@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "clean:next": "node -e \"const fs=require('fs'); const p='.next'; if(fs.existsSync(p)) fs.rmSync(p,{recursive:true,force:true});\"",
     "dev": "next dev",
+    "dev:clean": "npm run clean:next && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -18,7 +20,7 @@
     "react-dom": "^19.0.0",
     "react-redux": "^9.2.0",
     "react-toastify": "^11.0.5",
-    "swiper": "^11.2.5"
+    "swiper": "^14.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

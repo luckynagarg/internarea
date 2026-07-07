@@ -1,0 +1,93 @@
+{
+  "home": {
+    "hero": {
+      "title": "Find your next internship",
+      "subtitle": "Discover internships and jobs tailored for you"
+    },
+    "sections": {
+      "internships": "Internships",
+      "jobs": "Jobs"
+    },
+    "filters": {
+      "all": "All"
+    },
+    "cards": {
+      "hiring": "Hiring now",
+      "viewDetails": "View details"
+    },
+    "slides": {
+      "0": "Slide 1",
+      "1": "Slide 2",
+      "2": "Slide 3",
+      "3": "Slide 4"
+    },
+    "stats": {
+      "0": "300K+",
+      "1": "10K+",
+      "2": "21Mn+",
+      "3": "600K+"
+    },
+    "categories": {
+      "bigBrands": "Big Brands",
+      "workFromHome": "Work From Home",
+      "partTime": "Part Time",
+      "mba": "MBA",
+      "engineering": "Engineering",
+      "media": "Media",
+      "design": "Design",
+      "dataScience": "Data Science"
+    }
+  },
+  "navbar": {
+    "internships": "Internships",
+    "jobs": "Jobs",
+    "publicSpace": "Public Space",
+    "searchPlaceholder": "Search opportunities...",
+    "login": "Login",
+    "logout": "Logout",
+    "continueWithGoogle": "Continue with Google",
+    "admin": "Admin",
+    "language": "Language"
+  },
+  "footer": {
+    "text": "All rights reserved.",
+    "copyright": "© Copyright 2025. All Rights Reserved.",
+    "getAndroidApp": "Get Android App",
+    "internshipByPlaces": "Internships by Places",
+    "internshipByStream": "Internships by Stream",
+    "jobPlaces": "Jobs by Places",
+    "jobsByStreams": "Jobs by Stream",
+    "aboutUs": "About Us",
+    "teamDiary": "Team Diary",
+    "termsAndConditions": "Terms and Conditions",
+    "sitemap": "Sitemap"
+  },
+  "pages": {
+    "subscription": {
+      "title": "Subscription & Billing",
+      "subtitle": "Manage your plan, payments, and invoices.",
+      "loading": "Loading...",
+      "paymentHistory": "Payment History",
+      "invoices": "Invoices",
+      "upgradeCta": "Upgrade to increase monthly applications.",
+      "noPayments": "No payments yet.",
+      "noInvoices": "No invoices yet."
+    },
+    "resume": {
+      "homeTitle": "Premium Resume",
+      "homeSubtitle": "Create a professional resume by paying ₹50 and verifying via email OTP.",
+      "createResume": "Create Resume",
+      "createTitle": "Create Resume (Premium)",
+      "createFee": "Fee: ₹50 per resume • OTP verification required.",
+      "sendOtp": "Send OTP & Continue",
+      "otpHint": "Enter OTP sent to your registered email.",
+      "verifyOtp": "Verify OTP",
+      "payTitle": "OTP verified. Proceed with payment.",
+      "payCta": "Pay ₹50 with Razorpay",
+      "afterPayHint": "After successful payment, your resume will be generated and added to profile.",
+      "doneTitle": "Resume generated successfully.",
+      "goToProfile": "Go to Profile"
+    }
+  }
+}
+

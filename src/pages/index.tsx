@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+"use client";
+import { useEffect, useMemo, useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination, Autoplay } from "swiper/modules";
 import "swiper/css";
@@ -8,364 +9,233 @@ import {
   ArrowUpRight,
   Banknote,
   Calendar,
-  ChevronRight,
   MapPin,
 } from "lucide-react";
 import Link from "next/link";
 import axios from "axios";
+import { useLanguage } from "@/i18n/LanguageContext";
+
+
+type Internship = {
+  _id: string;
+  title: string;
+  company: string;
+  location: string;
+  stipend: string;
+  duration: string;
+  category: string;
+};
+
+type Job = {
+  _id: string;
+  title: string;
+  company: string;
+  location: string;
+  CTC: string;
+  Experience: string;
+  category: string;
+};
+
+ // Backend must be running: cd backend && npm run dev
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "https://intern-backend-4dlt.onrender.com";
 
 export default function SvgSlider() {
-  const categories = [
-    "Big Brands",
-    "Work From Home",
-    "Part-time",
-    "MBA",
-    "Engineering",
-    "Media",
-    "Design",
-    "Data Science",
-  ];
-  // const internships = [
-  //   {
-  //     _id: "1",
-  //     title: "Software Engineering Intern",
-  //     company: "Google",
-  //     location: "Remote",
-  //     stipend: "$1,500/month",
-  //     duration: "3 months",
-  //     category: "Engineering",
-  //   },
-  //   {
-  //     _id: "2",
-  //     title: "Marketing Intern",
-  //     company: "Meta",
-  //     location: "New York",
-  //     stipend: "$1,200/month",
-  //     duration: "6 months",
-  //     category: "Media",
-  //   },
-  //   {
-  //     _id: "3",
-  //     title: "Graphic Design Intern",
-  //     company: "Adobe",
-  //     location: "San Francisco",
-  //     stipend: "$1,000/month",
-  //     duration: "4 months",
-  //     category: "Design",
-  //   },
-  // ];
+  const { t } = useLanguage();
 
-  // const jobs = [
-  //   {
-  //     _id: "101",
-  //     title: "Frontend Developer",
-  //     company: "Amazon",
-  //     location: "Seattle",
-  //     CTC: "$100K/year",
-  //     Experience: "2+ years",
-  //     category: "Engineering",
-  //   },
-  //   {
-  //     _id: "102",
-  //     title: "Data Analyst",
-  //     company: "Microsoft",
-  //     location: "Remote",
-  //     CTC: "$90K/year",
-  //     Experience: "1+ years",
-  //     category: "Data Science",
-  //   },
-  //   {
-  //     _id: "103",
-  //     title: "UX Designer",
-  //     company: "Apple",
-  //     location: "California",
-  //     CTC: "$110K/year",
-  //     Experience: "3+ years",
-  //     category: "Design",
-  //   },
-  // ];
+  const categories = [
+
+    t("home.categories.bigBrands"),
+    t("home.categories.workFromHome"),
+    t("home.categories.partTime"),
+    t("home.categories.mba"),
+    t("home.categories.engineering"),
+    t("home.categories.media"),
+    t("home.categories.design"),
+    t("home.categories.dataScience"),
+  ];
+
+
   const slides = [
-    {
-      pattern: "pattern-1",
-      title: "Start Your Career Journey",
-      bgColor: "bg-indigo-600",
-    },
-    {
-      pattern: "pattern-2",
-      title: "Learn From The Best",
-      bgColor: "bg-blue-600",
-    },
-    {
-      pattern: "pattern-3",
-      title: "Grow Your Skills",
-      bgColor: "bg-purple-600",
-    },
-    {
-      pattern: "pattern-4",
-      title: "Connect With Top Companies",
-      bgColor: "bg-teal-600",
-    },
+    { pattern: "pattern-1", title: t("home.slides.0"), bgColor: "bg-indigo-600" },
+    { pattern: "pattern-2", title: t("home.slides.1"), bgColor: "bg-blue-600" },
+    { pattern: "pattern-3", title: t("home.slides.2"), bgColor: "bg-purple-600" },
+    { pattern: "pattern-4", title: t("home.slides.3"), bgColor: "bg-teal-600" },
   ];
 
   const stats = [
-    { number: "300K+", label: "companies hiring" },
-    { number: "10K+", label: "new openings everyday" },
-    { number: "21Mn+", label: "active students" },
-    { number: "600K+", label: "learners" },
+    { number: "300K+", label: t("home.stats.0") },
+    { number: "10K+", label: t("home.stats.1") },
+    { number: "21Mn+", label: t("home.stats.2") },
+    { number: "600K+", label: t("home.stats.3") },
   ];
-  const [internships, setinternship] = useState<any>([]);
-  const [jobs, setjob] = useState<any>([]);
+
+
+  const [internships, setInternships] = useState<Internship[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+
   useEffect(() => {
-    const fetchdata = async () => {
+
+
+    console.log("API_BASE:", API_BASE);
+console.log("Internship URL:", `${API_BASE}/api/internship`);
+console.log("Job URL:", `${API_BASE}/api/job`);
+
+
+    const fetchData = async () => {
       try {
-        const [internshipres, jobres] = await Promise.all([
-          axios.get("https://internshala-clone-y2p2.onrender.com/api/internship"),
-          axios.get("https://internshala-clone-y2p2.onrender.com/api/job"),
+        const [internshipRes, jobRes] = await Promise.all([
+          axios.get(`${API_BASE}/api/internship`),
+          axios.get(`${API_BASE}/api/job`),
         ]);
-        setinternship(internshipres.data);
-        setjob(jobres.data);
-      } catch (error) {
-        console.log(error);
+
+        setInternships(internshipRes.data?.data || internshipRes.data || []);
+        setJobs(jobRes.data?.data || jobRes.data || []);
+      } catch (err) {
+        console.error("Fetch error:", err);
       }
     };
-    fetchdata();
-  }, []);
-  const [selectedCategory, setSelectedCategory] = useState("");
-  const filteredInternships = internships.filter(
-    (item: any) => !selectedCategory || item.category === selectedCategory
-  );
-  const filteredJobs = jobs.filter(
-    (item: any) => !selectedCategory || item.category === selectedCategory
-  );
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* hero section */}
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          Make your dream career a reality
-        </h1>
-        <p className="text-xl text-gray-600">Trending on InternArea 🔥</p>
-      </div>
-      {/* Swiper section */}
-      <div className="mb-16">
-        <Swiper
-          modules={[Navigation, Pagination, Autoplay]}
-          spaceBetween={30}
-          slidesPerView={1}
-          navigation
-          pagination={{ clickable: true }}
-          autoplay={{ delay: 5000 }}
-          className="rounded-xl overflow-hidden shadow-lg"
-        >
-          {slides.map((slide, index) => (
-            <SwiperSlide key={index}>
-              <div className={`relative h-[400px] ${slide.bgColor}`}>
-                {/* SVG Pattern Background */}
-                <div className="absolute inset-0 opacity-20">
-                  <svg
-                    className="w-full h-full"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    {slide.pattern === "pattern-1" && (
-                      <pattern
-                        id="pattern-1"
-                        x="0"
-                        y="0"
-                        width="20"
-                        height="20"
-                        patternUnits="userSpaceOnUse"
-                      >
-                        <circle cx="10" cy="10" r="3" fill="white" />
-                      </pattern>
-                    )}
-                    {slide.pattern === "pattern-2" && (
-                      <pattern
-                        id="pattern-2"
-                        x="0"
-                        y="0"
-                        width="40"
-                        height="40"
-                        patternUnits="userSpaceOnUse"
-                      >
-                        <rect
-                          x="15"
-                          y="15"
-                          width="10"
-                          height="10"
-                          fill="white"
-                        />
-                      </pattern>
-                    )}
-                    {slide.pattern === "pattern-3" && (
-                      <pattern
-                        id="pattern-3"
-                        x="0"
-                        y="0"
-                        width="40"
-                        height="40"
-                        patternUnits="userSpaceOnUse"
-                      >
-                        <path d="M0 20 L20 0 L40 20 L20 40 Z" fill="white" />
-                      </pattern>
-                    )}
-                    {slide.pattern === "pattern-4" && (
-                      <pattern
-                        id="pattern-4"
-                        x="0"
-                        y="0"
-                        width="60"
-                        height="60"
-                        patternUnits="userSpaceOnUse"
-                      >
-                        <path d="M30 5 L55 30 L30 55 L5 30 Z" fill="white" />
-                      </pattern>
-                    )}
-                    <rect
-                      x="0"
-                      y="0"
-                      width="100%"
-                      height="100%"
-                      fill={`url(#${slide.pattern})`}
-                    />
-                  </svg>
-                </div>
 
-                {/* Content */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <h2 className="text-4xl font-bold text-white">
-                    {slide.title}
-                  </h2>
-                </div>
-              </div>
-            </SwiperSlide>
-          ))}
-        </Swiper>
+    fetchData();
+  }, []);
+
+  const filteredInternships = useMemo(() => {
+    return internships.filter(
+      (item) => !selectedCategory || item.category === selectedCategory
+    );
+  }, [internships, selectedCategory]);
+
+  const filteredJobs = useMemo(() => {
+    return jobs.filter(
+      (item) => !selectedCategory || item.category === selectedCategory
+    );
+  }, [jobs, selectedCategory]);
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-8">
+
+      {/* HERO */}
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-bold text-gray-800">{t("home.hero.title")}</h1>
+        <p className="text-xl text-gray-700">{t("home.hero.subtitle")}</p>
       </div>
-      {/* Category section */}
-      <div className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">
-          Latest internships on Intern Area
-        </h2>
-        <div className="flex flex-wrap gap-4">
-          <span className="text-gray-700 font-medium">POPULAR CATEGORIES:</span>
-          {categories.map((category) => (
+
+
+      {/* SWIPER */}
+      <Swiper
+        modules={[Navigation, Pagination, Autoplay]}
+        spaceBetween={30}
+        slidesPerView={1}
+        navigation
+        pagination={{ clickable: true }}
+        autoplay={{ delay: 5000 }}
+        className="rounded-xl overflow-hidden shadow-lg mb-16"
+      >
+        {slides.map((slide, i) => (
+          <SwiperSlide key={i}>
+          <div className={`h-96 ${slide.bgColor} flex items-center justify-center`}>              <h2 className="text-white text-3xl font-bold">
+                {slide.title}
+              </h2>
+            </div>
+          </SwiperSlide>
+        ))}
+      </Swiper>
+
+      {/* CATEGORY */}
+      <div className="mb-8">
+        <h2 className="text-xl font-bold mb-3 text-black ">{t("home.sections.internships")}</h2>
+
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setSelectedCategory("")}
+            className={`px-4 py-2 rounded-2xl ${
+              selectedCategory === "" ? "bg-blue-600 text-black" : "bg-gray-400"
+            }`}
+          >
+            {t("home.filters.all")}
+
+          </button>
+
+          {categories.map((cat) => (
             <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              className={`px-4 py-2 rounded-full transition-colors ${
-                selectedCategory === category
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-4 py-2 text-black rounded-2xl ${
+                selectedCategory === cat
+                  ? "bg-blue-600 text-black"
+                  : "bg-gray-500"
               }`}
             >
-              {category}
+              {cat}
             </button>
           ))}
         </div>
       </div>
-      {/* INternship grid   */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
-        {filteredInternships.map((internship: any, index: any) => (
-          <div
-            key={index}
-            className="bg-white rounded-lg shadow-md p-6 transition-transform hover:transform hover:scale-105"
-          >
-            <div className="flex items-center gap-2 text-blue-600 mb-4">
-              <ArrowUpRight size={20} />
-              <span className="font-medium">Actively Hiring</span>
+
+      {/* INTERNSHIPS */}
+      <div className="grid md:grid-cols-3 gap-6 mb-16">
+        {filteredInternships.map((item) => (
+          <div key={item._id} className="bg-white p-5 rounded shadow hover:scale-105 transition">
+            <div className="text-blue-600 flex items-center gap-2 ">
+              <ArrowUpRight size={18} /> {t("home.cards.hiring")}
             </div>
-            <h3 className="text-lg font-semibold mb-2 text-gray-800">
-              {internship.title}
-            </h3>
-            <p className="text-gray-500 mb-4">{internship.company}</p>
-            <div className="space-y-3 text-gray-600">
-              <div className="flex items-center gap-2">
-                <MapPin size={18} />
-                <span>{internship.location}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Banknote size={18} />
-                <span>{internship.stipend}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Calendar size={18} />
-                <span>{internship.duration}</span>
-              </div>
+
+
+            <h3 className="font-bold mt-2 text-black">{item.title}</h3>
+            <p className="text-gray-700">{item.company}</p>
+
+            <div className="mt-3 text-sm space-y-2">
+              <p><MapPin size={14} /> {item.location}</p>
+              <p><Banknote size={14} /> {item.stipend}</p>
+              <p><Calendar size={14} /> {item.duration}</p>
             </div>
-            <div className="flex items-center justify-between mt-6">
-              <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm">
-                Internship
-              </span>
-              <Link
-                href={`/detailiternship/${internship._id}`}
-                className="text-blue-600 hover:text-blue-700 flex items-center gap-1"
-              >
-                View details
-                <ChevronRight size={16} />
-              </Link>
-            </div>
+
+            <Link href={`/detailinternship/${item._id}`} className="text-blue-600 mt-3 block">
+              {t("home.cards.viewDetails")}
+            </Link>
+
           </div>
         ))}
       </div>
-      {/* Jobs grid   */}
-      <div className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Latest Jobs</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
-          {filteredJobs.map((job: any, index: any) => (
-            <div
-              key={index}
-              className="bg-white rounded-lg shadow-md p-6 transition-transform hover:transform hover:scale-105"
-            >
-              <div className="flex items-center gap-2 text-blue-600 mb-4">
-                <ArrowUpRight size={20} />
-                <span className="font-medium">Actively Hiring</span>
-              </div>
-              <h3 className="text-lg font-semibold mb-2 text-gray-800">
-                {job.title}
-              </h3>
-              <p className="text-gray-500 mb-4">{job.company}</p>
-              <div className="space-y-3 text-gray-600">
-                <div className="flex items-center gap-2">
-                  <MapPin size={18} />
-                  <span>{job.location}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Banknote size={18} />
-                  <span>{job.CTC}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar size={18} />
-                  <span>{job.Experience}</span>
-                </div>
-              </div>
-              <div className="flex items-center justify-between mt-6">
-                <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm">
-                  Jobs
-                </span>
-                <Link
-href={`/detailjob/${job._id}`}
-                  className="text-blue-600 hover:text-blue-700 flex items-center gap-1"
-                >
-                  View details
-                  <ChevronRight size={16} />
-                </Link>
-              </div>
+
+      {/* JOBS */}
+      <h2 className="text-xl font-bold mb-4 text-black">{t("home.sections.jobs")}</h2>
+
+
+      <div className="grid md:grid-cols-3 gap-6 mb-16">
+        {filteredJobs.map((job) => (
+          <div key={job._id} className="bg-white p-5 rounded shadow hover:scale-105 transition">
+            <div className="text-blue-600 flex items-center gap-2">
+              <ArrowUpRight size={18} /> {t("home.cards.hiring")}
             </div>
-          ))}
-        </div>
+
+
+            <h3 className="font-bold mt-2 text-black">{job.title}</h3>
+            <p className="text-gray-700">{job.company}</p>
+
+            <div className="mt-3 text-sm space-y-2 text-black">
+              <p><MapPin size={14} /> {job.location}</p>
+              <p><Banknote size={14} /> {job.CTC}</p>
+              <p><Calendar size={14} /> {job.Experience}</p>
+            </div>
+
+            <Link href={`/detailjob/${job._id}`} className="text-blue-600 mt-3 block">
+              {t("home.cards.viewDetails")}
+            </Link>
+
+          </div>
+        ))}
       </div>
-      {/* Stat Section  */}
-      <div className="bg-white rounded-xl shadow-lg p-8 mb-16">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-          {stats.map((stat, index) => (
-            <div key={index} className="text-center">
-              <div className="text-4xl font-bold text-blue-600 mb-2">
-                {stat.number}
-              </div>
-              <div className="text-gray-600">{stat.label}</div>
-            </div>
-          ))}
-        </div>
+
+      {/* STATS */}
+      <div className="bg-white p-8 rounded shadow grid grid-cols-2 md:grid-cols-4 text-center text-black">
+        {stats.map((s, i) => (
+          <div key={i}>
+            <div className="text-3xl font-bold text-blue-600">{s.number}</div>
+            <div className="text-gray-600">{s.label}</div>
+          </div>
+        ))}
       </div>
     </div>
   );

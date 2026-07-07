@@ -1,0 +1,93 @@
+{
+  "home": {
+    "hero": {
+      "title": "Trouvez votre prochain stage",
+      "subtitle": "Découvrez des stages et des emplois adaptés à vous"
+    },
+    "sections": {
+      "internships": "Stages",
+      "jobs": "Emplois"
+    },
+    "filters": {
+      "all": "Tous"
+    },
+    "cards": {
+      "hiring": "Recrutement",
+      "viewDetails": "Voir les détails"
+    },
+    "slides": {
+      "0": "Diapositive 1",
+      "1": "Diapositive 2",
+      "2": "Diapositive 3",
+      "3": "Diapositive 4"
+    },
+    "stats": {
+      "0": "300K+",
+      "1": "10K+",
+      "2": "21Mn+",
+      "3": "600K+"
+    },
+    "categories": {
+      "bigBrands": "Grandes marques",
+      "workFromHome": "Travail à domicile",
+      "partTime": "Temps partiel",
+      "mba": "MBA",
+      "engineering": "Ingénierie",
+      "media": "Médias",
+      "design": "Design",
+      "dataScience": "Data Science"
+    }
+  },
+  "navbar": {
+    "internships": "Stages",
+    "jobs": "Emplois",
+    "publicSpace": "Espace Public",
+    "searchPlaceholder": "Rechercher des opportunités...",
+    "login": "Connexion",
+    "logout": "Déconnexion",
+    "continueWithGoogle": "Continuer avec Google",
+    "admin": "Admin",
+    "language": "Langue"
+  },
+  "footer": {
+    "text": "Tous droits réservés.",
+    "copyright": "© Copyright 2025. Tous droits réservés.",
+    "getAndroidApp": "Obtenir l’application Android",
+    "internshipByPlaces": "Stages par lieux",
+    "internshipByStream": "Stages par filière",
+    "jobPlaces": "Emplois par lieux",
+    "jobsByStreams": "Emplois par filières",
+    "aboutUs": "À propos de nous",
+    "teamDiary": "Journal de l’équipe",
+    "termsAndConditions": "Conditions générales",
+    "sitemap": "Plan du site"
+  },
+  "pages": {
+    "subscription": {
+      "title": "Abonnement & Facturation",
+      "subtitle": "Gérez votre formule, vos paiements et vos factures.",
+      "loading": "Chargement...",
+      "paymentHistory": "Historique des paiements",
+      "invoices": "Factures",
+      "upgradeCta": "Passez à un plan pour augmenter les candidatures mensuelles.",
+      "noPayments": "Aucun paiement pour le moment.",
+      "noInvoices": "Aucune facture pour le moment."
+    },
+    "resume": {
+      "homeTitle": "CV Premium",
+      "homeSubtitle": "Créez un CV professionnel en payant 50 ₹ et en vérifiant via un OTP par email.",
+      "createResume": "Créer un CV",
+      "createTitle": "Créer un CV (Premium)",
+      "createFee": "Tarif : 50 ₹ par CV • Vérification OTP requise.",
+      "sendOtp": "Envoyer l’OTP et continuer",
+      "otpHint": "Saisissez l’OTP envoyé à votre email enregistré.",
+      "verifyOtp": "Vérifier l’OTP",
+      "payTitle": "OTP vérifié. Procédez au paiement.",
+      "payCta": "Payer 50 ₹ avec Razorpay",
+      "afterPayHint": "Après un paiement réussi, votre CV sera généré et ajouté à votre profil.",
+      "doneTitle": "CV généré avec succès.",
+      "goToProfile": "Aller au profil"
+    }
+  }
+}
+
