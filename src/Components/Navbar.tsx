@@ -1,29 +1,29 @@
 import React, { useEffect, useRef, useState } from "react";
 
 import Link from "next/link";
-import { auth, provider } from "../firebase/firebase";
-import { Globe, Search } from "lucide-react";
-import { signInWithPopup, signOut } from "firebase/auth";
-import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
-import { selectuser } from "@/Feature/Userslice";
-import { SupportedLang, supportedLangs } from "@/i18n/langs";
-import { useLanguage } from "@/i18n/LanguageContext";
+import { toast } from "react-toastify";
+import { Globe, Search } from "lucide-react";
+import { signOut } from "firebase/auth";
+
 import FrenchOtpModal from "@/Components/FrenchOtpModal";
 import NotificationDropdown from "@/Components/NotificationDropdown";
+import { useLanguage } from "@/i18n/LanguageContext";
+import { selectuser } from "@/Feature/Userslice";
+import { supportedLangs } from "@/i18n/langs";
+import type { SupportedLang } from "@/i18n/langs";
+
+import { auth } from "@/lib/firebase";
 
 const NAV_LANGS = [
   { key: "en" as const, label: "English" },
   { key: "hi" as const, label: "हिन्दी (Hindi)" },
   { key: "fr" as const, label: "Français (French)" },
-  // repo i18n doesn't include pt in requirements dropdown order, so we keep actual dropdown keys.
   { key: "es" as const, label: "Español (Spanish)" },
   // repo i18n doesn't include de, map Deutsch -> en
   { key: "en" as const, label: "Deutsch (German)" },
   { key: "zh" as const, label: "中文 (Chinese)" },
 ] as const;
-
-type DropdownLangKey = (typeof NAV_LANGS)[number]["key"];
 
 function isSupportedLang(x: string): x is SupportedLang {
   return supportedLangs.includes(x as SupportedLang);
@@ -57,35 +57,10 @@ const Navbar = () => {
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [langDropdownOpen]);
 
-  const [loggingIn, setLoggingIn] = useState(false);
-
-  const handlelogin = async () => {
-    if (loggingIn) return;
-
-    setLoggingIn(true);
-
-    try {
-      await signInWithPopup(auth, provider);
-      toast.success("Logged in successfully");
-    } catch (error: any) {
-      console.error("Google sign-in error:", error);
-
-      if (error.code === "auth/cancelled-popup-request") {
-        // Ignore this error because another popup request cancelled it.
-        return;
-      }
-
-      toast.error(
-        error?.message ||
-          error?.code ||
-          "Google login failed. Check console for details.",
-      );
-    } finally {
-      setLoggingIn(false);
-    }
-  };
   const handlelogout = () => {
-    signOut(auth);
+    signOut(auth)
+      .then(() => toast.success("Logged out"))
+      .catch(() => toast.error("Logout failed"));
   };
 
   const selectLang = (next: SupportedLang) => {
@@ -164,9 +139,7 @@ const Navbar = () => {
               <button className="flex items-center font-bold border-b-2 border-transparent pb-1 text-gray-700 hover:text-blue-600">
                 <Link href="/public">
                   <>
-                    <span className="hidden lg:inline">
-                      {t("navbar.publicSpace")}
-                    </span>
+                    <span className="hidden lg:inline">{t("navbar.publicSpace")}</span>
                     <span className="lg:hidden">Public</span>
                   </>
                 </Link>
@@ -178,10 +151,7 @@ const Navbar = () => {
                   href="/search"
                   className="ml-2 bg-transparent focus:outline-none text-sm w-48"
                 >
-                  {/* Keep navbar design; search page provides functional search. */}
-                  <span className="text-gray-500">
-                    {t("navbar.searchPlaceholder")}
-                  </span>
+                  <span className="text-gray-500">{t("navbar.searchPlaceholder")}</span>
                 </Link>
 
                 <div className="relative" ref={langDropdownRef}>
@@ -212,9 +182,8 @@ const Navbar = () => {
                       </div>
                       {NAV_LANGS.map((l) => {
                         const isCurrent =
-                          l.label === "Deutsch (German)"
-                            ? lang === "en"
-                            : l.key === lang;
+                          l.label === "Deutsch (German)" ? lang === "en" : l.key === lang;
+
                         return (
                           <button
                             key={l.label}
@@ -224,20 +193,19 @@ const Navbar = () => {
                                 isCurrent && l.label !== "Deutsch (German)"
                                   ? l.key
                                   : (l.key as SupportedLang);
-                              selectLang(target);
+                              if (isSupportedLang(target)) {
+                                selectLang(target);
+                              }
+                              setLangDropdownOpen(false);
                             }}
                             className={`w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center justify-between ${
                               isCurrent ? "bg-gray-800" : ""
                             }`}
                           >
                             <span>{l.label}</span>
-                            {((l.key === lang &&
-                              l.label !== "Deutsch (German)") ||
-                              (l.label === "Deutsch (German)" &&
-                                lang === "en")) && (
-                              <span className="text-blue-600  font-semibold">
-                                ✓
-                              </span>
+                            {((l.key === lang && l.label !== "Deutsch (German)") ||
+                              (l.label === "Deutsch (German)" && lang === "en")) && (
+                              <span className="text-blue-600 font-semibold">✓</span>
                             )}
                           </button>
                         );
@@ -289,62 +257,34 @@ const Navbar = () => {
             <div className="hidden md:flex items-center space-x-4 flex-shrink-0">
               {user ? (
                 <div className="relative flex">
-                  <button className="flex items-center space-x-2">
-                    {" "}
-                    <Link href={"/profile"}>
-                      <img
-                        src={user.photo}
-                        alt=""
-                        className="w-8 h-8 rounded-full"
-                      />
-                    </Link>
-                  </button>
+                  <Link href="/profile">
+                    <img
+                      src={user.photo}
+                      alt=""
+                      className="w-8 h-8 rounded-full"
+                    />
+                  </Link>
                   <button
-                    className="flex items-center w-full px-4 py-2  text-gray-700  hover:bg-gray-200 rounded-lg"
+                    className="flex items-center w-full px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg"
                     onClick={handlelogout}
                   >
                     Logout
                   </button>
                 </div>
               ) : (
-                <>
-                  <button
-                    onClick={handlelogin}
-                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-gray-300 bg-white px-4 py-2 hover:bg-gray-50 flex-shrink-0"
-                  >
-                    <svg className="w-5 h-5" viewBox="0 0 24 24">
-                      <path
-                        fill="#4285F4"
-                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                      />
-                      <path
-                        fill="#34A853"
-                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      />
-                      <path
-                        fill="#FBBC05"
-                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                      />
-                      <path
-                        fill="#EA4335"
-                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                      />
-                    </svg>
-                    <span className="text-gray-700">
-                      {t("navbar.continueWithGoogle")}
-                    </span>
-                  </button>
-                  {/* <button className="bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700">
-                    {" "}
-                    <Link href={"/"}>Register</Link>
-                  </button> */}
-                  <a
-                    href="/adminlogin"
-                    className="text-gray-600 hover:text-gray-800"
-                  >
-                    Admin
-                  </a>
-                </>
+                <Link
+                  href="/login"
+                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-gray-300 bg-white px-4 py-2 hover:bg-gray-50 flex-shrink-0"
+                >
+                  <span className="text-gray-700 font-medium">Login</span>
+                </Link>
+              )}
+
+              {/* Keep existing Admin link */}
+              {!user && (
+                <a href="/adminlogin" className="text-gray-600 hover:text-gray-800">
+                  Admin
+                </a>
               )}
             </div>
 
@@ -352,7 +292,7 @@ const Navbar = () => {
             <div
               id="mobile-nav"
               data-open="false"
-                  className="lg:hidden absolute left-0 right-0 top-16 z-[9999] bg-white shadow-md border-t transition-all duration-200 opacity-0 pointer-events-none h-0 overflow-hidden"
+              className="lg:hidden absolute left-0 right-0 top-16 z-[9999] bg-white shadow-md border-t transition-all duration-200 opacity-0 pointer-events-none h-0 overflow-hidden"
             >
               <div className="px-4 py-3 flex flex-col space-y-3">
                 <button className="flex items-center font-bold border-b-2 border-blue-600 pb-1 space-x-2 text-gray-800 hover:text-blue-600">
@@ -362,7 +302,7 @@ const Navbar = () => {
                 </button>
 
                 <button className="flex items-center font-bold border-b-2 border-transparent pb-1 space-x-2 text-gray-700 hover:text-blue-600">
-                  <Link href={"/public"}>
+                  <Link href="/public">
                     <span>{t("navbar.publicSpace")}</span>
                   </Link>
                 </button>
@@ -373,9 +313,7 @@ const Navbar = () => {
                     href="/search"
                     className="ml-2 bg-transparent focus:outline-none text-sm w-full"
                   >
-                    <span className="text-gray-500">
-                      {t("navbar.searchPlaceholder")}
-                    </span>
+                    <span className="text-gray-500">{t("navbar.searchPlaceholder")}</span>
                   </Link>
                 </div>
 
@@ -409,9 +347,8 @@ const Navbar = () => {
                       </div>
                       {NAV_LANGS.map((l) => {
                         const isCurrent =
-                          l.label === "Deutsch (German)"
-                            ? lang === "en"
-                            : l.key === lang;
+                          l.label === "Deutsch (German)" ? lang === "en" : l.key === lang;
+
                         return (
                           <button
                             key={l.label}
@@ -421,20 +358,18 @@ const Navbar = () => {
                                 isCurrent && l.label !== "Deutsch (German)"
                                   ? l.key
                                   : (l.key as SupportedLang);
-                              selectLang(target);
+                              if (isSupportedLang(target)) {
+                                selectLang(target);
+                              }
                             }}
                             className={`w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center justify-between ${
                               isCurrent ? "bg-gray-800" : ""
                             }`}
                           >
                             <span>{l.label}</span>
-                            {((l.key === lang &&
-                              l.label !== "Deutsch (German)") ||
-                              (l.label === "Deutsch (German)" &&
-                                lang === "en")) && (
-                              <span className="text-blue-600 font-semibold">
-                                ✓
-                              </span>
+                            {((l.key === lang && l.label !== "Deutsch (German)") ||
+                              (l.label === "Deutsch (German)" && lang === "en")) && (
+                              <span className="text-blue-600 font-semibold">✓</span>
                             )}
                           </button>
                         );
@@ -447,7 +382,7 @@ const Navbar = () => {
                   {user ? (
                     <>
                       <div className="flex items-center gap-3">
-                        <Link href={"/profile"}>
+                        <Link href="/profile">
                           <img
                             src={user.photo}
                             alt=""
@@ -464,32 +399,12 @@ const Navbar = () => {
                     </>
                   ) : (
                     <>
-                      <button
-                        onClick={handlelogin}
+                      <Link
+                        href="/login"
                         className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 flex items-center justify-center space-x-2 hover:bg-gray-50"
                       >
-                        <svg className="w-5 h-5" viewBox="0 0 24 24">
-                          <path
-                            fill="#4285F4"
-                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                          />
-                          <path
-                            fill="#34A853"
-                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                          />
-                          <path
-                            fill="#FBBC05"
-                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                          />
-                          <path
-                            fill="#EA4335"
-                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                          />
-                        </svg>
-                        <span className="text-gray-700">
-                          {t("navbar.continueWithGoogle")}
-                        </span>
-                      </button>
+                        <span className="text-gray-700 font-medium">Login</span>
+                      </Link>
                       <a
                         href="/adminlogin"
                         className="text-gray-600 hover:text-gray-800 text-center"
@@ -518,3 +433,4 @@ const Navbar = () => {
 };
 
 export default Navbar;
+

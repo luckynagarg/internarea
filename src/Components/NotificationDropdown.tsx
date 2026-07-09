@@ -4,10 +4,9 @@ import { Bell, X } from "lucide-react";
 import { toast } from "react-toastify";
 import { auth } from "../firebase/firebase";
 
-
 export type NotificationItem = {
   _id: string;
-  type: "internship" | "application" | "admin_message" | "announcement";
+  type: "internship" | "application" | "admin_message" | "announcement" | string;
   title: string;
   body?: string;
   createdAt: string;
@@ -30,6 +29,66 @@ function formatTitle(n: NotificationItem) {
           : "Announcement");
 }
 
+function getApiNotificationsPayload(data: any): any[] {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.notifications)) return data.notifications;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.data)) return data.data;
+  return [];
+}
+
+function normalizeNotificationItem(raw: any): NotificationItem {
+  // Backend canonical format:
+  // {_id,title,body,type,read,createdAt}
+  // Legacy/other format support:
+  // {id,title,message,type,read,createdAt}
+  const _id =
+    typeof raw?._id === "string"
+      ? raw._id
+      : typeof raw?.id === "string"
+        ? raw.id
+        : String(raw?._id ?? raw?.id ?? "");
+
+  const title = typeof raw?.title === "string" ? raw.title : "";
+
+  const body =
+    typeof raw?.body === "string"
+      ? raw.body
+      : typeof raw?.message === "string"
+        ? raw.message
+        : undefined;
+
+  const createdAtVal = raw?.createdAt;
+  const createdAt =
+    typeof createdAtVal === "string" || createdAtVal instanceof Date
+      ? String(createdAtVal)
+      : createdAtVal
+        ? new Date(createdAtVal).toISOString()
+        : new Date().toISOString();
+
+  const read = typeof raw?.read === "boolean" ? raw.read : false;
+  const type = typeof raw?.type === "string" ? raw.type : "announcement";
+
+  return { _id, title, body, createdAt, read, type };
+}
+
+function errorToString(err: any): string {
+  const apiErr = err?.response?.data?.error;
+
+  if (typeof apiErr === "string") return apiErr;
+  if (apiErr && typeof apiErr === "object") {
+    if (typeof apiErr.message === "string") return apiErr.message;
+  }
+
+  // Fallbacks
+  if (typeof err?.message === "string") return err.message;
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return "Something went wrong";
+  }
+}
+
 export default function NotificationDropdown({
   open,
   onClose,
@@ -39,36 +98,42 @@ export default function NotificationDropdown({
   onClose: () => void;
   onMarkRead: (items: NotificationItem[]) => void;
 }) {
-
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [errorState, setErrorState] = useState<string | null>(null);
 
-  const unreadCount = useMemo(() => items.filter((x) => !x.read).length, [items]);
+  const unreadCount = useMemo(
+    () => items.filter((x) => !x.read).length,
+    [items]
+  );
 
   useEffect(() => {
     if (!open) return;
 
     let mounted = true;
+
     const run = async () => {
       setLoading(true);
       setErrorState(null);
+
       try {
-        // Firebase auth is required by backend
         const token = await auth.currentUser?.getIdToken();
 
         const res = await axios.get(`${API_BASE}/api/notifications`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
 
-        const data = res.data?.notifications || res.data?.items || res.data?.data || [];
+        const rawList = getApiNotificationsPayload(res.data);
+        const normalized = rawList.map(normalizeNotificationItem);
+
         if (!mounted) return;
 
-        setItems(data);
-        onMarkRead(data);
+        setItems(normalized);
+        onMarkRead(normalized);
       } catch (e: any) {
+        const msg = errorToString(e);
         if (!mounted) return;
-        const msg = e?.response?.data?.error || e.message || "Failed to load notifications";
+
         setErrorState(msg);
         toast.error(msg);
       } finally {
@@ -77,6 +142,7 @@ export default function NotificationDropdown({
     };
 
     run();
+
     return () => {
       mounted = false;
     };
@@ -138,8 +204,7 @@ export default function NotificationDropdown({
                   n.read ? "bg-white" : "bg-amber-50"
                 }`}
                 onClick={() => {
-                  // marking read is handled outside for now to keep API wiring centralized
-                  // but we still visually respond by optimistic mark.
+                  // Visual optimistic update. API wiring handled elsewhere.
                   onMarkRead(
                     items.map((x) => (x._id === n._id ? { ...x, read: true } : x))
                   );
@@ -147,11 +212,15 @@ export default function NotificationDropdown({
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="font-semibold text-gray-900">{formatTitle(n)}</div>
-                    {n.body ? <div className="text-sm text-gray-700 mt-1">{n.body}</div> : null}
+                    <div className="font-semibold text-gray-900">
+                      {formatTitle(n)}
+                    </div>
+                    {typeof n.body === "string" && n.body ? (
+                      <div className="text-sm text-gray-700 mt-1">{n.body}</div>
+                    ) : null}
                   </div>
                   <div className="text-[11px] text-gray-500 whitespace-nowrap">
-                    {new Date(n.createdAt).toLocaleString()}
+                    {n.createdAt ? new Date(n.createdAt).toLocaleString() : ""}
                   </div>
                 </div>
               </button>
@@ -161,9 +230,7 @@ export default function NotificationDropdown({
       </div>
 
       <div className="px-4 py-3 border-t text-xs text-gray-500">
-        <div>
-          {"To enable real-time notifications, connect this UI to the backend API."}
-        </div>
+        <div>{"To enable real-time notifications, connect this UI to the backend API."}</div>
       </div>
     </div>
   );

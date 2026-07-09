@@ -1,0 +1,2 @@
+Legacy OtpLogin replaced by PhoneOtpLogin. This file is intentionally left as marker only. Remove when cleanup finished.
+

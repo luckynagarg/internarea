@@ -1,12 +1,12 @@
 import Footer from "@/Components/Footer";
 import Navbar from "@/Components/Navbar";
-import "@/styles/global.css";
+import  "@/styles/global.css";
 import type { AppProps } from "next/app";
 
 import { Provider, useDispatch } from "react-redux";
 import { useEffect, useState } from "react";
 import { store } from "../store/store";
-import { auth } from "@/firebase/firebase";
+import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { login, logout } from "@/Feature/Userslice";
 import { ToastContainer } from "react-toastify";
