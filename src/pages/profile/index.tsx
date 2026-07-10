@@ -11,7 +11,8 @@ interface User {
   photo: string;
 }
 
-const BACKEND_BASE = process.env.NEXT_PUBLIC_BACKEND_BASE || 'http://localhost:5000';
+const BACKEND_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://intern-backend-4dlt.onrender.com";
+
 
 const index = () => {
   // const [user, setuser] = useState<User | null>({
@@ -27,7 +28,7 @@ const index = () => {
     async function loadResumes() {
       try {
         const res = await axios.get(`${BACKEND_BASE}/api/resume/my-resumes`);
-        setResumes(res.data?.data || []);
+setResumes(res.data?.data || []);
       } catch (e) {
         // ignore
       }

@@ -214,41 +214,44 @@ const Navbar = () => {
                   )}
                 </div>
 
-                {/* Notification Bell */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    className="relative flex items-center justify-center w-9 h-9 rounded-lg hover:bg-gray-200"
-                    aria-label="Open notifications"
-                    onClick={() => setNotifOpen((v) => !v)}
-                  >
-                    <span className="sr-only">Notifications</span>
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="w-4 h-4 text-gray-900"
+                {user && (
+                  /* Notification Bell (ONLY if logged in) */
+                  <div className="relative">
+                    <button
+                      type="button"
+                      className="relative flex items-center justify-center w-9 h-9 rounded-lg hover:bg-gray-200"
+                      aria-label="Open notifications"
+                      onClick={() => setNotifOpen((v) => !v)}
                     >
-                      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 7h18s-3 0-3-7" />
-                      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                    </svg>
-                    <span className="absolute -top-0.5 -right-0.5 bg-blue-600 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center">
-                      {unreadCount}
-                    </span>
-                  </button>
+                      <span className="sr-only">Notifications</span>
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="w-4 h-4 text-gray-900"
+                      >
+                        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 7h18s-3 0-3-7" />
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                      </svg>
+                      <span className="absolute -top-0.5 -right-0.5 bg-blue-600 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center">
+                        {unreadCount}
+                      </span>
+                    </button>
 
-                  <NotificationDropdown
-                    open={notifOpen}
-                    onClose={() => setNotifOpen(false)}
-                    onMarkRead={(nextItems) => {
-                      setUnreadCount(nextItems.filter((x) => !x.read).length);
-                    }}
-                  />
-                </div>
+                    <NotificationDropdown
+                      open={notifOpen}
+                      onClose={() => setNotifOpen(false)}
+                      onMarkRead={(nextItems) => {
+                        setUnreadCount(nextItems.filter((x) => !x.read).length);
+                      }}
+                    />
+                  </div>
+                )}
               </div>
+
 
               {/* Notification dropdown rendered at root of navbar container below */}
             </div>

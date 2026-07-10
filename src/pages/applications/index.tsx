@@ -11,32 +11,32 @@ import {
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-// const Applications = [
-//   {
-//     _id: "1",
-//     company: "Tech Corp",
-//     category: "Software",
-//     user: { name: "John Doe", email: "john@example.com" },
-//     createAt: "2024-03-10T12:00:00Z",
-//     status: "approved",
-//   },
-//   {
-//     _id: "2",
-//     company: "Health Solutions",
-//     category: "Healthcare",
-//     user: { name: "Jane Smith", email: "jane@example.com" },
-//     createAt: "2024-03-08T10:30:00Z",
-//     status: "pending",
-//   },
-//   {
-//     _id: "3",
-//     company: "EduLearn",
-//     category: "Education",
-//     user: { name: "Alice Johnson", email: "alice@example.com" },
-//     createAt: "2024-03-05T09:15:00Z",
-//     status: "rejected",
-//   },
-// ];
+ const Applications = [
+   {
+     _id: "1",
+     company: "Tech Corp",
+     category: "Software",
+     user: { name: "John Doe", email: "john@example.com" },
+     createAt: "2024-03-10T12:00:00Z",
+     status: "approved",
+   },
+   {
+     _id: "2",
+     company: "Health Solutions",
+     category: "Healthcare",
+     user: { name: "Jane Smith", email: "jane@example.com" },
+     createAt: "2024-03-08T10:30:00Z",
+     status: "pending",
+   },
+   {
+     _id: "3",
+     company: "EduLearn",
+     category: "Education",
+     user: { name: "Alice Johnson", email: "alice@example.com" },
+     createAt: "2024-03-05T09:15:00Z",
+     status: "rejected",
+   },
+ ];
 const getStatusColor = (status: any) => {
   switch (status.toLowerCase()) {
     case "approved":
@@ -54,15 +54,17 @@ const index = () => {
   useEffect(() => {
     const fetchdata = async () => {
       try {
-        const res = await axios.get("https://internshala-clone-y2p2.onrender.com/api/application");
+        const base = process.env.NEXT_PUBLIC_API_BASE_URL;
+        const res = await axios.get(`${base}/api/application`);
         setdata(res.data);
+
       } catch (error) {
         console.log(error);
       }
     };
     fetchdata();
   }, []);
-  // console.log(data);
+   console.log(data);
   const filteredapplications = data.filter((application: any) => {
     const searchmatch =
       application.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -74,7 +76,8 @@ const index = () => {
   const handleacceptandreject = async (id: any, action: any) => {
     try {
       const res = await axios.put(
-        `https://internshala-clone-y2p2.onrender.com/api/application/${id}`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/application/${id}`,
+
         { action }
       );
       const updateappliacrtion = data.map((app: any) =>
