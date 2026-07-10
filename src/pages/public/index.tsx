@@ -265,7 +265,7 @@ export default function PublicSpacePage() {
                 {post.caption && <p className="text-gray-800 mt-2 whitespace-pre-wrap">{post.caption}</p>}
 
                 {post.media?.mediaType === "video" ? (
-                  <video src={post.media.url} controls className="mt-3 w-full max-h-105 rounded-xl" />
+                  <video src={post.media.url} controls className="mt-3 w-full max-h-[420px] rounded-xl" />
                 ) : (
                   <img src={post.media?.url} className="mt-3 w-full rounded-xl" alt="post" />
                 )}

@@ -54,11 +54,11 @@ const index = () => {
     partTime: false,
     stipend: 50,
   });
-  const [internshipData, setinternship] = useState<any>([])
-  useEffect(() => {
-    const fetchdata = async () => {
+  const [internshipData,setinternship]=useState<any>([])
+  useEffect(()=>{
+    const fetchdata=async()=>{
       try {
-        const res=await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL || "https://intern-backend-4dlt.onrender.com"}/api/internship`)
+        const res=await axios.get( "https://internshala-clone-y2p2.onrender.com/api/internship")     
         setinternship(res.data)
         setfilteredInternships(res.data)
       } catch (error) {

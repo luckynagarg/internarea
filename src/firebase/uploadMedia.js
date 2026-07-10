@@ -1,5 +1,5 @@
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { storage } from "../lib/firebase";
+import { storage } from "./storage";
 
 function sanitizeFileName(name) {
   return (name || "file").replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -21,6 +21,4 @@ export async function uploadMedia(file) {
 
   return { mediaType, mediaUrl: url };
 }
-
-
 

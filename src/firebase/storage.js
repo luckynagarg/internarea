@@ -1,5 +1,8 @@
-// Re-export centralized Firebase storage from src/lib/firebase.ts
-export { storage } from "../lib/firebase";
+import { getStorage } from "firebase/storage";
+import app from "./firebase";
 
+const storage = getStorage(app);
+
+export { storage };
 
 

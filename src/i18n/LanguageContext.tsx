@@ -3,12 +3,10 @@ import type { SupportedLang } from './langs';
 import { defaultLang, supportedLangs } from './langs';
 import { tFactory } from './t';
 
-import type { TranslationKeyTyped } from './t';
-
 type LanguageContextValue = {
   lang: SupportedLang;
   setLang: (next: SupportedLang) => void;
-  t: (key: TranslationKeyTyped) => string;
+  t: (key: string) => string;
 };
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
