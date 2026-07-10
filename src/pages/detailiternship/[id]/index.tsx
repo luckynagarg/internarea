@@ -74,20 +74,22 @@ import { toast } from "react-toastify";
 const index = () => {
   const router = useRouter();
   const { id } = router.query;
-const [internshipData, setinternship] = useState<any>(null)
+  const [internshipData, setinternship] = useState<any>(null);
+
   useEffect(() => {
     const fetchdata = async () => {
       try {
-        const res = await axios.get(
-          `https://internshala-clone-y2p2.onrender.com/api/internship/${id}`
-        )
-        setinternship(res.data)
+        const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
+        const res = await axios.get(`${API_BASE}/api/internship/${id}`);
+        setinternship(res.data);
       } catch (error) {
-        console.log(error)
+        console.log(error);
       }
-    }
-    fetchdata()
-  }, [id])
+    };
+
+    fetchdata();
+  }, [id]);
+
   const [availability, setAvailability] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [coverLetter, setCoverLetter] = useState("");
@@ -118,9 +120,11 @@ const applicationdata={
         Application:id,
         availability
       }
-      await axios.post("https://internshala-clone-y2p2.onrender.com/api/application",applicationdata)
+      const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
+      await axios.post(`${API_BASE}/api/application`,applicationdata)
       toast.success("Application submit successfully")
       router.push('/internship')
+
     } catch (error) {
       console.error(error)
       toast.error("Failed to submit application")

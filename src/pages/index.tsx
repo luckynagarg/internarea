@@ -118,10 +118,15 @@ export default function SvgSlider() {
   useEffect(() => {
     const fetchdata = async () => {
       try {
+        const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
         const [internshipres, jobres] = await Promise.all([
-          axios.get("https://internshala-clone-y2p2.onrender.com/api/internship"),
-          axios.get("https://internshala-clone-y2p2.onrender.com/api/job"),
+          axios.get(`${API_BASE}/api/internship`),
+          axios.get(`${API_BASE}/api/job`),
         ]);
+
+
+
+
         setinternship(internshipres.data);
         setjob(jobres.data);
       } catch (error) {
