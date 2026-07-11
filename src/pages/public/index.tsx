@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { uploadMedia } from "@/firebase/uploadMedia";
 import { Camera, Heart, MessageCircle, Share2, Trash2 } from "lucide-react";
@@ -70,10 +70,15 @@ export default function PublicSpacePage() {
   }
 
   // Initial load
-  // NOTE: run once using useEffect to avoid render loops (Next.js build executes renders).
-  useState(() => {
-    return true;
-  });
+  useEffect(() => {
+    // Load both the feed and the per-day posting limit.
+    // fetchLimit depends on userId, but it is safe to call regardless.
+    fetchLimit();
+    fetchFeed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+
 
 
 
