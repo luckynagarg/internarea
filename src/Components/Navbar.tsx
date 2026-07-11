@@ -1,19 +1,19 @@
-import React, { use, useEffect, useRef, useState } from "react";
-import logo from "../Assets/logo.png";
+import React, { useState } from "react";
 import Link from "next/link";
 import { auth, provider } from "../firebase/firebase";
-import { ChevronDown, ChevronUp, Search } from "lucide-react";
+import { Bell, Search } from "lucide-react";
 import { signInWithPopup, signOut } from "firebase/auth";
 import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
 import { selectuser } from "@/Feature/Userslice";
-interface User {
-  name: string;
-  email: string;
-  photo: string;
-}
+import NotificationDropdown from "./NotificationDropdown";
+
 const Navbar = () => {
   const user = useSelector(selectuser);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifItems, setNotifItems] = useState<any[]>([]);
+
+
   const handlelogin = async () => {
     try {
       await signInWithPopup(auth, provider);
@@ -49,8 +49,9 @@ const Navbar = () => {
               </a>
             </div>
             {/* Navigation Links */}
-            <div className="hidden md:flex items-center space-x-8">
+              <div className="hidden md:flex items-center space-x-8">
               <button className="flex items-center space-x-1 text-gray-700 hover:text-blue-600">
+
                 <Link href={"/internship"}>
                   <span>Internships</span>
                 </Link>
@@ -66,43 +67,80 @@ const Navbar = () => {
                 </Link>
               </button>
 
+              <button className="flex items-center space-x-1 text-gray-700 hover:text-blue-600">
+                <Link href={"/friends"}>
+                  <span>Friends</span>
+                </Link>
+              </button>
+
               <div className="flex items-center bg-gray-100 rounded-full px-4 py-2">
+
                 <Search size={16} className="text-gray-400" />
                 <input
                   type="text"
                   placeholder="Search opportunities..."
                   className="ml-2 bg-transparent focus:outline-none text-sm w-48"
+                  onChange={(e) => {
+                    const q = e.target.value;
+                    // optional: connect this to backend search later
+                    // console.log('search', q);
+                  }}
                 />
               </div>
+
             </div>
 
             {/* Auth Buttons */}
             <div className="flex items-center space-x-4">
               {user ? (
-                <div className="relative flex">
-                  <button className="flex items-center space-x-2">
-                    {" "}
-                    <Link href={"/profile"}>
-                      <img
-                        src={user.photo}
-                        alt=""
-                        className="w-8 h-8 rounded-full"
+                <>
+                  {/* Notification bell */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      className="relative p-2 rounded-full hover:bg-gray-100"
+                      onClick={() => setNotifOpen((v) => !v)}
+                      aria-label="Open notifications"
+                    >
+                      <Bell size={18} className="text-gray-700" />
+                      {/* dot */}
+                      <span className="absolute top-1 right-2 block w-2 h-2 rounded-full bg-red-500" />
+                    </button>
+                    {notifOpen ? (
+                      <NotificationDropdown
+                        open={notifOpen}
+                        onClose={() => setNotifOpen(false)}
+                        onMarkRead={(items) => setNotifItems(items)}
                       />
-                    </Link>
-                  </button>
-                  <button
-                    className="flex items-center w-full px-4 py-2  text-gray-700  hover:bg-gray-200 rounded-lg"
-                    onClick={handlelogout}
-                  >
-                    Logout
-                  </button>
-                </div>
+                    ) : null}
+                  </div>
+
+                  <div className="relative flex">
+                    <button className="flex items-center space-x-2">
+                      {" "}
+                      <Link href={"/profile"}>
+                        <img
+                          src={user.photo}
+                          alt=""
+                          className="w-8 h-8 rounded-full"
+                        />
+                      </Link>
+                    </button>
+                    <button
+                      className="flex items-center w-full px-4 py-2  text-gray-700  hover:bg-gray-200 rounded-lg"
+                      onClick={handlelogout}
+                    >
+                      Logout
+                    </button>
+                  </div>
+                </>
               ) : (
                 <>
                   <button
                     onClick={handlelogin}
                     className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 flex items-center justify-center space-x-2 hover:bg-gray-50 "
                   >
+
                     <svg className="w-5 h-5" viewBox="0 0 24 24">
                       <path
                         fill="#4285F4"
