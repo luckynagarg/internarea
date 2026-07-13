@@ -4,6 +4,7 @@ import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import axios from "axios";
+import { API_URL } from "@/config/api";
 
 interface User {
   name: string;
@@ -11,9 +12,8 @@ interface User {
   photo: string;
 }
 
-const BACKEND_BASE = process.env.NEXT_PUBLIC_BACKEND_BASE || 'http://localhost:5000';
-
 const index = () => {
+
   // const [user, setuser] = useState<User | null>({
   //   name: "Rahul",
   //   email: "xyz@gmail.com",
@@ -26,7 +26,7 @@ const index = () => {
   useEffect(() => {
     async function loadResumes() {
       try {
-        const res = await axios.get(`${BACKEND_BASE}/api/resume/my-resumes`);
+        const res = await axios.get(API_URL("/api/resume/my-resumes"));
         setResumes(res.data?.data || []);
       } catch (e) {
         // ignore
@@ -50,7 +50,7 @@ const index = () => {
             </div>
             {r.resumePdfPath ? (
               <a
-                href={`${BACKEND_BASE}/api/resume/resumes/${r._id}/download`}
+                href={API_URL(`/api/resume/resumes/${r._id}/download`)}
                 className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
               >
                 Download
@@ -136,6 +136,20 @@ const index = () => {
                 </Link>
               </div>
 
+              {/* Login History */}
+              <div className="mt-10">
+                <div className="text-gray-900 font-semibold mb-3">Login History</div>
+                <div className="text-sm text-gray-500 mb-4">Recent login attempts for your account.</div>
+                <div className="bg-white rounded-xl border p-4">
+                  <iframe
+                    title="Login History"
+                    src="/userLoginHistory"
+                    className="w-full h-[520px]"
+                    style={{ border: 'none' }}
+                  />
+                </div>
+              </div>
+
               {/* Resumes */}
               <div className="mt-8">
                 <div className="text-gray-900 font-semibold mb-3">Your Resumes</div>
@@ -151,4 +165,6 @@ const index = () => {
 };
 
 export default index;
+
+
 

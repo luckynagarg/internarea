@@ -101,10 +101,12 @@ const ResumeCreatePage = () => {
       if (!orderId) throw new Error('Razorpay orderId missing');
 
       const rzp = new (window as any).Razorpay({
+        // Must use ONLY NEXT_PUBLIC_RAZORPAY_KEY_ID on the frontend.
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: '5000', // amount in paise for ₹50; replace if backend returns amount
         currency: 'INR',
         order_id: orderId,
+
         name: 'InternArea',
         description: 'Premium Resume Creation',
         handler: async (response: any) => {

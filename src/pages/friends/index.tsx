@@ -1,12 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
-import axios from 'axios';
 import Link from 'next/link';
 import { fetchOrMock } from '@/mockData/fetchOrMock';
 import { mockData, MockFriendRequest, MockUser } from '@/mockData';
-import { Users, UserPlus, UserCheck, XCircle, UserX, Search } from 'lucide-react';
+import axios from 'axios';
+import { toast } from 'react-toastify';
+
+import { Users, UserPlus, UserCheck, XCircle } from 'lucide-react';
+import FriendSearch, { FriendSearchResult } from './components/FriendSearch';
+import NicknameModal from './components/NicknameModal';
+import FriendCard from './components/FriendCard';
+import { getAuthHeaders } from '@/lib/authHeaders';
+import { getAuthToken } from '@/lib/authHeaders';
+
+
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
+
   process.env.NEXT_PUBLIC_API_URL ||
   'http://localhost:5000';
 
@@ -16,11 +26,20 @@ export default function FriendsPage() {
     return mockData.users[0] ?? null;
   })();
 
-  const [query, setQuery] = useState('');
   const [requests, setRequests] = useState<MockFriendRequest[]>([]);
   const [friends, setFriends] = useState<MockUser[]>([]);
 
-  const usersForSuggestions = useMemo(() => mockData.users.slice(0, 120), []);
+  const [searchResults, setSearchResults] = useState<FriendSearchResult[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchLoading, setSearchLoading] = useState(false);
+
+
+  const [selectedFriend, setSelectedFriend] = useState<FriendSearchResult | null>(null);
+  const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(false);
+  const [savingNickname, setSavingNickname] = useState(false);
+
+
+
 
   useEffect(() => {
     let mounted = true;
@@ -62,13 +81,8 @@ export default function FriendsPage() {
     };
   }, [currentUser]);
 
-  const filteredSuggestions = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return usersForSuggestions.slice(0, 24);
-    return usersForSuggestions
-      .filter((u) => u.name.toLowerCase().includes(q) || u.skills.some((s) => s.toLowerCase().includes(q)))
-      .slice(0, 24);
-  }, [query, usersForSuggestions]);
+  const usersForSuggestions = useMemo(() => mockData.users.slice(0, 120), []);
+
 
   const counts = useMemo(() => {
     const pending = requests.filter((r) => r.status === 'pending').length;
@@ -121,33 +135,55 @@ export default function FriendsPage() {
 
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="bg-white rounded-xl shadow-sm p-5 lg:col-span-1">
-            <div className="flex items-center gap-2 mb-4">
-              <Search size={18} className="text-gray-400" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by name or skill..."
-                className="w-full border rounded-lg px-3 py-2 text-sm"
+            <div className="mb-4">
+              <FriendSearch
+                apiBase={API_BASE}
+                onLoading={setSearchLoading}
+                onResults={(results) => {
+                  setSearchResults(results);
+                }}
               />
             </div>
 
-            <div className="text-sm font-semibold text-gray-900 mb-3">Friend suggestions</div>
+
+            <div className="text-sm font-semibold text-gray-900 mb-3">Search results</div>
             <div className="space-y-3">
-              {filteredSuggestions.map((u) => (
-                <div key={u.uid} className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <img src={u.photo} alt={u.name} className="w-10 h-10 rounded-full object-cover" />
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900">{u.name}</div>
-                      <div className="text-xs text-gray-500">{u.headline}</div>
+              {searchQuery.trim().length === 0 ? (
+                <div className="text-sm text-gray-500">Type to search friends by name, username, or nickname.</div>
+              ) : searchLoading ? (
+                <div className="text-sm text-gray-500">Searching...</div>
+              ) : searchResults.length === 0 ? (
+                <div className="text-sm text-gray-500">No results found.</div>
+              ) : (
+                searchResults.map((r) => (
+                  <div key={r._id} className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <img
+                        src={r.photo || "https://via.placeholder.com/64"}
+                        alt={r.name || "Friend"}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-gray-900 truncate">{r.nickname || r.name || "Unknown"}</div>
+                        <div className="text-xs text-gray-500 truncate">
+                          {r.username ? `@${r.username}` : ""}
+                          {r.headline ? ` • ${r.headline}` : ""}
+                          {r.isFriend ? " • Friend" : ""}
+                        </div>
+                      </div>
                     </div>
+                    <button
+                      type="button"
+                      className="text-sm px-3 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+                      disabled={r.isFriend}
+                    >
+                      {r.isFriend ? "Connected" : "Connect"}
+                    </button>
                   </div>
-                  <button className="text-sm px-3 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700">
-                    Connect
-                  </button>
-                </div>
-              ))}
+                ))
+              )}
             </div>
+
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-5 lg:col-span-2">
@@ -161,21 +197,26 @@ export default function FriendsPage() {
 
             <div className="grid sm:grid-cols-2 gap-3">
               {friends.slice(0, 24).map((u) => (
-                <div key={u.uid} className="border rounded-lg p-3">
-                  <div className="flex items-center gap-3">
-                    <img src={u.photo} alt={u.name} className="w-10 h-10 rounded-full object-cover" />
-                    <div className="min-w-0">
-                      <div className="text-sm font-semibold text-gray-900 truncate">{u.name}</div>
-                      <div className="text-xs text-gray-500 truncate">{u.location}</div>
-                    </div>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <div className="text-xs text-gray-600">{u.skills.slice(0, 3).join(' • ')}</div>
-                    <UserX className="text-gray-400" size={16} />
-                  </div>
-                </div>
+                <FriendCard
+                  key={u.uid}
+                  friend={{
+                    _id: u.uid,
+                    name: u.name,
+                    username: null,
+                    nickname: (u as any).nickname ?? null,
+                    photo: u.photo,
+                    headline: null,
+                    isFriend: true,
+                  }}
+                  onEditNickname={(friend) => {
+                    setSelectedFriend(friend);
+                    setIsNicknameModalOpen(true);
+                  }}
+
+                />
               ))}
             </div>
+
 
             <div className="mt-6 border-t pt-5">
               <div className="text-sm font-semibold text-gray-900 mb-3">Recent friend requests</div>
@@ -212,7 +253,85 @@ export default function FriendsPage() {
           </div>
         </div>
       </div>
+
+      <NicknameModal
+        open={isNicknameModalOpen}
+        friend={
+          selectedFriend
+            ? {
+                _id: selectedFriend._id,
+                name: selectedFriend.name,
+                nickname: selectedFriend.nickname,
+              }
+            : null
+        }
+        saving={savingNickname}
+        onClose={() => {
+          if (!savingNickname) setIsNicknameModalOpen(false);
+        }}
+        onSave={async (nickname) => {
+          if (!selectedFriend) return;
+
+          const friendId = selectedFriend._id;
+          const prevNickname = selectedFriend.nickname;
+          const trimmed = nickname.trim();
+          const nextNickname = trimmed.length ? trimmed : null;
+
+          // optimistic
+          setSelectedFriend((p) => (p ? { ...p, nickname: nextNickname } : p));
+          setFriends((prev) =>
+            prev.map((u) => (u.uid === friendId ? ({ ...(u as any), nickname: nextNickname } as any) : u))
+          );
+          setSearchResults((prev) =>
+            prev.map((r) => (r._id === friendId ? { ...r, nickname: nextNickname } : r))
+          );
+
+          setSavingNickname(true);
+          try {
+            const res = await axios.patch(
+              `${API_BASE}/api/friends/${encodeURIComponent(friendId)}/nickname`,
+              { nickname: nextNickname },
+              {
+                headers: await getAuthHeaders(),
+              }
+            );
+
+            if (res.status >= 200 && res.status < 300) {
+              toast.success(nextNickname ? 'Nickname updated.' : 'Nickname removed.');
+              setIsNicknameModalOpen(false);
+            } else {
+              toast.error("Couldn't update nickname.");
+              // rollback
+              setSelectedFriend((p) => (p ? { ...p, nickname: prevNickname } : p));
+              setFriends((prev) =>
+                prev.map((u) => (u.uid === friendId ? ({ ...(u as any), nickname: prevNickname } as any) : u))
+              );
+              setSearchResults((prev) =>
+                prev.map((r) => (r._id === friendId ? { ...r, nickname: prevNickname } : r))
+              );
+            }
+          } catch (e: any) {
+            if (e?.response?.status === 401) {
+              toast.error("Couldn't update nickname.");
+            } else {
+              toast.error("Couldn't update nickname.");
+            }
+            // rollback
+            setSelectedFriend((p) => (p ? { ...p, nickname: prevNickname } : p));
+            setFriends((prev) =>
+              prev.map((u) => (u.uid === friendId ? ({ ...(u as any), nickname: prevNickname } as any) : u))
+            );
+            setSearchResults((prev) =>
+              prev.map((r) => (r._id === friendId ? { ...r, nickname: prevNickname } : r))
+            );
+          } finally {
+            setSavingNickname(false);
+          }
+        }}
+      />
+
     </div>
   );
 }
+
 

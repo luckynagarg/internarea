@@ -70,9 +70,9 @@ export default function LoginPage() {
 
 
 
-          {/* Small helper link (doesn't change requirement list; keeps UI consistent). */}
-          <div className="text-center text-xs text-gray-500 pt-2">
-            <Link href="/">Back to home</Link>
+          <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+            <Link href="/" className="hover:text-gray-700">Back to home</Link>
+            <Link href="/forgot-password" className="hover:text-gray-700">Forgot Password?</Link>
           </div>
         </div>
       </div>
