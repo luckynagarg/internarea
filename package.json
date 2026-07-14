@@ -29,6 +29,7 @@
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "tailwind-merge": "^2.5.3"
   }
 }

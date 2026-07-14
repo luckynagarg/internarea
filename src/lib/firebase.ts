@@ -14,26 +14,30 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID as string | undefined,
 };
 
-function assertConfig(config: Record<string, unknown>) {
-  const missing = Object.entries(config)
+function getMissingFirebaseEnvVars(config: Record<string, unknown>) {
+  return Object.entries(config)
     .filter(([, v]) => v === undefined || v === "")
     .map(([k]) => k);
-  if (missing.length) {
-    throw new Error(
-      `Missing Firebase env vars: ${missing.join(", ")}. Please set them in .env.local.`
-    );
-  }
 }
 
-assertConfig(firebaseConfig);
+const missing = getMissingFirebaseEnvVars(firebaseConfig);
+const firebaseEnabled = missing.length === 0;
 
-const app = getApps().length ? getApps()[0]! : initializeApp(firebaseConfig);
+// Avoid crashing during Next.js build/SSG when env vars are not present.
+// Runtime pages/components that actually require Firebase will still fail with a clear error when used.
+const app = firebaseEnabled
+  ? getApps().length
+    ? getApps()[0]!
+    : initializeApp(firebaseConfig)
+  : null;
 
 
 
-export const auth = getAuth(app);
-export const storage = getStorage(app);
+
+export const auth = app ? getAuth(app) : (undefined as any);
+export const storage = app ? getStorage(app) : (undefined as any);
 export const googleProvider = new GoogleAuthProvider();
 
 export default app;
+
 
