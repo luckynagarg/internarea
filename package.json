@@ -21,15 +21,15 @@
     "react-toastify": "^11.0.5",
     "swiper": "^11.2.5"
   },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "9.39.4",
-    "eslint-config-next": "16.2.10",
-    "tailwindcss": "^4",
-    "typescript": "^5",
-    "tailwind-merge": "^2.5.3"
-  }
+    "devDependencies": {
+  "@tailwindcss/postcss": "^4",
+  "@types/node": "^20",
+  "@types/react": "^19",
+  "@types/react-dom": "^19",
+  "eslint": "^8.57.1",
+  "eslint-config-next": "15.2.1",
+  "tailwindcss": "^4",
+  "tailwind-merge": "^2.5.3",
+  "typescript": "^5"
+}
 }
