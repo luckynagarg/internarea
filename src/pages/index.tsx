@@ -357,6 +357,7 @@ href={`/detailjob/${job._id}`}
               </div>
             </div>
           ))}
+          {/*  */}
         </div>
       </div>
       {/* Stat Section  */}
