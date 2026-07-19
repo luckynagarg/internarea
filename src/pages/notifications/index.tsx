@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { mockData, MockNotification, MockUser } from '@/mockData';
 import { fetchOrMock } from '@/mockData/fetchOrMock';
+import axiosClient from '@/lib/apiClient';
+
 import { Bell, CheckCircle2, Heart, MessageSquare, FileText } from 'lucide-react';
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  'http://localhost:5000';
+const API_BASE = '';
+
 
 export default function NotificationsPage() {
   const currentUser: MockUser | null = mockData.users[0] ?? null;
@@ -22,13 +22,14 @@ export default function NotificationsPage() {
       if (!currentUser) return;
 
       const data = await fetchOrMock<MockNotification[]>({
-        url: `${API_BASE}/api/notifications?userId=${encodeURIComponent(currentUser.uid)}`,
+        url: `/api/notifications`,
         mock: () => mockData.notifications,
         transform: (d) => {
           const arr = d?.data?.notifications ?? d?.data ?? d?.notifications ?? d;
           return Array.isArray(arr) ? arr : [];
         },
       });
+
 
       if (!mounted) return;
       setItems(data);

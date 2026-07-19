@@ -3,8 +3,9 @@ import { ExternalLink, Mail, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import axios from "axios";
+import axiosClient from "@/lib/apiClient";
 import { API_URL } from "@/config/api";
+
 
 interface User {
   name: string;
@@ -26,11 +27,12 @@ const index = () => {
   useEffect(() => {
     async function loadResumes() {
       try {
-        const res = await axios.get(API_URL("/api/resume/my-resumes"));
+        const res = await axiosClient.get("/api/resume/my-resumes");
         setResumes(res.data?.data || []);
       } catch (e) {
         // ignore
       }
+
     }
     loadResumes();
   }, []);

@@ -1,140 +1,94 @@
-import axios from "axios";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
 import { ArrowUpRight, MapPin, Calendar, Search as SearchIcon } from "lucide-react";
+import { searchAllEntities, type SearchInternship, type SearchJob } from "@/services/searchService";
 
-type Internship = {
-  _id: string;
-  title: string;
-  company: string;
-  location: string;
-  stipend: string;
-  duration: string;
-  category: string;
+type SearchState = {
+  internships: SearchInternship[];
+  jobs: SearchJob[];
+  companies: string[];
 };
-
-type Job = {
-  _id: string;
-  title: string;
-  company: string;
-  location: string;
-  CTC: string;
-  Experience: string;
-  category: string;
-};
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ||
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  "https://intern-backend-4dlt.onrender.com";
-
-function normalize(s: string) {
-  return s.toLowerCase().trim();
-}
-
-function matchesAnyField({
-  haystack,
-  query,
-}: {
-  haystack: string[];
-  query: string;
-}) {
-  const q = normalize(query);
-  if (!q) return true;
-  return haystack.some((field) => normalize(field).includes(q));
-}
 
 export default function SearchPage() {
   const router = useRouter();
-  const queryFromUrl = typeof router.query.query === "string" ? router.query.query : "";
+  const queryFromUrl =
+    typeof router.query.query === "string" ? router.query.query : "";
 
-  const [internships, setInternships] = useState<Internship[]>([]);
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [loading, setLoading] = useState(true);
   const [q, setQ] = useState(queryFromUrl);
   const [debouncedQuery, setDebouncedQuery] = useState(queryFromUrl);
+
+  const [results, setResults] = useState<SearchState>({
+    internships: [],
+    jobs: [],
+    companies: [],
+  });
 
   useEffect(() => {
     setQ(queryFromUrl);
     setDebouncedQuery(queryFromUrl);
   }, [queryFromUrl]);
 
-  // Debounce typing so we don't recompute too aggressively.
   useEffect(() => {
     const t = window.setTimeout(() => {
       setDebouncedQuery(q);
-    }, 200);
+    }, 250);
     return () => window.clearTimeout(t);
   }, [q]);
 
   useEffect(() => {
     let mounted = true;
-    const fetchData = async () => {
-      try {
-        const [internshipRes, jobRes] = await Promise.all([
-          axios.get(`${API_BASE}/api/internship`),
-          axios.get(`${API_BASE}/api/job`),
-        ]);
 
+    async function run() {
+      const query = String(debouncedQuery || "").trim();
+      if (!query) {
         if (!mounted) return;
-        setInternships(internshipRes.data?.data || internshipRes.data || []);
-        setJobs(jobRes.data?.data || jobRes.data || []);
+        setResults({ internships: [], jobs: [], companies: [] });
+        setLoading(false);
+        setError(null);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const data = await searchAllEntities(query);
+        if (!mounted) return;
+        setResults(data);
       } catch (e) {
-        // Keep UI stable even if backend is unavailable
-        console.error("Search fetch error:", e);
+        if (!mounted) return;
+        setError(e instanceof Error ? e.message : "Search failed");
+        setResults({ internships: [], jobs: [], companies: [] });
       } finally {
         if (mounted) setLoading(false);
       }
-    };
+    }
 
-    fetchData();
+    run();
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [debouncedQuery]);
 
-  // Live results (while typing)
-  const filteredInternships = useMemo(() => {
-    if (loading) return [];
-    return internships.filter((item) =>
-      matchesAnyField({
-        query: debouncedQuery,
-        haystack: [
-          item.title,
-          item.company,
-          item.location,
-          item.category,
-        ],
-      })
-    );
-  }, [debouncedQuery, internships, loading]);
+  const totalCount = results.internships.length + results.jobs.length;
 
-  const filteredJobs = useMemo(() => {
-    if (loading) return [];
-    return jobs.filter((job) =>
-      matchesAnyField({
-        query: debouncedQuery,
-        haystack: [job.title, job.company, job.location, job.category],
-      })
-    );
-  }, [debouncedQuery, jobs, loading]);
-
-  const totalCount = filteredInternships.length + filteredJobs.length;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-6">
           <div className="flex items-center gap-3">
-            <div className="bg-gray-100 rounded-full px-4 py-2 flex items-center w-full max-w-2xl">
-              <SearchIcon size={16} className="text-gray-400" />
+            <div className="bg-background rounded-full px-4 py-2 flex items-center w-full max-w-2xl border border-border">
+              <SearchIcon size={16} className="text-foreground" />
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 type="text"
-                className="ml-3 bg-transparent w-full focus:outline-none text-sm"
+                className="ml-3 bg-transparent w-full focus:outline-none text-sm text-foreground placeholder:text-muted-foreground"
                 placeholder="Search opportunities... (title, company, location, category)"
               />
             </div>
@@ -147,38 +101,48 @@ export default function SearchPage() {
             </button>
           </div>
 
-          <div className="mt-3 text-sm text-gray-600">
-            {loading ? "Loading results…" : `${totalCount} results found`}
+          <div className="mt-3 text-sm text-gray-800">
+            {loading ? (
+              "Loading results…"
+            ) : error ? (
+              <span className="text-red-600">{error}</span>
+            ) : (
+              `${totalCount} results found`
+            )}
           </div>
         </div>
 
         <div className="space-y-8">
           <section>
             <h2 className="text-xl font-bold mb-4">Internships</h2>
-            {filteredInternships.length === 0 ? (
+            {results.internships.length === 0 ? (
               <div className="bg-white rounded-lg shadow-sm p-6 text-gray-600">
-                No matching internships.
+                {loading ? "" : "No matching internships."}
               </div>
             ) : (
               <div className="grid md:grid-cols-3 gap-6">
-                {filteredInternships.map((item) => (
+                {results.internships.map((item) => (
                   <div
                     key={item._id}
                     className="bg-white p-5 rounded shadow hover:scale-105 transition"
                   >
                     <h3 className="font-bold mt-2">{item.title}</h3>
-                    <p className="text-gray-500">{item.company}</p>
+                    <p className="text-gray-800">{item.company}</p>
 
                     <div className="mt-3 text-sm space-y-2">
                       <p className="flex items-center gap-2">
                         <MapPin size={14} /> {item.location}
                       </p>
-                      <p className="flex items-center gap-2">
-                        <span className="font-medium">Stipend:</span> {item.stipend}
-                      </p>
-                      <p className="flex items-center gap-2">
-                        <Calendar size={14} /> {item.duration}
-                      </p>
+                      {item.stipend ? (
+                        <p className="flex items-center gap-2">
+                          <span className="font-medium">Stipend:</span> {item.stipend}
+                        </p>
+                      ) : null}
+                      {item.duration ? (
+                        <p className="flex items-center gap-2">
+                          <Calendar size={14} /> {item.duration}
+                        </p>
+                      ) : null}
                     </div>
 
                     <Link
@@ -195,13 +159,13 @@ export default function SearchPage() {
 
           <section>
             <h2 className="text-xl font-bold mb-4">Jobs</h2>
-            {filteredJobs.length === 0 ? (
-              <div className="bg-white rounded-lg shadow-sm p-6 text-gray-600">
-                No matching jobs.
+            {results.jobs.length === 0 ? (
+              <div className="bg-white rounded-lg shadow-sm p-6 text-gray-800">
+                {loading ? "" : "No matching jobs."}
               </div>
             ) : (
               <div className="grid md:grid-cols-3 gap-6">
-                {filteredJobs.map((job) => (
+                {results.jobs.map((job) => (
                   <div
                     key={job._id}
                     className="bg-white p-5 rounded shadow hover:scale-105 transition"
@@ -213,12 +177,16 @@ export default function SearchPage() {
                       <p className="flex items-center gap-2">
                         <MapPin size={14} /> {job.location}
                       </p>
-                      <p className="flex items-center gap-2">
-                        <span className="font-medium">CTC:</span> {job.CTC}
-                      </p>
-                      <p className="flex items-center gap-2">
-                        <Calendar size={14} /> {job.Experience}
-                      </p>
+                      {job.CTC ? (
+                        <p className="flex items-center gap-2">
+                          <span className="font-medium">CTC:</span> {job.CTC}
+                        </p>
+                      ) : null}
+                      {job.Experience ? (
+                        <p className="flex items-center gap-2">
+                          <Calendar size={14} /> {job.Experience}
+                        </p>
+                      ) : null}
                     </div>
 
                     <Link
@@ -233,6 +201,7 @@ export default function SearchPage() {
             )}
           </section>
         </div>
+
       </div>
     </div>
   );

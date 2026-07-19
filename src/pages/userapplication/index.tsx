@@ -2,18 +2,18 @@ import React, { useEffect, useState } from "react";
 import {
   Building2,
   Calendar,
-  CheckCircle2,
   Mail,
   Tag,
   User,
-  XCircle,
 } from "lucide-react";
-import Link from "next/link";
+
 import axios from "axios";
 import { selectuser } from "@/Feature/Userslice";
 import { useSelector } from "react-redux";
 const Applications = [
   {
+
+
     _id: "1",
     company: "Tech Corp",
     category: "Software",
@@ -38,8 +38,22 @@ const Applications = [
     status: "rejected",
   },
 ];
-const getStatusColor = (status: any) => {
+type ApplicationStatus = "pending" | "approved" | "rejected";
+
+type FilterStatus = "all" | ApplicationStatus;
+
+type Application = {
+  _id: string;
+  company: string;
+  category: string;
+  user: { name: string; email: string };
+  createdAt: string;
+  status: ApplicationStatus | string;
+};
+
+const getStatusColor = (status: string) => {
   switch (status.toLowerCase()) {
+
     case "approved":
       return "bg-green-100 text-green-800";
     case "rejected":
@@ -48,7 +62,8 @@ const getStatusColor = (status: any) => {
       return "bg-yellow-100 text-yellow-800";
   }
 };
-const index = () => {
+const UserApplicationsPage = () => {
+
   const [searchTerm, setsearchTerm] = useState("");
   const [filter, setFilter] = useState("all");
   const user=useSelector(selectuser)
@@ -249,4 +264,5 @@ const index = () => {
   );
 };
 
-export default index;
+export default UserApplicationsPage;
+

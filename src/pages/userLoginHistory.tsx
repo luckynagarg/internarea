@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { getAuthHeaders } from '@/lib/authHeaders';
-import axios from 'axios';
+import axiosClient from '@/lib/apiClient';
 import { API_URL } from '@/config/api';
+
 
 type LoginStatus = string;
 
@@ -43,15 +43,10 @@ export default function UserLoginHistoryPage() {
       setLoading(true);
       setError('');
       try {
-        const headers = await getAuthHeaders();
-        if (!headers.Authorization) {
-          throw new Error('Not authenticated');
-        }
-
-        const res = await axios.get(API_URL('/api/login/history'), {
-          headers,
+        const res = await axiosClient.get('/api/login/history', {
           params: queryParams,
         });
+
 
         if (!mounted) return;
         const data = res?.data?.data || [];

@@ -37,7 +37,23 @@ import { toast } from "react-toastify";
 //     status: "rejected",
 //   },
 // ];
-const getStatusColor = (status: any) => {
+type ApplicationStatus = "pending" | "approved" | "rejected";
+
+type FilterStatus = "all" | ApplicationStatus;
+
+type Application = {
+  _id: string;
+  company: string;
+  category: string;
+  user: {
+    name: string;
+    email: string;
+  };
+  createdAt: string;
+  status: ApplicationStatus | string;
+};
+
+const getStatusColor = (status: string) => {
   switch (status.toLowerCase()) {
     case "approved":
       return "bg-green-100 text-green-800";
@@ -47,10 +63,12 @@ const getStatusColor = (status: any) => {
       return "bg-yellow-100 text-yellow-800";
   }
 };
-const index = () => {
-  const [searchTerm, setsearchTerm] = useState("");
-  const [filter, setFilter] = useState("all");
-  const [data, setdata] = useState<any>([]);
+
+const ApplicationsPage = () => {
+  const [searchTerm, setsearchTerm] = useState<string>("");
+  const [filter, setFilter] = useState<FilterStatus>("all");
+  const [data, setdata] = useState<Application[]>([]);
+
   useEffect(() => {
     const fetchdata = async () => {
       try {
@@ -63,7 +81,8 @@ const index = () => {
     fetchdata();
   }, []);
   // console.log(data);
-  const filteredapplications = data.filter((application: any) => {
+  const filteredapplications = data.filter((application) => {
+
     const searchmatch =
       application.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
       application.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -287,4 +306,5 @@ const index = () => {
   );
 };
 
-export default index;
+export default ApplicationsPage;
+

@@ -100,11 +100,12 @@ export default function SubscriptionPage() {
   // For now, we attempt calls without token only if the backend is relaxed.
 
   const headers = useMemo(() => {
-    // Placeholder: axios will be called with no Authorization unless you add it.
     return {
       "Content-Type": "application/json",
     };
   }, []);
+
+
 
   async function refreshAll() {
     setLoading(true);

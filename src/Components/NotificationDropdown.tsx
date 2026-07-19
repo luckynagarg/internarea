@@ -151,13 +151,13 @@ export default function NotificationDropdown({
   if (!open) return null;
 
   return (
-    <div className="absolute right-0 mt-2 w-[420px] max-w-[92vw] rounded-xl bg-white shadow-lg border overflow-hidden z-50">
-      <div className="px-4 py-3 flex items-center justify-between border-b">
+    <div className="absolute right-0 mt-2 w-[420px] max-w-[92vw] rounded-xl bg-popover text-popover-foreground shadow-lg border border-border overflow-hidden z-50">
+      <div className="px-4 py-3 flex items-center justify-between border-b border-border">
         <div className="flex items-center gap-2">
-          <Bell size={18} className="text-gray-800" />
+          <Bell size={18} className="text-foreground" />
           <div>
-            <div className="font-semibold text-gray-900">Notifications</div>
-            <div className="text-xs text-gray-500">{unreadCount} unread</div>
+            <div className="font-semibold text-foreground">Notifications</div>
+            <div className="text-xs text-muted-foreground">{unreadCount} unread</div>
           </div>
         </div>
         <button
@@ -184,13 +184,13 @@ export default function NotificationDropdown({
         )}
 
         {!loading && errorState && (
-          <div className="p-4 text-sm text-red-600">{errorState}</div>
+          <div className="p-4 text-sm text-destructive">{errorState}</div>
         )}
 
         {!loading && !errorState && items.length === 0 && (
           <div className="p-6 text-center">
-            <div className="text-gray-800 font-semibold">No notifications yet.</div>
-            <div className="text-sm text-gray-500 mt-1">You’ll see updates here.</div>
+            <div className="font-semibold">No notifications yet.</div>
+            <div className="text-sm text-muted-foreground mt-1">You’ll see updates here.</div>
           </div>
         )}
 
@@ -200,9 +200,10 @@ export default function NotificationDropdown({
               <button
                 key={n._id}
                 type="button"
-                className={`w-full text-left px-3 py-3 rounded-lg hover:bg-gray-50 ${
-                  n.read ? "bg-white" : "bg-amber-50"
+                className={`w-full text-left px-3 py-3 rounded-lg hover:bg-accent ${
+                  n.read ? "bg-transparent" : "bg-accent/50"
                 }`}
+
                 onClick={() => {
                   // Visual optimistic update. API wiring handled elsewhere.
                   onMarkRead(
@@ -212,14 +213,14 @@ export default function NotificationDropdown({
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="font-semibold text-gray-900">
+                    <div className="font-semibold text-foreground">
                       {formatTitle(n)}
                     </div>
                     {typeof n.body === "string" && n.body ? (
-                      <div className="text-sm text-gray-700 mt-1">{n.body}</div>
+                      <div className="text-sm text-foreground/90 mt-1">{n.body}</div>
                     ) : null}
                   </div>
-                  <div className="text-[11px] text-gray-500 whitespace-nowrap">
+                  <div className="text-[11px] text-muted-foreground whitespace-nowrap">
                     {n.createdAt ? new Date(n.createdAt).toLocaleString() : ""}
                   </div>
                 </div>
@@ -229,7 +230,7 @@ export default function NotificationDropdown({
         )}
       </div>
 
-      <div className="px-4 py-3 border-t text-xs text-gray-500">
+      <div className="px-4 py-3 border-t border-border text-xs text-muted-foreground">
         <div>{"To enable real-time notifications, connect this UI to the backend API."}</div>
       </div>
     </div>

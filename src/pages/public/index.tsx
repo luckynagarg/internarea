@@ -212,7 +212,7 @@ export default function PublicSpacePage() {
         />
 
         <div className="flex items-center gap-3 mt-3">
-          <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 rounded-lg border hover:bg-gray-50 text-sm">
+          <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 rounded-lg border hover:bg-gray-500 text-black text-sm">
             <Camera size={16} />
             <span>{file ? file.name : "Upload image/video"}</span>
             <input
@@ -309,8 +309,9 @@ export default function PublicSpacePage() {
                       const url = window.location.href;
                       try {
                         if (navigator.share) {
-                          // @ts-ignore
+
                           await navigator.share({ title: "Post", url });
+
                         } else {
                           await navigator.clipboard.writeText(url);
                           toast.success("Link copied");

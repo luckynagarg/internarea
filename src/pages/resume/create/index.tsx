@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
-import axios from 'axios';
 import { selectuser } from '@/Feature/Userslice';
 import { useRouter } from 'next/router';
+import axiosClient from '@/lib/apiClient';
 
-const BACKEND_BASE = process.env.NEXT_PUBLIC_BACKEND_BASE || 'http://localhost:5000';
+
 
 const ResumeCreatePage = () => {
   const router = useRouter();
@@ -42,8 +42,9 @@ const ResumeCreatePage = () => {
     try {
       // TODO: Integrate with auth token if your frontend uses Firebase ID token.
       // Existing pages likely already attach Authorization header from Userslice middleware.
-      const res = await axios.post(
-        `${BACKEND_BASE}/api/resume/purchase/start`,
+      const res = await axiosClient.post(
+        `/api/resume/purchase/start`,
+
         {
           resumeData: {
             fullName: form.fullName,
@@ -71,7 +72,8 @@ const ResumeCreatePage = () => {
     setError(null);
     setLoading(true);
     try {
-      await axios.post(`${BACKEND_BASE}/api/resume/purchase/otp/verify`, {
+      await axiosClient.post(`/api/resume/purchase/otp/verify`, {
+
         resumeId,
         otp,
       });
@@ -91,7 +93,8 @@ const ResumeCreatePage = () => {
     setError(null);
     setLoading(true);
     try {
-      const res = await axios.post(`${BACKEND_BASE}/api/resume/purchase/razorpay/create-order`, {
+      const res = await axiosClient.post(`/api/resume/purchase/razorpay/create-order`, {
+
         resumeId,
       });
 
@@ -111,7 +114,8 @@ const ResumeCreatePage = () => {
         description: 'Premium Resume Creation',
         handler: async (response: any) => {
           try {
-            const verifyRes = await axios.post(`${BACKEND_BASE}/api/resume/purchase/razorpay/verify`, {
+            const verifyRes = await axiosClient.post(`/api/resume/purchase/razorpay/verify`, {
+
               resumeId,
               razorpayOrderId: response.razorpay_order_id,
               razorpayPaymentId: response.razorpay_payment_id,

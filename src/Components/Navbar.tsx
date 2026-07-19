@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { auth, provider } from "../firebase/firebase";
 import { Bell, Search } from "lucide-react";
@@ -7,8 +7,92 @@ import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
 import { selectuser } from "@/Feature/Userslice";
 import NotificationDropdown from "./NotificationDropdown";
+import { useRouter } from "next/router";
+import { useGlobalSearchSuggestions } from "@/hooks/useGlobalSearchSuggestions";
+
+
+function GlobalSearchBox() {
+  const router = useRouter();
+  const [term, setTerm] = React.useState("");
+  const { loading, error, suggestions } = useGlobalSearchSuggestions(term);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [open, setOpen] = React.useState(false);
+
+  const showDropdown = useMemo(() => {
+    const q = term.trim();
+    return open && !!q && (loading || suggestions.length > 0 || !!error);
+  }, [error, loading, open, suggestions.length, term]);
+
+  function submit(q: string) {
+    const query = q.trim();
+    if (!query) return;
+    setOpen(false);
+    // Use replace to prevent keeping broken history entries
+    router.replace(`/search?query=${encodeURIComponent(query)}`);
+  }
+
+
+  return (
+    <div className="relative">
+      <input
+        ref={inputRef}
+        type="text"
+        value={term}
+        placeholder="Search opportunities..."
+        className="ml-2 bg-transparent focus:outline-none text-sm w-56 text-foreground placeholder:text-muted-foreground"
+        onChange={(e) => {
+          setTerm(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => {
+          // allow click on suggestions
+          window.setTimeout(() => setOpen(false), 150);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") submit(term);
+          if (e.key === "Escape") setOpen(false);
+        }}
+      />
+
+      {showDropdown ? (
+        <div className="absolute left-0 top-10 z-50 w-72 bg-popover text-popover-foreground border border-border rounded-lg shadow-lg overflow-hidden">
+          <div className="px-3 py-2 text-xs text-muted-foreground">
+            {loading ? "Searching…" : "Suggestions"}
+          </div>
+
+
+          {suggestions.length === 0 && !loading ? (
+            <div className="px-3 py-3 text-sm text-muted-foreground">No results</div>
+          ) : null}
+
+          <ul>
+            {suggestions.map((s) => (
+              <li key={`${s.type}-${s.id}`}>
+                  <button
+                  type="button"
+                  className="w-full text-left px-3 py-2 hover:bg-accent flex flex-col"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => submit(term)}
+                >
+                  <span className="text-sm font-medium text-foreground">
+                    {s.title}
+                  </span>
+                    {s.subtitle ? (
+                    <span className="text-xs text-muted-foreground">{s.subtitle}</span>
+                  ) : null}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 const Navbar = () => {
+
   const user = useSelector(selectuser);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifItems, setNotifItems] = useState<any[]>([]);
@@ -76,16 +160,8 @@ const Navbar = () => {
               <div className="flex items-center bg-gray-100 rounded-full px-4 py-2">
 
                 <Search size={16} className="text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search opportunities..."
-                  className="ml-2 bg-transparent focus:outline-none text-sm w-48"
-                  onChange={(e) => {
-                    const q = e.target.value;
-                    // optional: connect this to backend search later
-                    // console.log('search', q);
-                  }}
-                />
+                <GlobalSearchBox />
+
               </div>
 
             </div>
