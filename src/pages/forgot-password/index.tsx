@@ -5,8 +5,6 @@ import { useRouter } from "next/router";
 import axios from "axios";
 import { toast } from "react-toastify";
 
-type IdentifierMethod = "email" | "phone";
-
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
@@ -25,14 +23,10 @@ export default function ForgotPasswordPage() {
   const [identifier, setIdentifier] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const [step, setStep] = useState<"request" | "verify" | "reset">("request");
-  const [otp, setOtp] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-
-  const [successMessage, setSuccessMessage] = useState<string>("");
+  const [message, setMessage] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
 
-  const detectedMethod: IdentifierMethod | null = useMemo(() => {
+  const detectedMethod: "email" | "phone" | null = useMemo(() => {
     const v = identifier.trim();
     if (!v) return null;
     if (isValidEmail(v)) return "email";
@@ -43,108 +37,41 @@ export default function ForgotPasswordPage() {
 
   const apiBase = process.env.NEXT_PUBLIC_BACKEND_URL || "";
 
-  const requestOtp = async () => {
+  const requestReset = async () => {
     setLoading(true);
-    setSuccessMessage("");
+    setMessage("");
     setErrorMessage("");
 
     try {
-      const method = detectedMethod;
-      if (!method) {
+      if (!detectedMethod) {
         throw new Error("Please enter a valid email address or phone number.");
       }
 
-      await axios.post(
-        `${apiBase}/api/password-recovery/request`,
+      const res = await axios.post(
+        `${apiBase}/api/auth/forgot-password`,
         {
-          method,
           identifier: identifier.trim(),
         },
         { headers: { "Content-Type": "application/json" } }
       );
 
-      setSuccessMessage(
-        "If an account exists, we will send an OTP to help you reset your password."
-      );
-      toast.success("OTP requested.");
-      setStep("verify");
+      const msg =
+        res?.data?.message ||
+        "If an account exists, we will send a new password to your registered email.";
+
+      // If the user has already reset today, surface the once-per-day message.
+      if (res?.data?.success === false) {
+        setErrorMessage(msg);
+        toast.error(msg);
+      } else {
+        setMessage(msg);
+        toast.success("Password reset requested.");
+      }
     } catch (e: any) {
-      const status = e?.response?.status;
       const msg =
         e?.response?.data?.message ||
-        (status === 429
-          ? "You can use this option only once per day."
-          : "Request failed");
-
-      setErrorMessage(msg);
-      toast.error(msg);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const verifyOtp = async () => {
-    setLoading(true);
-    setSuccessMessage("");
-    setErrorMessage("");
-
-    try {
-      const method = detectedMethod;
-      if (!method) throw new Error("Invalid identifier method.");
-      if (!otp.trim()) throw new Error("OTP is required.");
-
-      await axios.post(
-        `${apiBase}/api/password-recovery/verify-otp`,
-        {
-          method,
-          identifier: identifier.trim(),
-          otp: otp.trim(),
-        },
-        { headers: { "Content-Type": "application/json" } }
-      );
-
-      setSuccessMessage("OTP verified.");
-      toast.success("OTP verified.");
-      setStep("reset");
-    } catch (e: any) {
-      const msg =
-        e?.response?.data?.message || e?.message || "OTP verification failed.";
-
-      setErrorMessage(msg);
-      toast.error(msg);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const resetPassword = async () => {
-    setLoading(true);
-    setSuccessMessage("");
-    setErrorMessage("");
-
-    try {
-      const method = detectedMethod;
-      if (!method) throw new Error("Invalid identifier method.");
-      if (!newPassword.trim()) throw new Error("New password is required.");
-
-      await axios.post(
-        `${apiBase}/api/password-recovery/reset-password`,
-        {
-          method,
-          identifier: identifier.trim(),
-          otp: otp.trim(),
-          newPassword: newPassword,
-        },
-        { headers: { "Content-Type": "application/json" } }
-      );
-
-      setSuccessMessage("Password updated successfully.");
-      toast.success("Password updated successfully.");
-      router.push("/login");
-    } catch (e: any) {
-      const msg =
-        e?.response?.data?.message || e?.message || "Password reset failed.";
-
+        e?.response?.data?.error?.message ||
+        "Request failed";
       setErrorMessage(msg);
       toast.error(msg);
     } finally {
@@ -153,20 +80,7 @@ export default function ForgotPasswordPage() {
   };
 
   const canRequest =
-    identifier.trim().length > 0 &&
-    !!detectedMethod &&
-    !loading &&
-    step === "request";
-  const canVerify =
-    otp.trim().length > 0 &&
-    !!detectedMethod &&
-    !loading &&
-    step === "verify";
-  const canReset =
-    newPassword.trim().length > 0 &&
-    !!detectedMethod &&
-    !loading &&
-    step === "reset";
+    identifier.trim().length > 0 && !!detectedMethod && !loading;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-10">
@@ -177,8 +91,9 @@ export default function ForgotPasswordPage() {
           </h1>
 
           <p className="text-gray-600 dark:text-gray-300 mt-2">
-            Enter your registered email address or phone number to receive an OTP
-            and reset your password.
+            Enter your registered email address or phone number. We will send a
+            new temporary password to your registered email. This option can be
+            used only once per day.
           </p>
 
           <div className="mt-6">
@@ -197,11 +112,14 @@ export default function ForgotPasswordPage() {
               autoComplete="email"
               className="mt-2 w-full border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:text-gray-100"
               value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
+              onChange={(e) => {
+                setIdentifier(e.target.value);
+                setMessage("");
+                setErrorMessage("");
+              }}
               placeholder="you@example.com or +91 98765 43210"
               aria-invalid={!!identifier.trim() && !detectedMethod}
               aria-describedby="identifier-help"
-              disabled={step !== "request"}
             />
 
             <div
@@ -222,61 +140,13 @@ export default function ForgotPasswordPage() {
             </div>
           </div>
 
-          {step !== "request" ? (
-            <div className="mt-6">
-              {step === "verify" ? (
-                <>
-                  <label
-                    htmlFor="otp"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-200"
-                  >
-                    Enter OTP
-                  </label>
-                  <input
-                    id="otp"
-                    type="text"
-                    inputMode="numeric"
-                    className="mt-2 w-full border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:text-gray-100"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                    placeholder="6-digit OTP"
-                    aria-invalid={!!otp.trim() && otp.trim().length !== 6}
-                  />
-                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    Check your email/phone for the OTP.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <label
-                    htmlFor="newPassword"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-200"
-                  >
-                    New Password
-                  </label>
-                  <input
-                    id="newPassword"
-                    type="password"
-                    className="mt-2 w-full border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:text-gray-100"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new password"
-                  />
-                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    Use a strong password. Password must be at least 6 characters.
-                  </p>
-                </>
-              )}
-            </div>
-          ) : null}
-
-          {successMessage ? (
+          {message ? (
             <div
               className="mt-5 rounded-xl border border-green-200 dark:border-green-900 bg-green-50 dark:bg-green-950 px-4 py-3 whitespace-pre-line"
               role="status"
               aria-live="polite"
             >
-              {successMessage}
+              {message}
             </div>
           ) : null}
 
@@ -290,55 +160,21 @@ export default function ForgotPasswordPage() {
             </div>
           ) : null}
 
-          {step === "request" ? (
-            <button
-              type="button"
-              disabled={!canRequest}
-              onClick={requestOtp}
-              className="mt-6 w-full bg-blue-600 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 disabled:opacity-60 flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <span className="inline-block h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                  Sending OTP...
-                </>
-              ) : (
-                "Send OTP"
-              )}
-            </button>
-          ) : step === "verify" ? (
-            <button
-              type="button"
-              disabled={!canVerify}
-              onClick={verifyOtp}
-              className="mt-6 w-full bg-blue-600 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 disabled:opacity-60 flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <span className="inline-block h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                  Verifying...
-                </>
-              ) : (
-                "Verify OTP"
-              )}
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled={!canReset}
-              onClick={resetPassword}
-              className="mt-6 w-full bg-blue-600 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 disabled:opacity-60 flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <span className="inline-block h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                "Update Password"
-              )}
-            </button>
-          )}
+          <button
+            type="button"
+            disabled={!canRequest}
+            onClick={requestReset}
+            className="mt-6 w-full bg-blue-600 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 disabled:opacity-60 flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <span className="inline-block h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                Sending...
+              </>
+            ) : (
+              "Send New Password"
+            )}
+          </button>
 
           <div className="mt-4 text-center text-xs text-gray-500 dark:text-gray-400">
             <button
@@ -354,4 +190,3 @@ export default function ForgotPasswordPage() {
     </div>
   );
 }
-

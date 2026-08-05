@@ -6,9 +6,11 @@ import { signOut } from "firebase/auth";
 import { useSelector } from "react-redux";
 import { selectuser } from "@/Feature/Userslice";
 import NotificationDropdown from "./NotificationDropdown";
+import FrenchOtpModal from "./FrenchOtpModal";
 import { useRouter } from "next/router";
 import { useGlobalSearchSuggestions } from "@/hooks/useGlobalSearchSuggestions";
 import { useT, LANG_LABELS, type SupportedLang } from "@/i18n/runtime";
+import { toast } from "react-toastify";
 
 function GlobalSearchBox() {
   const router = useRouter();
@@ -82,11 +84,27 @@ function GlobalSearchBox() {
 }
 
 const Navbar = () => {
-  const user = useSelector(selectuser);
+const user = useSelector(selectuser);
   const [notifOpen, setNotifOpen] = useState(false);
   const { t, lang, setLang } = useT();
   const [langOpen, setLangOpen] = useState(false);
+  const [frenchOtpOpen, setFrenchOtpOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
+
+// Intercept language selection. French requires OTP verification first.
+  const handleSelectLang = (l: SupportedLang) => {
+    if (l === "fr") {
+      setLangOpen(false);
+      if (!user) {
+        toast.error("Please login to switch to French.");
+        return;
+      }
+      setFrenchOtpOpen(true);
+      return;
+    }
+    setLang(l);
+    setLangOpen(false);
+  };
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -151,8 +169,8 @@ const Navbar = () => {
                         <button
                           key={l}
                           type="button"
-                          className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center justify-between ${lang === l ? 'text-blue-600 font-medium' : 'text-gray-700'}`}
-                          onClick={() => { setLang(l); setLangOpen(false); }}
+className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center justify-between ${lang === l ? 'text-blue-600 font-medium' : 'text-gray-700'}`}
+                          onClick={() => handleSelectLang(l)}
                         >
                           <span>{LANG_LABELS[l]}</span>
                           {lang === l && (
@@ -209,9 +227,17 @@ const Navbar = () => {
                 )}
               </div>
             </div>
-          </div>
+</div>
         </div>
       </nav>
+      <FrenchOtpModal
+        isOpen={frenchOtpOpen}
+        onClose={() => setFrenchOtpOpen(false)}
+        onVerified={() => {
+          setLang("fr");
+          setFrenchOtpOpen(false);
+        }}
+      />
     </div>
   );
 };

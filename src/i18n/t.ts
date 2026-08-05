@@ -6,6 +6,7 @@ import hi from './dictionaries/hi';
 import pt from './dictionaries/pt';
 import zh from './dictionaries/zh';
 import fr from './dictionaries/fr';
+import de from './dictionaries/de';
 
 const dictionaries = {
   en,
@@ -14,6 +15,7 @@ const dictionaries = {
   pt,
   zh,
   fr,
+  de,
 } as const;
 
 type Dict = (typeof dictionaries)[keyof typeof dictionaries];

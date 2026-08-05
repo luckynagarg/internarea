@@ -1,10 +1,10 @@
-import axios from "axios";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { uploadMedia } from "@/firebase/uploadMedia";
 import { Camera, Heart, MessageCircle, Share2, Trash2 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { selectuser } from "@/Feature/Userslice";
+import axiosClient from "@/lib/axiosClient";
 
 
 type FriendLimit = {
@@ -48,19 +48,20 @@ export default function PublicSpacePage() {
       setLimit({ friendsCount: 0, allowedPerDay: 0 });
       return;
     }
-    const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://internshala-clone-y2p2.onrender.com";
-    const res = await axios.get(
-      `${API_BASE}/api/public/friends/count?userId=` + encodeURIComponent(userId)
-    );
-    setLimit(res.data);
+    try {
+      // Backend derives userId from the Firebase token; no query param needed.
+      const res = await axiosClient.get(`/api/public/friends/count`);
+      setLimit(res.data);
+    } catch {
+      // If auth is unavailable, fall back to a zero limit.
+      setLimit({ friendsCount: 0, allowedPerDay: 0 });
+    }
   }
 
   async function fetchFeed() {
     setLoadingFeed(true);
     try {
-      const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://internshala-clone-y2p2.onrender.com";
-      const res = await axios.get(`${API_BASE}/api/public/posts?limit=20` + (userId ? "&userId=" + encodeURIComponent(userId) : ""));
-
+      const res = await axiosClient.get(`/api/public/posts?limit=20`);
       setPosts(res.data.posts || []);
     } catch (e: any) {
       toast.error(e?.response?.data?.error || e.message || "Failed to load feed");
@@ -72,7 +73,6 @@ export default function PublicSpacePage() {
   // Initial load
   useEffect(() => {
     // Load both the feed and the per-day posting limit.
-    // fetchLimit depends on userId, but it is safe to call regardless.
     fetchLimit();
     fetchFeed();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -102,9 +102,8 @@ export default function PublicSpacePage() {
       setCreating(true);
       const { mediaType, mediaUrl } = await uploadMedia(file);
 
-      const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://internshala-clone-y2p2.onrender.com";
-      const res = await axios.post(`${API_BASE}/api/public/posts`, {
-        userId,
+      // userId is derived server-side from the Firebase token.
+      const res = await axiosClient.post(`/api/public/posts`, {
         name: currentUser?.displayName || currentUser?.name || "",
         photo: currentUser?.photo || "",
         caption,
@@ -127,9 +126,8 @@ export default function PublicSpacePage() {
 
   async function fetchComments(postId: string) {
     try {
-      const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://internshala-clone-y2p2.onrender.com";
-      const res = await axios.get(
-        `${API_BASE}/api/public/posts/${postId}/comments`
+      const res = await axiosClient.get(
+        `/api/public/posts/${postId}/comments`
       );
       setCommentsByPostId((prev) => ({
         ...prev,
@@ -148,10 +146,7 @@ export default function PublicSpacePage() {
       return;
     }
     try {
-      const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://internshala-clone-y2p2.onrender.com";
-      await axios.post(`${API_BASE}/api/public/posts/` + post._id + `/like`, {
-        userId,
-      });
+      await axiosClient.post(`/api/public/posts/${post._id}/like`);
       await fetchFeed();
     } catch (e: any) {
       toast.error(e?.response?.data?.error || e.message || "Failed");
@@ -167,17 +162,13 @@ export default function PublicSpacePage() {
     if (!text) return;
 
     try {
-      const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://internshala-clone-y2p2.onrender.com";
-      await axios.post(`${API_BASE}/api/public/posts/${postId}/comments`, {
-        postId,
-        userId,
+      await axiosClient.post(`/api/public/posts/${postId}/comments`, {
         name: currentUser?.displayName || currentUser?.name || "",
         photo: currentUser?.photo || "",
         text,
       });
       toast.success("Comment added");
       setCommentTextByPostId((prev) => ({ ...prev, [postId]: "" }));
-      // No GET comments endpoint exists yet; for now reload feed only.
       await fetchFeed();
     } catch (e: any) {
       toast.error(e?.response?.data?.error || e.message || "Failed");
@@ -306,14 +297,13 @@ export default function PublicSpacePage() {
 
                   <button
                     onClick={async () => {
-                      const url = window.location.href;
+                      // Share the post-specific URL on the public space page.
+                      const postUrl = `${window.location.origin}/public#post-${post._id}`;
                       try {
                         if (navigator.share) {
-
-                          await navigator.share({ title: "Post", url });
-
+                          await navigator.share({ title: "Post", url: postUrl });
                         } else {
-                          await navigator.clipboard.writeText(url);
+                          await navigator.clipboard.writeText(postUrl);
                           toast.success("Link copied");
                         }
                       } catch {
@@ -373,4 +363,3 @@ export default function PublicSpacePage() {
     </div>
   );
 }
-

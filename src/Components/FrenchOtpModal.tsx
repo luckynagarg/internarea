@@ -1,7 +1,9 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
-import { verifyFrenchOtp } from "@/Feature/frenchOtp";
-
+import {
+  requestFrenchOtp,
+  verifyFrenchOtp,
+} from "@/Feature/frenchOtp";
 
 type Props = {
   isOpen: boolean;
@@ -16,9 +18,43 @@ export default function FrenchOtpModal({
 }: Props) {
   const [otp, setOtp] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
 
   const title = useMemo(() => "Verify OTP for language switching", []);
+
+  // Request a fresh OTP whenever the modal opens.
+  useEffect(() => {
+    if (!isOpen) return;
+    let mounted = true;
+
+    setOtp("");
+    setError(null);
+    setSent(false);
+    setSending(true);
+
+    (async () => {
+      try {
+        await requestFrenchOtp();
+        if (mounted) setSent(true);
+      } catch (e: any) {
+        if (mounted) {
+          setError(
+            e?.response?.data?.error?.message ||
+              e?.response?.data?.message ||
+              "Failed to send OTP. Please try again."
+          );
+        }
+      } finally {
+        if (mounted) setSending(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -28,14 +64,18 @@ export default function FrenchOtpModal({
     try {
       const res = await verifyFrenchOtp(otp);
       if (!res.ok) {
-        setError("Invalid OTP. Demo OTP is 123456.");
+        setError("Invalid OTP. Please try again.");
         return;
       }
 
       onVerified();
       onClose();
-    } catch (e) {
-      setError("OTP verification failed. Please try again.");
+    } catch (e: any) {
+      setError(
+        e?.response?.data?.error?.message ||
+          e?.response?.data?.message ||
+          "OTP verification failed. Please try again."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -63,11 +103,9 @@ export default function FrenchOtpModal({
         </div>
 
         <p className="text-sm text-gray-600 mb-4">
-          Enter the OTP sent to your email to switch to Français.
-          <br />
-          <span className="text-xs text-gray-500">
-            Demo OTP: <span className="font-mono">123456</span>
-          </span>
+          {sending
+            ? "Sending OTP to your email…"
+            : "Enter the OTP sent to your email to switch to Français."}
         </p>
 
         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -80,7 +118,7 @@ export default function FrenchOtpModal({
           inputMode="numeric"
           className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
           placeholder="Enter OTP"
-          disabled={submitting}
+          disabled={submitting || sending}
         />
 
         {error && <div className="mt-3 text-sm text-red-600">{error}</div>}
@@ -98,7 +136,7 @@ export default function FrenchOtpModal({
             type="button"
             onClick={handleSubmit}
             className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-60"
-            disabled={submitting || otp.trim().length === 0}
+            disabled={submitting || sending || otp.trim().length === 0}
           >
             {submitting ? "Verifying…" : "Verify & Switch"}
           </button>
@@ -107,4 +145,3 @@ export default function FrenchOtpModal({
     </div>
   );
 }
-
