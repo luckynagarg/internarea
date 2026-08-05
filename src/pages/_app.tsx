@@ -11,7 +11,7 @@ import { login, logout } from "@/Feature/Userslice";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-import { LanguageProvider } from "@/i18n/LanguageContext";
+import { I18nProvider } from "@/i18n/runtime";
 
 function AuthListener() {
   const dispatch = useDispatch();
@@ -42,7 +42,7 @@ function AuthListener() {
 export default function App({ Component, pageProps }: AppProps) {
   return (
     <Provider store={store}>
-      <LanguageProvider>
+      <I18nProvider>
         <AuthListener />
         <div className="bg-white">
           <ToastContainer />
@@ -50,7 +50,7 @@ export default function App({ Component, pageProps }: AppProps) {
           <Component {...pageProps} />
           <Footer />
         </div>
-      </LanguageProvider>
+      </I18nProvider>
     </Provider>
   );
 }

@@ -14,6 +14,7 @@ import { useRouter } from "next/router";
 import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import { getAuthHeaders } from "@/lib/authHeaders";
 // export const internships = [
 //   {
 //     _id: "1",
@@ -90,10 +91,28 @@ const index = () => {
     fetchdata();
   }, [id]);
 
-  const [availability, setAvailability] = useState("");
+const [availability, setAvailability] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [coverLetter, setCoverLetter] = useState("");
+  const [quota, setQuota] = useState<any>(null);
   const user=useSelector(selectuser)
+
+  useEffect(() => {
+    if (user) {
+      (async () => {
+        try {
+          const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
+          const headers = await getAuthHeaders();
+          const res = await axios.get(`${API_BASE}/api/subscription/me`, { headers });
+          setQuota(res.data?.data);
+        } catch (e) {
+          console.log(e);
+        }
+      })();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   if (internshipData === null) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -110,6 +129,10 @@ const index = () => {
       toast.error("please select your availability")
       return
     }
+    if (quota && quota.remainingApplications <= 0) {
+      toast.error("You have reached your monthly application limit. Upgrade your plan to apply more.");
+      return;
+    }
     try {
 const applicationdata={
         category:internshipData.category,
@@ -121,13 +144,20 @@ const applicationdata={
         availability
       }
       const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
-      await axios.post(`${API_BASE}/api/application`,applicationdata)
+      const headers = await getAuthHeaders();
+      await axios.post(`${API_BASE}/api/application`,applicationdata, { headers })
       toast.success("Application submit successfully")
       router.push('/internship')
 
-    } catch (error) {
+    } catch (error: any) {
+      const status = error?.response?.status;
+      const msg = error?.response?.data?.error?.message || error?.response?.data?.message || "Failed to submit application";
+      if (status === 403) {
+        toast.error("You have reached your monthly application limit. Upgrade your plan to apply more.");
+      } else {
+        toast.error(msg);
+      }
       console.error(error)
-      toast.error("Failed to submit application")
     }
   }
   return (
@@ -234,6 +264,33 @@ const applicationdata={
               </div>
             </div>
             <div className="p-6 space-y-6">
+              {/* Quota banner */}
+              {user && quota && (
+                <div className={`rounded-lg p-4 ${(quota.remainingApplications ?? 0) <= 0 ? "bg-red-50 border border-red-200" : "bg-blue-50 border border-blue-200"}`}>
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">
+                        {quota.planName} plan • {(quota.remainingApplications ?? 0) <= 0 ? "No applications remaining this month" : `${quota.remainingApplications} application(s) remaining this month`}
+                      </div>
+                      {quota.remainingApplications === Number.POSITIVE_INFINITY ? (
+                        <div className="text-xs text-gray-600">Unlimited applications on Gold</div>
+                      ) : (
+                        <div className="text-xs text-gray-600">
+                          {quota.monthlyLimit === Number.POSITIVE_INFINITY ? "Unlimited" : `${quota.applicationsUsed} of ${quota.monthlyLimit} used this month`}
+                        </div>
+                      )}
+                    </div>
+                    {(quota.remainingApplications ?? 0) <= 0 && (
+                      <Link
+                        href="/subscription"
+                        className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
+                      >
+                        Upgrade now
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              )}
               {/* Resume Section */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">

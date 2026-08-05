@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { Bell, X } from "lucide-react";
 import { toast } from "react-toastify";
@@ -96,11 +96,16 @@ export default function NotificationDropdown({
 }: {
   open: boolean;
   onClose: () => void;
-  onMarkRead: (items: NotificationItem[]) => void;
+  onMarkRead?: (items: NotificationItem[]) => void;
 }) {
-  const [loading, setLoading] = useState(false);
+const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [errorState, setErrorState] = useState<string | null>(null);
+
+  // Store the latest callback in a ref to avoid re-fetching notifications
+  // every time the parent re-renders with a new inline function.
+  const onMarkReadRef = useRef(onMarkRead);
+  onMarkReadRef.current = onMarkRead;
 
   const unreadCount = useMemo(
     () => items.filter((x) => !x.read).length,
@@ -128,8 +133,8 @@ export default function NotificationDropdown({
 
         if (!mounted) return;
 
-        setItems(normalized);
-        onMarkRead(normalized);
+setItems(normalized);
+        onMarkReadRef.current?.(normalized);
       } catch (e: any) {
         const msg = errorToString(e);
         if (!mounted) return;
@@ -146,7 +151,7 @@ export default function NotificationDropdown({
     return () => {
       mounted = false;
     };
-  }, [open, onMarkRead]);
+  }, [open]);
 
   if (!open) return null;
 
@@ -204,9 +209,9 @@ export default function NotificationDropdown({
                   n.read ? "bg-transparent" : "bg-accent/50"
                 }`}
 
-                onClick={() => {
+onClick={() => {
                   // Visual optimistic update. API wiring handled elsewhere.
-                  onMarkRead(
+                  onMarkRead?.(
                     items.map((x) => (x._id === n._id ? { ...x, read: true } : x))
                   );
                 }}

@@ -2,15 +2,26 @@ const dict = {
   navbar: {
     internships: 'Stages',
     jobs: 'Emplois',
+    friends: 'Amis',
     publicSpace: 'Espace Public',
     searchPlaceholder: 'Rechercher des opportunités...',
     logout: 'Déconnexion',
     continueWithGoogle: 'Continuer avec Google',
     admin: 'Admin',
+    language: 'Langue',
   },
   footer: {
     copyright: '© Copyright 2025. Tous droits réservés.',
     getAndroidApp: 'Obtenir l’application Android',
+    internshipByPlaces: 'Stages par lieux',
+    internshipByStream: 'Stages par filière',
+    jobPlaces: 'Emplois par lieux',
+    jobsByStreams: 'Emplois par filières',
+    aboutUs: 'À propos de nous',
+    teamDiary: 'Journal de l’équipe',
+    termsAndConditions: 'Conditions générales',
+    sitemap: 'Plan du site',
+    allRightsReserved: 'Tous droits réservés.',
   },
   pages: {
     subscription: {

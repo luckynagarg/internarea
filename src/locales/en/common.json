@@ -1,0 +1,28 @@
+{
+  "navbar": {
+    "internships": "Internships",
+    "jobs": "Jobs",
+    "publicSpace": "Public Space",
+    "friends": "Friends",
+    "searchPlaceholder": "Search opportunities...",
+    "login": "Login",
+    "logout": "Logout",
+    "continueWithGoogle": "Continue with Google",
+    "admin": "Admin",
+    "language": "Language"
+  },
+  "footer": {
+    "copyright": "© Copyright 2025. All Rights Reserved.",
+    "getAndroidApp": "Get Android App",
+    "internshipByPlaces": "Internships by Places",
+    "internshipByStream": "Internships by Stream",
+    "jobPlaces": "Jobs by Places",
+    "jobsByStreams": "Jobs by Streams",
+    "aboutUs": "About Us",
+    "teamDiary": "Team Diary",
+    "termsAndConditions": "Terms and Conditions",
+    "sitemap": "Sitemap",
+    "allRightsReserved": "All rights reserved."
+  }
+}
+

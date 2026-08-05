@@ -34,16 +34,6 @@ export default function AdminLoginHistoryPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
 
-  const queryParams = useMemo(() => {
-    return {
-      page,
-      pageSize,
-      sortOrder: 'desc',
-      search: search || undefined,
-      status: status || undefined,
-    };
-  }, [page, pageSize, search, status]);
-
   useEffect(() => {
     let mounted = true;
 
@@ -54,7 +44,13 @@ export default function AdminLoginHistoryPage() {
         const headers = await getAuthHeaders();
         const res = await axios.get(API_URL('/api/admin/login-history'), {
           headers,
-          params: queryParams,
+          params: {
+            page,
+            pageSize,
+            sortOrder: 'desc',
+            search: search || undefined,
+            status: status || undefined,
+          },
         });
 
         if (!mounted) return;
@@ -75,7 +71,7 @@ export default function AdminLoginHistoryPage() {
     return () => {
       mounted = false;
     };
-  }, [queryParams]);
+  }, [page, pageSize, search, status]);
 
   const exportCsv = async () => {
     const headers = await getAuthHeaders();

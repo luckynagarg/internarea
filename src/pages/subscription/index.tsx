@@ -3,17 +3,15 @@ import axios from "axios";
 import Link from "next/link";
 import { useSelector } from "react-redux";
 import { selectuser } from "@/Feature/Userslice";
+import { getAuthHeaders } from "@/lib/authHeaders";
+import { openRazorpayCheckout } from "@/lib/razorpay";
+import { toast } from "react-toastify";
 import {
-  Banknote,
   CalendarDays,
-  CheckCircle2,
   Loader2,
   Lock,
-  RefreshCw,
   RotateCcw,
   Shield,
-  SlidersHorizontal,
-  Wallet,
 } from "lucide-react";
 
 type PlanKey = "free" | "bronze" | "silver" | "gold";
@@ -89,28 +87,25 @@ export default function SubscriptionPage() {
   const user = useSelector(selectuser);
 
   const [loading, setLoading] = useState(false);
-  const [quota, setQuota] = useState<SubscriptionQuota | null>(null);
+const [quota, setQuota] = useState<SubscriptionQuota | null>(null);
   const [payments, setPayments] = useState<PaymentTransaction[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
-  // Token from Firebase is not stored; for this codebase we rely on the backend accepting
-  // Authorization: Bearer <firebaseToken> set by the caller.
-  // If you already have a token helper, plug it in here.
-  // For now, we attempt calls without token only if the backend is relaxed.
-
-  const headers = useMemo(() => {
+  async function getHeaders() {
+    const auth = await getAuthHeaders();
     return {
       "Content-Type": "application/json",
+      ...auth,
     };
-  }, []);
-
-
+  }
 
   async function refreshAll() {
     setLoading(true);
     setError(null);
     try {
+      const headers = await getHeaders();
       const [quotaRes, payRes, invRes] = await Promise.all([
         axios.get(`${API_BASE}/api/subscription/me`, { headers }),
         axios.get(`${API_BASE}/api/subscription/payments`, { headers }),
@@ -133,6 +128,63 @@ export default function SubscriptionPage() {
     refreshAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function handleUpgrade(planKey: PlanKey) {
+    if (!user) {
+      setError("Please sign in to upgrade your plan.");
+      return;
+    }
+    setCheckoutLoading(planKey);
+    setError(null);
+    try {
+      const headers = await getHeaders();
+      const { data } = await axios.post(
+        `${API_BASE}/api/subscription/razorpay/create-order`,
+        { planKey },
+        { headers }
+      );
+
+      const { orderId, amount, currency, subscriptionName } = data.data;
+
+      // Load the order and open Razorpay checkout.
+      await openRazorpayCheckout({
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "",
+        amount: amount * 100, // paise
+        currency,
+        order_id: orderId,
+        name: "InternArea",
+        description: `Subscription: ${subscriptionName}`,
+        prefill: {
+          name: user?.name || user?.displayName || "",
+          email: user?.email || "",
+        },
+        handler: async (response) => {
+          try {
+            await axios.post(
+              `${API_BASE}/api/subscription/razorpay/verify`,
+              {
+                planKey,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              },
+              { headers }
+            );
+            toast.success("Payment successful! Your plan has been upgraded.");
+            await refreshAll();
+          } catch (verifyErr: any) {
+            const msg = verifyErr?.response?.data?.error?.message || verifyErr?.response?.data?.message || "Payment verification failed.";
+            setError(msg);
+          }
+        },
+      });
+    } catch (e: any) {
+      const msg = e?.response?.data?.error?.message || e?.response?.data?.message || "Failed to start checkout. Make sure payment is enabled.";
+      setError(msg);
+    } finally {
+      setCheckoutLoading(null);
+    }
+  }
 
   const remaining = quota?.remainingApplications ?? 0;
   const used = quota?.applicationsUsed ?? 0;
@@ -241,18 +293,19 @@ export default function SubscriptionPage() {
                       { key: "bronze", label: "Bronze", price: "₹100" },
                       { key: "silver", label: "Silver", price: "₹300" },
                       { key: "gold", label: "Gold", price: "₹1000" },
-                    ] as const).map((p) => (
-                      <Link
+] as const).map((p) => (
+                      <button
                         key={p.key}
-                        href="#"
-                        className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          alert("Razorpay checkout flow is not yet wired in this UI. Wire create-order + checkout next.");
-                        }}
+                        type="button"
+                        disabled={checkoutLoading === p.key}
+                        onClick={() => handleUpgrade(p.key)}
+                        className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        Upgrade {p.label} ({p.price})
-                      </Link>
+                        {checkoutLoading === p.key ? (
+                          <Loader2 className="h-4 w-4 animate-spin inline mr-1" />
+                        ) : null}
+                        {checkoutLoading === p.key ? "Starting..." : `Upgrade ${p.label} (${p.price})`}
+                      </button>
                     ))}
                   </div>
                 </div>

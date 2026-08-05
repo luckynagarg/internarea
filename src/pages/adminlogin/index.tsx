@@ -2,6 +2,7 @@ import axios from "axios";
 import { User, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
+import Link from "next/link";
 import { toast } from "react-toastify";
 
 const index = () => {
@@ -105,6 +106,15 @@ const index = () => {
                 />
               </div>
             </div>
+            <div className="flex justify-end">
+              <Link
+                href="/admin-forgot-password"
+                className="text-sm font-medium text-blue-600 hover:text-blue-500 hover:underline transition-colors"
+              >
+                Forgot Password?
+              </Link>
+            </div>
+
             <div>
               <button
                 type="submit"

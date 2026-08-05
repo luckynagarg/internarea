@@ -1,0 +1,93 @@
+{
+  "home": {
+    "hero": {
+      "title": "Finde dein nächstes Praktikum",
+      "subtitle": "Entdecke Praktika und Jobs, die zu dir passen"
+    },
+    "sections": {
+      "internships": "Praktika",
+      "jobs": "Jobs"
+    },
+    "filters": {
+      "all": "Alle"
+    },
+    "cards": {
+      "hiring": "Jetzt einstellen",
+      "viewDetails": "Details anzeigen"
+    },
+    "slides": {
+      "0": "Folie 1",
+      "1": "Folie 2",
+      "2": "Folie 3",
+      "3": "Folie 4"
+    },
+    "stats": {
+      "0": "300K+",
+      "1": "10K+",
+      "2": "21Mn+",
+      "3": "600K+"
+    },
+    "categories": {
+      "bigBrands": "Große Marken",
+      "workFromHome": "Von zu Hause arbeiten",
+      "partTime": "Teilzeit",
+      "mba": "MBA",
+      "engineering": "Ingenieurwesen",
+      "media": "Medien",
+      "design": "Design",
+      "dataScience": "Datenwissenschaft"
+    }
+  },
+  "navbar": {
+    "internships": "Praktika",
+    "jobs": "Jobs",
+    "publicSpace": "Öffentlicher Bereich",
+    "searchPlaceholder": "Möglichkeiten suchen...",
+    "login": "Anmelden",
+    "logout": "Abmelden",
+    "continueWithGoogle": "Mit Google fortfahren",
+    "admin": "Admin",
+    "language": "Sprache"
+  },
+  "footer": {
+    "text": "Alle Rechte vorbehalten.",
+    "copyright": "© Copyright 2025. Alle Rechte vorbehalten.",
+    "getAndroidApp": "Android-App herunterladen",
+    "internshipByPlaces": "Praktika nach Orten",
+    "internshipByStream": "Praktika nach Bereich",
+    "jobPlaces": "Jobs nach Orten",
+    "jobsByStreams": "Jobs nach Bereichen",
+    "aboutUs": "Über uns",
+    "teamDiary": "Team-Tagebuch",
+    "termsAndConditions": "Allgemeine Geschäftsbedingungen",
+    "sitemap": "Sitemap"
+  },
+  "pages": {
+    "subscription": {
+      "title": "Abonnement & Abrechnung",
+      "subtitle": "Verwalte deinen Plan, Zahlungen und Rechnungen.",
+      "loading": "Wird geladen...",
+      "paymentHistory": "Zahlungsverlauf",
+      "invoices": "Rechnungen",
+      "upgradeCta": "Upgrade, um monatliche Bewerbungen zu erhöhen.",
+      "noPayments": "Noch keine Zahlungen.",
+      "noInvoices": "Noch keine Rechnungen."
+    },
+    "resume": {
+      "homeTitle": "Premium-Lebenslauf",
+      "homeSubtitle": "Erstelle einen professionellen Lebenslauf für ₹50 mit E-Mail-OTP-Verifizierung.",
+      "createResume": "Lebenslauf erstellen",
+      "createTitle": "Lebenslauf erstellen (Premium)",
+      "createFee": "Gebühr: ₹50 pro Lebenslauf • OTP-Verifizierung erforderlich.",
+      "sendOtp": "OTP senden & fortfahren",
+      "otpHint": "Gib das OTP ein, das an deine registrierte E-Mail gesendet wurde.",
+      "verifyOtp": "OTP verifizieren",
+      "payTitle": "OTP verifiziert. Fahre mit der Zahlung fort.",
+      "payCta": "₹50 mit Razorpay bezahlen",
+      "afterPayHint": "Nach erfolgreicher Zahlung wird dein Lebenslauf erstellt und deinem Profil hinzugefügt.",
+      "doneTitle": "Lebenslauf erfolgreich erstellt.",
+      "goToProfile": "Zum Profil"
+    }
+  }
+}
+

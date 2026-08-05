@@ -5,7 +5,7 @@ import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import axiosClient from "@/lib/apiClient";
 import { API_URL } from "@/config/api";
-
+import LoginHistory from "@/Components/LoginHistory";
 
 interface User {
   name: string;
@@ -14,14 +14,7 @@ interface User {
 }
 
 const index = () => {
-
-  // const [user, setuser] = useState<User | null>({
-  //   name: "Rahul",
-  //   email: "xyz@gmail.com",
-  //   photo:
-  //     "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=64&h=64&fit=crop&crop=faces",
-  // });
-  const user=useSelector(selectuser)
+  const user = useSelector(selectuser);
   const [resumes, setResumes] = useState<any[]>([]);
 
   useEffect(() => {
@@ -32,7 +25,6 @@ const index = () => {
       } catch (e) {
         // ignore
       }
-
     }
     loadResumes();
   }, []);
@@ -143,12 +135,7 @@ const index = () => {
                 <div className="text-gray-900 font-semibold mb-3">Login History</div>
                 <div className="text-sm text-gray-500 mb-4">Recent login attempts for your account.</div>
                 <div className="bg-white rounded-xl border p-4">
-                  <iframe
-                    title="Login History"
-                    src="/userLoginHistory"
-                    className="w-full h-[520px]"
-                    style={{ border: 'none' }}
-                  />
+                  <LoginHistory />
                 </div>
               </div>
 
@@ -158,7 +145,6 @@ const index = () => {
                 <ResumesList />
               </div>
             </div>
-
           </div>
         </div>
       </div>
@@ -167,6 +153,3 @@ const index = () => {
 };
 
 export default index;
-
-
-

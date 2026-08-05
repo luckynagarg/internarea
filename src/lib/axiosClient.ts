@@ -2,8 +2,8 @@ import axios from "axios";
 import { auth } from "@/firebase/firebase";
 
 // NOTE: auth.currentUser can be briefly null right after sign-in/refresh.
-// We therefore wait for currentUser in the interceptor before attaching a token.
-
+// We therefore attach a token only when a Firebase user is actually present.
+// This avoids 401 loops for unauthenticated/demo requests (e.g. mock users).
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -22,109 +22,40 @@ const axiosClient = axios.create({
   },
 });
 
-function waitForCurrentUser(timeoutMs = 5000): Promise<any> {
-  return new Promise((resolve) => {
-    const user = auth?.currentUser;
-    if (user) return resolve(user);
-
-    const start = Date.now();
-    const interval = setInterval(() => {
-      const u = auth?.currentUser;
-      if (u) {
-        clearInterval(interval);
-        return resolve(u);
-      }
-      if (Date.now() - start > timeoutMs) {
-        clearInterval(interval);
-        return resolve(undefined as any);
-      }
-    }, 100);
-  });
+async function getTokenSafely(): Promise<string | null> {
+  try {
+    const currentUser = auth?.currentUser;
+    if (!currentUser) return null;
+    return await currentUser.getIdToken();
+  } catch {
+    return null;
+  }
 }
 
 axiosClient.interceptors.request.use(async (config) => {
-  // High-signal log to prove interceptor execution for protected requests.
-  // eslint-disable-next-line no-console
-  console.log('[axiosClient][request] interceptor fired', config?.url);
-
   try {
-    const currentUser = await waitForCurrentUser(5000);
+    // Support per-request opt-out (public endpoints, demo endpoints).
+    const skipAuth = (config as any)?.skipAuth === true;
 
-    if (process.env.NODE_ENV !== 'production') {
-      // eslint-disable-next-line no-console
-      console.debug('[axiosClient][request] url:', config?.url);
-      // eslint-disable-next-line no-console
-      console.debug('[axiosClient][request] auth.currentUser available:', !!currentUser);
-    }
-
-    // Log whether Authorization is already present before we attach anything.
-    const existingAuthHeader = (config.headers as any)?.Authorization;
-    if (process.env.NODE_ENV !== 'production') {
-      // eslint-disable-next-line no-console
-      console.debug(
-        '[axiosClient][request] Authorization header exists before attach:',
-        !!existingAuthHeader
-      );
-      // eslint-disable-next-line no-console
-      console.debug(
-        '[axiosClient][request] Authorization header prefix:',
-        typeof existingAuthHeader === 'string'
-          ? existingAuthHeader.slice(0, 12)
-          : null
-      );
-    }
-
-    if (!currentUser) {
-      if (process.env.NODE_ENV !== 'production') {
-        // eslint-disable-next-line no-console
-        console.debug(
-          '[axiosClient][request] skipping token attach because currentUser is null'
-        );
-      }
+    if (skipAuth) {
       return config;
     }
 
-    const token = await currentUser.getIdToken();
-
-    if (process.env.NODE_ENV !== 'production') {
-      // eslint-disable-next-line no-console
-      console.debug('[axiosClient][request] idToken length:', token?.length || 0);
-    }
+    const token = await getTokenSafely();
 
     if (token) {
       config.headers = config.headers ?? {};
       (config.headers as any).Authorization = `Bearer ${token}`;
-
-      if (process.env.NODE_ENV !== 'production') {
-        // eslint-disable-next-line no-console
-        console.debug('[axiosClient][request] Authorization header set:', true);
-        // eslint-disable-next-line no-console
-        console.debug(
-          '[axiosClient][request] Authorization header final prefix:',
-          `Bearer ${token.slice(0, 10)}...`
-        );
-      }
     }
+    // If no token (signed out / demo user), DO NOT attach an Authorization
+    // header. Backend will return 401, and callers are expected to fall back
+    // to mock data instead of retrying endlessly.
   } catch (e) {
-    if (process.env.NODE_ENV !== 'production') {
-      // eslint-disable-next-line no-console
-      console.debug('[axiosClient][request] token attach failed:', (e as any)?.message || e);
-    }
-    // If token fetch fails, do not block request; backend will return 401 with clear message.
-  }
-
-  // Log Authorization header immediately before returning config.
-  if (process.env.NODE_ENV !== 'production') {
-    // eslint-disable-next-line no-console
-    console.debug(
-      '[axiosClient][request] Authorization exists on returned config:',
-      !!(config.headers as any)?.Authorization
-    );
+    // If token fetch fails, do not block request; backend will handle it.
   }
 
   return config;
 });
 
 export default axiosClient;
-
 

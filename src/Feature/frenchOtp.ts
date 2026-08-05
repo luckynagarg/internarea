@@ -18,8 +18,7 @@ export async function requestFrenchOtp(): Promise<FrenchOtpRequest> {
 
 export async function verifyFrenchOtp(otp: string): Promise<FrenchOtpVerification> {
   // TODO: Replace with real backend call.
-  // For now, accept a demo OTP.
-  const normalized = otp.replace(/\s/g, "");
-  return { ok: normalized === "123456" };
+  // Stub: always fail until backend endpoint is implemented.
+  return { ok: false };
 }
 

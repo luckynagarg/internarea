@@ -28,8 +28,10 @@ export default function SearchPage() {
   });
 
   useEffect(() => {
-    setQ(queryFromUrl);
-    setDebouncedQuery(queryFromUrl);
+    // Sync from URL only when it actually differs from the current query.
+    // This prevents an infinite render loop when typing updates the URL.
+    setQ((prev) => (prev === queryFromUrl ? prev : queryFromUrl));
+    setDebouncedQuery((prev) => (prev === queryFromUrl ? prev : queryFromUrl));
   }, [queryFromUrl]);
 
   useEffect(() => {

@@ -1,6 +1,6 @@
-export type SupportedLang = 'en' | 'es' | 'hi' | 'pt' | 'zh' | 'fr';
+export type SupportedLang = 'en' | 'es' | 'hi' | 'pt' | 'zh' | 'fr' | 'de';
 
-export const supportedLangs: SupportedLang[] = ['en', 'es', 'hi', 'pt', 'zh', 'fr'];
+export const supportedLangs: SupportedLang[] = ['en', 'es', 'hi', 'pt', 'zh', 'fr', 'de'];
 
 export const defaultLang: SupportedLang = 'en';
 
@@ -11,5 +11,6 @@ export const langLabel: Record<SupportedLang, string> = {
   pt: 'Português',
   zh: '中文',
   fr: 'Français',
+  de: 'Deutsch',
 };
 

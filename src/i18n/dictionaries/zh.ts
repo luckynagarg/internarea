@@ -2,15 +2,26 @@ const dict = {
   navbar: {
     internships: '实习',
     jobs: '工作',
+    friends: '朋友',
     publicSpace: '公共空间',
     searchPlaceholder: '搜索机会...',
     logout: '退出登录',
     continueWithGoogle: '使用 Google 继续',
     admin: '管理员',
+    language: '语言',
   },
   footer: {
     copyright: '© 版权所有 2025。保留所有权利。',
     getAndroidApp: '获取 Android 应用',
+    internshipByPlaces: '按地点找实习',
+    internshipByStream: '按领域找实习',
+    jobPlaces: '按地点找工作',
+    jobsByStreams: '按领域找工作',
+    aboutUs: '关于我们',
+    teamDiary: '团队日志',
+    termsAndConditions: '条款和条件',
+    sitemap: '网站地图',
+    allRightsReserved: '保留所有权利。',
   },
   pages: {
     subscription: {

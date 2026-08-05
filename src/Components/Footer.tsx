@@ -1,8 +1,8 @@
 import { Facebook, Twitter, Instagram } from "lucide-react";
-import { useLanguage } from "@/i18n/LanguageContext";
+import { useT } from "@/i18n/runtime";
 
 export default function Footer() {
-  const { t } = useLanguage();
+  const { t } = useT();
   return (
     <footer className="bg-gray-800 text-white py-10 sm:py-12">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
