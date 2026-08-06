@@ -1,5 +1,5 @@
 import axios from "axios";
-import { auth } from "@/firebase/firebase";
+import { auth } from "@/lib/firebase";
 
 // NOTE: auth.currentUser can be briefly null right after sign-in/refresh.
 // We therefore attach a token only when a Firebase user is actually present.

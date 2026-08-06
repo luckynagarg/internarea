@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
-import { auth } from "../firebase/firebase";
+import { auth } from "@/lib/firebase";
 import { Bell, Search, Globe } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useSelector } from "react-redux";

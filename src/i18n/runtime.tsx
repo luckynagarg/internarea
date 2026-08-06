@@ -60,6 +60,7 @@ import fr from './dictionaries/fr';
 import es from './dictionaries/es';
 import pt from './dictionaries/pt';
 import zh from './dictionaries/zh';
+import de from './dictionaries/de';
 
 type LocaleDict = Record<string, any>;
 
@@ -78,6 +79,7 @@ const localeData: Record<string, LocaleDict> = {
   es: resolveLocaleModule(es, 'es'),
   pt: resolveLocaleModule(pt, 'pt'),
   zh: resolveLocaleModule(zh, 'zh'),
+  de: resolveLocaleModule(de, 'de'),
 };
 
 // ─── Warning tracker ───────────────────────────────────────────────────
