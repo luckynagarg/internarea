@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { MoreVertical } from "lucide-react";
+import { MoreVertical, UserPlus, UserCheck, UserMinus, Clock, Check, X } from "lucide-react";
 
 export type FriendCardModel = {
   _id: string;
@@ -8,26 +8,50 @@ export type FriendCardModel = {
   nickname: string | null;
   photo: string | null;
   headline: string | null;
+  bio?: string | null;
+  location?: string | null;
+  mutualFriends?: number;
+  friendCount?: number;
   isFriend: boolean;
+  relationship?: "none" | "request_sent" | "request_received" | "friends";
+  uid?: string;
 };
 
 type Props = {
   friend: FriendCardModel;
   onEditNickname?: (friend: FriendCardModel) => void;
+  onRemove?: (friend: FriendCardModel) => void;
+  onAdd?: (friend: FriendCardModel) => void;
+  onAccept?: (friend: FriendCardModel) => void;
+  onReject?: (friend: FriendCardModel) => void;
+  onCancel?: (friend: FriendCardModel) => void;
+  removing?: boolean;
+  actionLoading?: boolean;
 };
 
-export default function FriendCard({ friend, onEditNickname }: Props) {
+const FALLBACK_IMG = "https://via.placeholder.com/64";
+
+export default function FriendCard({
+  friend,
+  onEditNickname,
+  onRemove,
+  onAdd,
+  onAccept,
+  onReject,
+  onCancel,
+  removing,
+  actionLoading,
+}: Props) {
   const [open, setOpen] = useState(false);
   const safeFriend = friend ?? ({} as FriendCardModel);
   const safeName = safeFriend.nickname || safeFriend.name || "Unknown";
+  const rel = safeFriend.relationship ?? (safeFriend.isFriend ? "friends" : "none");
 
-
-  const menu = useMemo(
-    () => {
-      if (!open) return null;
-      return (
-        <div className="absolute right-2 top-9 bg-white border rounded-lg shadow-md p-1 z-10 w-44">
-          <button
+  const menu = useMemo(() => {
+    if (!open) return null;
+    return (
+      <div className="absolute right-2 top-9 bg-white border rounded-lg shadow-md p-1 z-10 w-44">
+        <button
           className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded"
           onClick={() => {
             setOpen(false);
@@ -35,7 +59,6 @@ export default function FriendCard({ friend, onEditNickname }: Props) {
           }}
         >
           Edit Nickname
-
         </button>
         <button
           className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded"
@@ -45,37 +68,21 @@ export default function FriendCard({ friend, onEditNickname }: Props) {
         </button>
         <button
           className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded text-red-600"
-          onClick={() => setOpen(false)}
+          onClick={() => {
+            setOpen(false);
+            onRemove?.(friend);
+          }}
+          disabled={!!removing}
         >
-          Remove Friend
+          {removing ? "Removing..." : "Remove Friend"}
         </button>
       </div>
     );
-  }, [open, friend, onEditNickname]);
+  }, [open, friend, onEditNickname, onRemove, removing]);
 
-  return (
-    <div className="border rounded-lg p-3 relative">
-      <div className="flex items-center gap-3">
-        <img
-          src={safeFriend.photo || "https://via.placeholder.com/64"}
-          alt={safeFriend.name || "Friend"}
-
-
-          className="w-10 h-10 rounded-full object-cover"
-        />
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold text-gray-900 truncate">
-            {safeName}
-          </div>
-          {safeFriend.name && safeFriend.nickname && safeFriend.nickname !== safeFriend.name ? (
-            <div className="text-xs text-gray-500 truncate">{safeFriend.name}</div>
-          ) : (
-            <div className="text-xs text-gray-500 truncate">{safeFriend.headline || safeFriend.username || ""}</div>
-          )}
-          <div className="text-xs text-gray-500 truncate">@{safeFriend.username || ""}</div>
-
-        </div>
-
+  function renderAction() {
+    if (rel === "friends") {
+      return (
         <div className="relative">
           <button
             type="button"
@@ -87,8 +94,84 @@ export default function FriendCard({ friend, onEditNickname }: Props) {
           </button>
           {menu}
         </div>
+      );
+    }
+
+    if (rel === "request_sent") {
+      return (
+        <button
+          type="button"
+          disabled={actionLoading}
+          onClick={() => onCancel?.(friend)}
+          className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-50"
+        >
+          <Clock size={14} />
+          Requested
+        </button>
+      );
+    }
+
+    if (rel === "request_received") {
+      return (
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            disabled={actionLoading}
+            onClick={() => onAccept?.(friend)}
+            className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-green-50 text-green-700 hover:bg-green-100 disabled:opacity-50"
+          >
+            <Check size={14} />
+            Accept
+          </button>
+          <button
+            type="button"
+            disabled={actionLoading}
+            onClick={() => onReject?.(friend)}
+            className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50"
+          >
+            <X size={14} />
+            Reject
+          </button>
+        </div>
+      );
+    }
+
+    // none
+    return (
+      <button
+        type="button"
+        disabled={actionLoading}
+        onClick={() => onAdd?.(friend)}
+        className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:opacity-50"
+      >
+        <UserPlus size={14} />
+        Add
+      </button>
+    );
+  }
+
+  return (
+    <div className="border rounded-lg p-3 relative flex items-center gap-3">
+      <img
+        src={safeFriend.photo || FALLBACK_IMG}
+        alt={safeFriend.name || "Friend"}
+        className="w-10 h-10 rounded-full object-cover"
+      />
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-semibold text-gray-900 truncate">
+          {safeName}
+        </div>
+        {safeFriend.name && safeFriend.nickname && safeFriend.nickname !== safeFriend.name ? (
+          <div className="text-xs text-gray-500 truncate">{safeFriend.name}</div>
+        ) : (
+          <div className="text-xs text-gray-500 truncate">{safeFriend.headline || ""}</div>
+        )}
+        {(safeFriend.mutualFriends ?? 0) > 0 && (
+          <div className="text-xs text-gray-400 truncate">{safeFriend.mutualFriends} mutual friends</div>
+        )}
       </div>
+
+      {renderAction()}
     </div>
   );
 }
-

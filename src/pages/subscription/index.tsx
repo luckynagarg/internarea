@@ -1,17 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import axiosClient from "@/lib/apiClient";
 import Link from "next/link";
 import { useSelector } from "react-redux";
 import { selectuser } from "@/Feature/Userslice";
-import { getAuthHeaders } from "@/lib/authHeaders";
 import { openRazorpayCheckout } from "@/lib/razorpay";
 import { toast } from "react-toastify";
 import {
   CalendarDays,
   Loader2,
   Lock,
+  QrCode,
   RotateCcw,
   Shield,
+  X,
 } from "lucide-react";
 
 type PlanKey = "free" | "bronze" | "silver" | "gold";
@@ -62,12 +63,10 @@ type Invoice = {
   createdAt: string;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://internshala-clone-y2p2.onrender.com";
-
-function formatINR(amount: number) {
-  if (!Number.isFinite(amount)) return "∞";
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(amount);
-}
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  "http://localhost:5000";
 
 function getDaysRemaining(expiry: string | Date | null | undefined) {
   if (!expiry) return 0;
@@ -87,29 +86,22 @@ export default function SubscriptionPage() {
   const user = useSelector(selectuser);
 
   const [loading, setLoading] = useState(false);
-const [quota, setQuota] = useState<SubscriptionQuota | null>(null);
+  const [quota, setQuota] = useState<SubscriptionQuota | null>(null);
   const [payments, setPayments] = useState<PaymentTransaction[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
-
-  async function getHeaders() {
-    const auth = await getAuthHeaders();
-    return {
-      "Content-Type": "application/json",
-      ...auth,
-    };
-  }
+  const [qrData, setQrData] = useState<any>(null);
+  const [qrLoading, setQrLoading] = useState(false);
 
   async function refreshAll() {
     setLoading(true);
     setError(null);
     try {
-      const headers = await getHeaders();
       const [quotaRes, payRes, invRes] = await Promise.all([
-        axios.get(`${API_BASE}/api/subscription/me`, { headers }),
-        axios.get(`${API_BASE}/api/subscription/payments`, { headers }),
-        axios.get(`${API_BASE}/api/subscription/invoices`, { headers }),
+        axiosClient.get("/api/subscription/me"),
+        axiosClient.get("/api/subscription/payments"),
+        axiosClient.get("/api/subscription/invoices"),
       ]);
 
       const q: SubscriptionDashboardResponse = quotaRes.data;
@@ -137,12 +129,9 @@ const [quota, setQuota] = useState<SubscriptionQuota | null>(null);
     setCheckoutLoading(planKey);
     setError(null);
     try {
-      const headers = await getHeaders();
-      const { data } = await axios.post(
-        `${API_BASE}/api/subscription/razorpay/create-order`,
-        { planKey },
-        { headers }
-      );
+      const { data } = await axiosClient.post("/api/subscription/razorpay/create-order", {
+        planKey,
+      });
 
       const { orderId, amount, currency, subscriptionName } = data.data;
 
@@ -160,16 +149,12 @@ const [quota, setQuota] = useState<SubscriptionQuota | null>(null);
         },
         handler: async (response) => {
           try {
-            await axios.post(
-              `${API_BASE}/api/subscription/razorpay/verify`,
-              {
-                planKey,
-                razorpayOrderId: response.razorpay_order_id,
-                razorpayPaymentId: response.razorpay_payment_id,
-                razorpaySignature: response.razorpay_signature,
-              },
-              { headers }
-            );
+            await axiosClient.post("/api/subscription/razorpay/verify", {
+              planKey,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+            });
             toast.success("Payment successful! Your plan has been upgraded.");
             await refreshAll();
           } catch (verifyErr: any) {
@@ -183,6 +168,26 @@ const [quota, setQuota] = useState<SubscriptionQuota | null>(null);
       setError(msg);
     } finally {
       setCheckoutLoading(null);
+    }
+  }
+
+  async function handleShowQr(planKey: PlanKey) {
+    if (!user) {
+      setError("Please sign in to upgrade your plan.");
+      return;
+    }
+    setQrLoading(true);
+    setQrData(null);
+    setError(null);
+    try {
+      const res = await axiosClient.post("/api/subscriptions/qr", { planKey });
+      setQrData(res?.data?.data);
+      toast.success("QR generated. Scan with any UPI app to pay.");
+    } catch (e: any) {
+      const msg = e?.response?.data?.error?.message || e?.response?.data?.message || "Failed to generate QR.";
+      setError(msg);
+    } finally {
+      setQrLoading(false);
     }
   }
 
@@ -293,7 +298,7 @@ const [quota, setQuota] = useState<SubscriptionQuota | null>(null);
                       { key: "bronze", label: "Bronze", price: "₹100" },
                       { key: "silver", label: "Silver", price: "₹300" },
                       { key: "gold", label: "Gold", price: "₹1000" },
-] as const).map((p) => (
+                    ] as const).map((p) => (
                       <button
                         key={p.key}
                         type="button"
@@ -307,6 +312,14 @@ const [quota, setQuota] = useState<SubscriptionQuota | null>(null);
                         {checkoutLoading === p.key ? "Starting..." : `Upgrade ${p.label} (${p.price})`}
                       </button>
                     ))}
+                    <button
+                      type="button"
+                      onClick={() => handleShowQr("gold")}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 text-sm font-semibold hover:bg-gray-50 transition"
+                    >
+                      <QrCode className="h-4 w-4" />
+                      Pay via QR
+                    </button>
                   </div>
                 </div>
               </div>
@@ -414,7 +427,38 @@ const [quota, setQuota] = useState<SubscriptionQuota | null>(null);
           </div>
         )}
       </div>
+
+      {/* QR Code Modal */}
+      {qrData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 relative">
+            <button
+              type="button"
+              onClick={() => setQrData(null)}
+              className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100"
+            >
+              <X size={20} />
+            </button>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Scan to Pay</h3>
+            <p className="text-sm text-gray-600 mb-4">Scan this QR with any UPI app to complete payment.</p>
+            {qrData.qrUrl && (
+              <img
+                src={qrData.qrUrl}
+                alt="Payment QR"
+                className="mx-auto w-64 h-64 object-contain border rounded-lg"
+              />
+            )}
+            {qrData.upiId && (
+              <div className="mt-3 text-center text-sm text-gray-500">
+                UPI ID: <span className="font-mono font-semibold text-gray-900">{qrData.upiId}</span>
+              </div>
+            )}
+            <div className="mt-4 text-xs text-gray-500 text-center">
+              Amount: ₹{qrData.amountPaise ? (qrData.amountPaise / 100).toFixed(2) : "—"} | Status: {qrData.status}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-

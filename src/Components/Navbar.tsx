@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import axiosClient from "@/lib/apiClient";
 import Link from "next/link";
 import { auth } from "@/lib/firebase";
 import { Bell, Search, Globe } from "lucide-react";
@@ -86,10 +87,29 @@ function GlobalSearchBox() {
 const Navbar = () => {
 const user = useSelector(selectuser);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const { t, lang, setLang } = useT();
   const [langOpen, setLangOpen] = useState(false);
   const [frenchOtpOpen, setFrenchOtpOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
+
+  // Fetch unread notification count on mount / whenever dropdown state changes.
+  useEffect(() => {
+    let mounted = true;
+    async function loadUnread() {
+      if (!user) return;
+      try {
+        const res = await axiosClient.get("/api/notifications/unread-count");
+        if (mounted) setUnreadCount(res?.data?.unreadCount ?? 0);
+      } catch {
+        // ignore; badge stays at 0
+      }
+    }
+    loadUnread();
+    return () => {
+      mounted = false;
+    };
+  }, [user, notifOpen]);
 
 // Intercept language selection. French requires OTP verification first.
   const handleSelectLang = (l: SupportedLang) => {
@@ -194,10 +214,18 @@ className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-cent
                         aria-label="Open notifications"
                       >
                         <Bell size={18} className="text-gray-700" />
-                        <span className="absolute top-1 right-2 block w-2 h-2 rounded-full bg-red-500" />
+                        {unreadCount > 0 && (
+                          <span className="absolute top-0 right-0 block min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold leading-4 text-center">
+                            {unreadCount > 99 ? "99+" : unreadCount}
+                          </span>
+                        )}
                       </button>
-                      {notifOpen ? (
-                        <NotificationDropdown open={notifOpen} onClose={() => setNotifOpen(false)} />
+{notifOpen ? (
+                        <NotificationDropdown
+                          open={notifOpen}
+                          onClose={() => setNotifOpen(false)}
+                          onUnreadCountChange={setUnreadCount}
+                        />
                       ) : null}
                     </div>
                     <div className="relative flex items-center space-x-2">

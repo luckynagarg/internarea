@@ -1,256 +1,649 @@
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import { fetchOrMock } from '@/mockData/fetchOrMock';
-import { mockData, MockFriendRequest, MockUser } from '@/mockData';
-import axios from 'axios';
+import axiosClient from '@/lib/apiClient';
 import { toast } from 'react-toastify';
-
-import { Users, UserPlus, UserCheck, XCircle } from 'lucide-react';
+import {
+  Users,
+  UserPlus,
+  UserCheck,
+  XCircle,
+  UserX,
+  Search,
+  User as UserIcon,
+} from 'lucide-react';
 import FriendSearch, { FriendSearchResult } from './components/FriendSearch';
 import NicknameModal from './components/NicknameModal';
-import FriendCard from './components/FriendCard';
-import { getAuthHeaders } from '@/lib/authHeaders';
-import { getAuthToken } from '@/lib/authHeaders';
+import FriendCard, { FriendCardModel } from './components/FriendCard';
 
+type IncomingRequest = {
+  _id: string;
+  senderId: string;
+  receiverId: string;
+  status: string;
+  createdAtISO: string;
+  sender?: {
+    _id: string;
+    name: string | null;
+    username: string | null;
+    nickname: string | null;
+    photo: string | null;
+    headline: string | null;
+  } | null;
+};
 
+type SentRequest = {
+  _id: string;
+  senderId: string;
+  receiverId: string;
+  status: string;
+  createdAtISO: string;
+  receiver?: {
+    _id: string;
+    name: string | null;
+    username: string | null;
+    nickname: string | null;
+    photo: string | null;
+    headline: string | null;
+  } | null;
+};
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
+type FriendListItem = {
+  _id: string;
+  friendId: string;
+  name: string | null;
+  username: string | null;
+  nickname: string | null;
+  photo: string | null;
+  headline: string | null;
+};
 
-  process.env.NEXT_PUBLIC_API_URL ||
-  'http://localhost:5000';
+type TabId = 'friends' | 'requests' | 'sent' | 'suggestions' | 'search';
+
+type SearchTabResult = {
+  q: string;
+  results: FriendSearchResult[];
+  loading: boolean;
+};
 
 export default function FriendsPage() {
-  const currentUser = ((): MockUser | null => {
-    // Auth layer is not consistent in this repo; use a stable mock user by default.
-    return mockData.users[0] ?? null;
-  })();
+  const [tab, setTab] = useState<TabId>('friends');
 
-  const [requests, setRequests] = useState<MockFriendRequest[]>([]);
-  const [friends, setFriends] = useState<MockUser[]>([]);
+  // Friends (accepted)
+  const [friends, setFriends] = useState<FriendListItem[]>([]);
+  const [friendsLoading, setFriendsLoading] = useState(true);
 
-  const [searchResults, setSearchResults] = useState<FriendSearchResult[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchLoading, setSearchLoading] = useState(false);
+  // Incoming requests
+  const [requests, setRequests] = useState<IncomingRequest[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(true);
 
+  // Sent requests
+  const [sent, setSent] = useState<SentRequest[]>([]);
+  const [sentLoading, setSentLoading] = useState(true);
 
-  const [selectedFriend, setSelectedFriend] = useState<FriendSearchResult | null>(null);
+  // Suggestions
+  const [suggestions, setSuggestions] = useState<FriendSearchResult[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(true);
+
+  // Search tab
+  const [searchTab, setSearchTab] = useState<SearchTabResult>({ q: '', results: [], loading: false });
+
+  // Modal for nickname
+  const [selectedFriend, setSelectedFriend] = useState<FriendCardModel | null>(null);
   const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(false);
   const [savingNickname, setSavingNickname] = useState(false);
 
+  // Action loading
+  const [actionUid, setActionUid] = useState<string | null>(null);
 
+  const loadFriends = async () => {
+    setFriendsLoading(true);
+    try {
+      const res = await axiosClient.get('/api/friends');
+      const arr = res?.data?.data ?? [];
+      const list = arr.map((f: any) => ({
+        _id: String(f.friendId || f._id),
+        friendId: String(f.friendId || f._id),
+        name: f.name ?? null,
+        username: f.username ?? null,
+        nickname: f.nickname ?? null,
+        photo: f.photo ?? null,
+        headline: f.headline ?? null,
+      }));
+      setFriends(list);
+    } catch (e: any) {
+      // If 401 (no token/demo user), fall back gracefully.
+      toast.error("Couldn't load your friends.");
+    } finally {
+      setFriendsLoading(false);
+    }
+  };
 
+  const loadRequests = async () => {
+    setRequestsLoading(true);
+    try {
+      const res = await axiosClient.get('/api/friends/received');
+      setRequests((res?.data?.data ?? []).filter((r: any) => r.status === 'pending'));
+    } catch (e: any) {
+      toast.error("Couldn't load friend requests.");
+    } finally {
+      setRequestsLoading(false);
+    }
+  };
+
+  const loadSent = async () => {
+    setSentLoading(true);
+    try {
+      const res = await axiosClient.get('/api/friends/sent');
+      setSent((res?.data?.data ?? []).filter((r: any) => r.status === 'pending'));
+    } catch (e: any) {
+      toast.error("Couldn't load sent requests.");
+    } finally {
+      setSentLoading(false);
+    }
+  };
+
+  const loadSuggestions = async () => {
+    setSuggestionsLoading(true);
+    try {
+      const res = await axiosClient.get('/api/friends/suggestions', { params: { limit: 12 } });
+      const arr = res?.data?.data ?? [];
+      setSuggestions(arr.map((u: any) => ({ ...u, isFriend: u.relationship === 'friends' })));
+    } catch (e: any) {
+      setSuggestions([]);
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
+    loadFriends();
+    loadRequests();
+    loadSent();
+    loadSuggestions();
+  }, []);
 
-    async function load() {
-      if (!currentUser) return;
+  const refreshAll = () => {
+    loadFriends();
+    loadRequests();
+    loadSent();
+    loadSuggestions();
+  };
 
-      const reqs = await fetchOrMock<MockFriendRequest[]>({
-        url: `${API_BASE}/api/friends/requests?userId=${encodeURIComponent(currentUser.uid)}`,
-        mock: () => mockData.friendRequests,
-        transform: (data) => {
-          const arr = data?.data ?? data?.requests ?? data;
-          return Array.isArray(arr) ? arr : [];
+  // ----------------------------------------------------------------------
+  // Actions
+  // ----------------------------------------------------------------------
+  const handleAdd = async (target: FriendCardModel) => {
+    const uid = target.uid || target._id;
+    setActionUid(uid);
+    try {
+      await axiosClient.post('/api/friends/request', { receiver: uid });
+      toast.success('Friend request sent.');
+      // Optimistic: move this result to "sent" state.
+      setSent((prev) => [
+        {
+          _id: 'pending-' + uid,
+          senderId: 'me',
+          receiverId: uid,
+          status: 'pending',
+          createdAtISO: new Date().toISOString(),
+          receiver: {
+            _id: uid,
+            name: target.name,
+            username: target.username,
+            nickname: target.nickname,
+            photo: target.photo,
+            headline: target.headline,
+          },
         },
-      });
-
-      // Friends list is not currently exposed by backend routes in this snapshot.
-      // So derive accepted friends from requests when available; otherwise show mock friends.
-      const accepted = reqs.filter((r) => r.status === 'accepted');
-      const friendIds = new Set<string>();
-      for (const r of accepted) {
-        friendIds.add(r.senderId === currentUser.uid ? r.receiverId : r.senderId);
-      }
-
-      const friendList = Array.from(friendIds)
-        .map((id) => mockData.users.find((u) => u.uid === id))
-        .filter(Boolean) as MockUser[];
-
-      const finalFriends = friendList.length ? friendList : mockData.users.slice(1, 61);
-
-      if (!mounted) return;
-      setRequests(reqs);
-      setFriends(finalFriends);
+        ...prev,
+      ]);
+      loadSuggestions();
+    } catch (e: any) {
+      const msg =
+        e?.response?.data?.error?.message ||
+        e?.response?.data?.message ||
+        "Couldn't send friend request.";
+      toast.error(msg);
+    } finally {
+      setActionUid(null);
     }
+  };
 
-    load();
-    return () => {
-      mounted = false;
-    };
-  }, [currentUser]);
+  const handleCancel = async (target: FriendCardModel) => {
+    const uid = target.uid || target._id;
+    setActionUid(uid);
+    try {
+      await axiosClient.delete('/api/friends/request', { data: { friendId: uid } });
+      toast.success('Friend request cancelled.');
+      // Optimistically remove from sent.
+      setSent((prev) => prev.filter((r) => r.receiverId !== uid && r.receiver?._id !== uid));
+      loadSuggestions();
+    } catch (e: any) {
+      toast.error("Couldn't cancel request.");
+    } finally {
+      setActionUid(null);
+    }
+  };
 
-  const usersForSuggestions = useMemo(() => mockData.users.slice(0, 120), []);
+  const handleAccept = async (target: FriendCardModel) => {
+    const uid = target.uid || target._id;
+    setActionUid(uid);
+    try {
+      await axiosClient.post('/api/friends/accept', { sender: uid });
+      toast.success('Friend request accepted.');
+      setRequests((prev) => prev.filter((r) => r.senderId !== uid && r.sender?._id !== uid));
+      // Find the request to add to friends.
+      const req = requests.find((r) => r.senderId === uid || r.sender?._id === uid);
+      const other = req?.sender;
+      setFriends((prev) => [
+        ...prev,
+        {
+          _id: uid,
+          friendId: uid,
+          name: other?.name ?? target.name,
+          username: other?.username ?? target.username,
+          nickname: other?.nickname ?? target.nickname,
+          photo: other?.photo ?? target.photo,
+          headline: other?.headline ?? target.headline,
+        },
+      ]);
+    } catch (e: any) {
+      toast.error("Couldn't accept request.");
+    } finally {
+      setActionUid(null);
+    }
+  };
 
+  const handleReject = async (target: FriendCardModel) => {
+    const uid = target.uid || target._id;
+    setActionUid(uid);
+    try {
+      await axiosClient.post('/api/friends/reject', { sender: uid });
+      toast.success('Friend request rejected.');
+      setRequests((prev) => prev.filter((r) => r.senderId !== uid && r.sender?._id !== uid));
+    } catch (e: any) {
+      toast.error("Couldn't reject request.");
+    } finally {
+      setActionUid(null);
+    }
+  };
 
+  const handleRemove = async (target: FriendCardModel) => {
+    const uid = target.uid || target._id;
+    setActionUid(uid);
+    try {
+      await axiosClient.delete('/api/friends/remove', { data: { friendId: uid } });
+      toast.success('Friend removed.');
+      setFriends((prev) => prev.filter((f) => f.friendId !== uid && f._id !== uid));
+    } catch (e: any) {
+      toast.error("Couldn't remove friend.");
+    } finally {
+      setActionUid(null);
+    }
+  };
+
+  const handleNicknameSave = async (nickname: string) => {
+    if (!selectedFriend) return;
+    const friendId = selectedFriend.uid || selectedFriend._id;
+    const prevNickname = selectedFriend.nickname;
+    const trimmed = nickname.trim();
+    const nextNickname = trimmed.length ? trimmed : null;
+
+    // Optimistic
+    setSelectedFriend((p) => (p ? { ...p, nickname: nextNickname } : p));
+    setFriends((prev) =>
+      prev.map((f) => (f.friendId === friendId ? { ...f, nickname: nextNickname } : f))
+    );
+
+    setSavingNickname(true);
+    try {
+      await axiosClient.patch(`/api/friends/${encodeURIComponent(friendId)}/nickname`, {
+        nickname: nextNickname,
+      });
+      toast.success(nextNickname ? 'Nickname updated.' : 'Nickname removed.');
+      setIsNicknameModalOpen(false);
+    } catch (e: any) {
+      toast.error("Couldn't update nickname.");
+      // rollback
+      setSelectedFriend((p) => (p ? { ...p, nickname: prevNickname } : p));
+      setFriends((prev) =>
+        prev.map((f) => (f.friendId === friendId ? { ...f, nickname: prevNickname } : f))
+      );
+    } finally {
+      setSavingNickname(false);
+    }
+  };
+
+  // ----------------------------------------------------------------------
+  // Memoized counts
+  // ----------------------------------------------------------------------
   const counts = useMemo(() => {
-    const pending = requests.filter((r) => r.status === 'pending').length;
-    const accepted = requests.filter((r) => r.status === 'accepted').length;
-    const rejected = requests.filter((r) => r.status === 'rejected').length;
-    return { pending, accepted, rejected };
-  }, [requests]);
+    const friendCount = friends.length;
+    const requestCount = requests.length;
+    const sentCount = sent.length;
+    return { friendCount, requestCount, sentCount };
+  }, [friends, requests, sent]);
+
+  const tabs: { id: TabId; label: string; icon: React.ReactNode; count: number }[] = [
+    { id: 'friends', label: 'Friends', icon: <UserCheck size={16} />, count: counts.friendCount },
+    { id: 'requests', label: 'Requests', icon: <UserPlus size={16} />, count: counts.requestCount },
+    { id: 'sent', label: 'Sent', icon: <Users size={16} />, count: counts.sentCount },
+    { id: 'suggestions', label: 'Suggestions', icon: <UserIcon size={16} />, count: 0 },
+    { id: 'search', label: 'Search', icon: <Search size={16} />, count: 0 },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
               <Users className="text-blue-600" /> Friends & Connections
             </h1>
-            <p className="text-gray-600 mt-1">Suggestions, requests, mutual connections—always populated for demos.</p>
+            <p className="text-gray-600 mt-1">
+              Manage your connections, requests, and suggestions.
+            </p>
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 mb-6">
-          <div className="bg-white rounded-xl shadow-sm p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm text-gray-600">Pending requests</div>
-                <div className="text-2xl font-bold text-yellow-700">{counts.pending}</div>
-              </div>
-              <UserPlus className="text-yellow-600" />
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm text-gray-600">Accepted requests</div>
-                <div className="text-2xl font-bold text-green-700">{counts.accepted}</div>
-              </div>
-              <UserCheck className="text-green-600" />
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm text-gray-600">Rejected requests</div>
-                <div className="text-2xl font-bold text-red-700">{counts.rejected}</div>
-              </div>
-              <XCircle className="text-red-600" />
-            </div>
-          </div>
+        {/* Tabs */}
+        <div className="flex flex-wrap gap-2 mb-6 border-b border-gray-200 pb-2">
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-t-lg text-sm font-medium transition ${
+                tab === t.id
+                  ? 'bg-white text-blue-700 border border-b-0 border-gray-200 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+            >
+              {t.icon}
+              {t.label}
+              {t.count > 0 && (
+                <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">
+                  {t.count}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
-          <div className="bg-white rounded-xl shadow-sm p-5 lg:col-span-1">
-            <div className="mb-4">
-              <FriendSearch
-                apiBase={API_BASE}
-                onLoading={setSearchLoading}
-                onResults={(results) => {
-                  setSearchResults(results);
-                }}
-              />
-            </div>
+        <div className="bg-white rounded-2xl shadow-sm p-5">
+          {/* FRIENDS TAB */}
+          {tab === 'friends' && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-sm font-semibold text-gray-900">
+                  Your connections ({friends.length})
+                </div>
+              </div>
 
-
-            <div className="text-sm font-semibold text-gray-900 mb-3">Search results</div>
-            <div className="space-y-3">
-              {searchQuery.trim().length === 0 ? (
-                <div className="text-sm text-gray-500">Type to search friends by name, username, or nickname.</div>
-              ) : searchLoading ? (
-                <div className="text-sm text-gray-500">Searching...</div>
-              ) : searchResults.length === 0 ? (
-                <div className="text-sm text-gray-500">No results found.</div>
-              ) : (
-                searchResults.map((r) => (
-                  <div key={r._id} className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <img
-                        src={r.photo || "https://via.placeholder.com/64"}
-                        alt={r.name || "Friend"}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                      <div className="min-w-0">
-                        <div className="text-sm font-semibold text-gray-900 truncate">{r.nickname || r.name || "Unknown"}</div>
-                        <div className="text-xs text-gray-500 truncate">
-                          {r.username ? `@${r.username}` : ""}
-                          {r.headline ? ` • ${r.headline}` : ""}
-                          {r.isFriend ? " • Friend" : ""}
-                        </div>
+              {friendsLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="border rounded-lg p-3 flex items-center gap-3 animate-pulse">
+                      <div className="w-10 h-10 rounded-full bg-gray-200" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 bg-gray-200 rounded w-2/3" />
+                        <div className="h-3 bg-gray-200 rounded w-1/2" />
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      className="text-sm px-3 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
-                      disabled={r.isFriend}
-                    >
-                      {r.isFriend ? "Connected" : "Connect"}
-                    </button>
+                  ))}
+                </div>
+              ) : friends.length === 0 ? (
+                <div className="py-10 text-center text-gray-500">
+                  <UserX className="mx-auto mb-3 text-gray-300" size={40} />
+                  <div className="font-medium text-gray-700">No friends yet</div>
+                  <div className="text-sm mt-1">
+                    Ask people to connect or check the Search tab to find friends.
                   </div>
-                ))
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {friends.map((f) => (
+                    <FriendCard
+                      key={f.friendId || f._id}
+                      friend={{
+                        _id: f.friendId || f._id,
+                        uid: f.friendId || f._id,
+                        name: f.name,
+                        username: f.username,
+                        nickname: f.nickname,
+                        photo: f.photo,
+                        headline: f.headline,
+                        isFriend: true,
+                        relationship: 'friends',
+                      }}
+                      onEditNickname={(fr) => {
+                        setSelectedFriend(fr);
+                        setIsNicknameModalOpen(true);
+                      }}
+                      onRemove={handleRemove}
+                      removing={actionUid === f.friendId}
+                    />
+                  ))}
+                </div>
               )}
             </div>
+          )}
 
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-5 lg:col-span-2">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <div className="text-sm font-semibold text-gray-900">Friends list</div>
-                <div className="text-xs text-gray-500">{friends.length} connections • Mutual friends are implied in the mock graph</div>
-              </div>
-              <Link href="/public" className="text-sm text-blue-600 hover:text-blue-700">View Public Space</Link>
-            </div>
-
-            <div className="grid sm:grid-cols-2 gap-3">
-              {friends.slice(0, 24).map((u) => (
-                <FriendCard
-                  key={u.uid}
-                  friend={{
-                    _id: u.uid,
-                    name: u.name,
-                    username: null,
-                    nickname: (u as any).nickname ?? null,
-                    photo: u.photo,
-                    headline: null,
-                    isFriend: true,
-                  }}
-                  onEditNickname={(friend) => {
-                    setSelectedFriend(friend);
-                    setIsNicknameModalOpen(true);
-                  }}
-
-                />
-              ))}
-            </div>
-
-
-            <div className="mt-6 border-t pt-5">
-              <div className="text-sm font-semibold text-gray-900 mb-3">Recent friend requests</div>
-              <div className="space-y-3">
-                {requests.slice(0, 10).map((r) => {
-                  const otherId = r.senderId === currentUser?.uid ? r.receiverId : r.senderId;
-                  const other = mockData.users.find((u) => u.uid === otherId);
-                  if (!other) return null;
-                  const icon = r.status === 'pending' ? <UserPlus className="text-yellow-600" /> : r.status === 'accepted' ? <UserCheck className="text-green-600" /> : <XCircle className="text-red-600" />;
-                  return (
-                    <div key={r._id} className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        {icon}
-                        <img src={other.photo} alt={other.name} className="w-10 h-10 rounded-full object-cover" />
-                        <div>
-                          <div className="text-sm font-semibold text-gray-900">{other.name}</div>
-                          <div className="text-xs text-gray-500">{r.status.toUpperCase()} • {new Date(r.createdAtISO).toLocaleDateString()}</div>
+          {/* REQUESTS TAB */}
+          {tab === 'requests' && (
+            <div>
+              <div className="text-sm font-semibold text-gray-900 mb-4">Incoming requests</div>
+              {requestsLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="border rounded-lg p-3 flex items-center gap-3 animate-pulse">
+                      <div className="w-10 h-10 rounded-full bg-gray-200" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 bg-gray-200 rounded w-1/2" />
+                        <div className="h-3 bg-gray-200 rounded w-1/3" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : requests.length === 0 ? (
+                <div className="py-10 text-center text-gray-500">
+                  <UserPlus className="mx-auto mb-3 text-gray-300" size={40} />
+                  No pending friend requests.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {requests.map((r) => {
+                    const sender = r.sender;
+                    return (
+                      <div key={r._id} className="border rounded-lg p-3 flex items-center gap-3">
+                        <img
+                          src={sender?.photo || 'https://via.placeholder.com/48'}
+                          alt={sender?.name || 'User'}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold text-gray-900 truncate">
+                            {sender?.name || sender?.nickname || 'New user'}
+                          </div>
+                          <div className="text-xs text-gray-500 truncate">
+                            {sender?.nickname ? `@${sender.nickname}` : ''} • sent a request
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            disabled={!!actionUid}
+                            onClick={() => handleAccept({
+                              _id: r.senderId,
+                              uid: r.senderId,
+                              name: sender?.name ?? null,
+                              username: sender?.username ?? null,
+                              nickname: sender?.nickname ?? null,
+                              photo: sender?.photo ?? null,
+                              headline: sender?.headline ?? null,
+                              isFriend: false,
+                              relationship: 'request_received',
+                            })}
+                            className="px-3 py-1 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700 disabled:opacity-50"
+                          >
+                            Accept
+                          </button>
+                          <button
+                            disabled={!!actionUid}
+                            onClick={() => handleReject({
+                              _id: r.senderId,
+                              uid: r.senderId,
+                              name: sender?.name ?? null,
+                              username: sender?.username ?? null,
+                              nickname: sender?.nickname ?? null,
+                              photo: sender?.photo ?? null,
+                              headline: sender?.headline ?? null,
+                              isFriend: false,
+                              relationship: 'request_received',
+                            })}
+                            className="px-3 py-1 rounded-lg bg-gray-100 text-gray-700 text-xs font-medium hover:bg-gray-200 disabled:opacity-50"
+                          >
+                            Reject
+                          </button>
                         </div>
                       </div>
-                      {r.status === 'pending' ? (
-                        <div className="flex items-center gap-2">
-                          <button className="text-xs px-2 py-1 rounded bg-green-100 text-green-800">Accept</button>
-                          <button className="text-xs px-2 py-1 rounded bg-red-100 text-red-800">Reject</button>
-                        </div>
-                      ) : (
-                        <div className="text-xs text-gray-500">Done</div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
+          )}
 
-          </div>
+          {/* SENT TAB */}
+          {tab === 'sent' && (
+            <div>
+              <div className="text-sm font-semibold text-gray-900 mb-4">Sent requests</div>
+              {sentLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="border rounded-lg p-3 flex items-center gap-3 animate-pulse">
+                      <div className="w-10 h-10 rounded-full bg-gray-200" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 bg-gray-200 rounded w-1/2" />
+                        <div className="h-3 bg-gray-200 rounded w-1/3" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : sent.length === 0 ? (
+                <div className="py-10 text-center text-gray-500">
+                  <Users className="mx-auto mb-3 text-gray-300" size={40} />
+You haven&apos;t sent any friend requests yet.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {sent.map((r) => {
+                    const recv = r.receiver;
+                    return (
+                      <div key={r._id} className="border rounded-lg p-3 flex items-center gap-3">
+                        <img
+                          src={recv?.photo || 'https://via.placeholder.com/48'}
+                          alt={recv?.name || 'User'}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold text-gray-900 truncate">
+                            {recv?.name || recv?.nickname || 'User'}
+                          </div>
+                          <div className="text-xs text-gray-500">Request pending</div>
+                        </div>
+                        <button
+                          disabled={!!actionUid}
+                          onClick={() => handleCancel({
+                            _id: r.receiverId,
+                            uid: r.receiverId,
+                            name: recv?.name ?? null,
+                            username: recv?.username ?? null,
+                            nickname: recv?.nickname ?? null,
+                            photo: recv?.photo ?? null,
+                            headline: recv?.headline ?? null,
+                            isFriend: false,
+                            relationship: 'request_sent',
+                          })}
+                          className="px-3 py-1 rounded-lg bg-amber-50 text-amber-700 text-xs font-medium hover:bg-amber-100 disabled:opacity-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* SUGGESTIONS TAB */}
+          {tab === 'suggestions' && (
+            <div>
+              <div className="text-sm font-semibold text-gray-900 mb-4">People you may know</div>
+              {suggestionsLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="border rounded-lg p-3 flex items-center gap-3 animate-pulse">
+                      <div className="w-10 h-10 rounded-full bg-gray-200" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 bg-gray-200 rounded w-2/3" />
+                        <div className="h-3 bg-gray-200 rounded w-1/2" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : suggestions.length === 0 ? (
+                <div className="py-10 text-center text-gray-500">
+                  <UserIcon className="mx-auto mb-3 text-gray-300" size={40} />
+                  No suggestions right now.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {suggestions.map((s) => (
+                    <FriendCard
+                      key={s._id}
+                      friend={s}
+                      onAdd={handleAdd}
+                      actionLoading={actionUid === (s.uid || s._id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* SEARCH TAB */}
+          {tab === 'search' && (
+            <div>
+              <FriendSearch
+                apiBase=""
+                onLoading={(l) => setSearchTab((p) => ({ ...p, loading: l }))}
+                onResults={(results, q) => setSearchTab((p) => ({ ...p, results, q }))}
+              />
+              {searchTab.q.trim().length === 0 ? (
+                <div className="py-10 text-center text-gray-500 text-sm">
+                  Search people by name or @nickname to connect.
+                </div>
+              ) : searchTab.loading ? (
+                <div className="py-10 text-center text-gray-500">Searching...</div>
+              ) : searchTab.results.length === 0 ? (
+                <div className="py-10 text-center text-gray-500">No results found.</div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {searchTab.results.map((r) => (
+                    <FriendCard
+                      key={r._id}
+                      friend={r}
+                      onAdd={handleAdd}
+                      onCancel={handleCancel}
+                      onAccept={handleAccept}
+                      onReject={handleReject}
+                      actionLoading={actionUid === (r.uid || r._id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -269,69 +662,8 @@ export default function FriendsPage() {
         onClose={() => {
           if (!savingNickname) setIsNicknameModalOpen(false);
         }}
-        onSave={async (nickname) => {
-          if (!selectedFriend) return;
-
-          const friendId = selectedFriend._id;
-          const prevNickname = selectedFriend.nickname;
-          const trimmed = nickname.trim();
-          const nextNickname = trimmed.length ? trimmed : null;
-
-          // optimistic
-          setSelectedFriend((p) => (p ? { ...p, nickname: nextNickname } : p));
-          setFriends((prev) =>
-            prev.map((u) => (u.uid === friendId ? ({ ...(u as any), nickname: nextNickname } as any) : u))
-          );
-          setSearchResults((prev) =>
-            prev.map((r) => (r._id === friendId ? { ...r, nickname: nextNickname } : r))
-          );
-
-          setSavingNickname(true);
-          try {
-            const res = await axios.patch(
-              `${API_BASE}/api/friends/${encodeURIComponent(friendId)}/nickname`,
-              { nickname: nextNickname },
-              {
-                headers: await getAuthHeaders(),
-              }
-            );
-
-            if (res.status >= 200 && res.status < 300) {
-              toast.success(nextNickname ? 'Nickname updated.' : 'Nickname removed.');
-              setIsNicknameModalOpen(false);
-            } else {
-              toast.error("Couldn't update nickname.");
-              // rollback
-              setSelectedFriend((p) => (p ? { ...p, nickname: prevNickname } : p));
-              setFriends((prev) =>
-                prev.map((u) => (u.uid === friendId ? ({ ...(u as any), nickname: prevNickname } as any) : u))
-              );
-              setSearchResults((prev) =>
-                prev.map((r) => (r._id === friendId ? { ...r, nickname: prevNickname } : r))
-              );
-            }
-          } catch (e: any) {
-            if (e?.response?.status === 401) {
-              toast.error("Couldn't update nickname.");
-            } else {
-              toast.error("Couldn't update nickname.");
-            }
-            // rollback
-            setSelectedFriend((p) => (p ? { ...p, nickname: prevNickname } : p));
-            setFriends((prev) =>
-              prev.map((u) => (u.uid === friendId ? ({ ...(u as any), nickname: prevNickname } as any) : u))
-            );
-            setSearchResults((prev) =>
-              prev.map((r) => (r._id === friendId ? { ...r, nickname: prevNickname } : r))
-            );
-          } finally {
-            setSavingNickname(false);
-          }
-        }}
+        onSave={handleNicknameSave}
       />
-
     </div>
   );
 }
-
-

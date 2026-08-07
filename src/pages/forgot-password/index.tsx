@@ -2,8 +2,8 @@
 
 import React, { useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import axios from "axios";
 import { toast } from "react-toastify";
+import axiosClient from "@/lib/axiosClient";
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -35,8 +35,6 @@ export default function ForgotPasswordPage() {
     return null;
   }, [identifier]);
 
-  const apiBase = process.env.NEXT_PUBLIC_BACKEND_URL || "";
-
   const requestReset = async () => {
     setLoading(true);
     setMessage("");
@@ -47,12 +45,14 @@ export default function ForgotPasswordPage() {
         throw new Error("Please enter a valid email address or phone number.");
       }
 
-      const res = await axios.post(
-        `${apiBase}/api/auth/forgot-password`,
+      // Use the centralized axiosClient so the request resolves to the real
+      // backend (NEXT_PUBLIC_API_BASE_URL / localhost:5000), not the Next.js
+      // origin. An empty NEXT_PUBLIC_BACKEND_URL caused a 404 to /api/auth/...
+      const res = await axiosClient.post(
+        `/api/auth/forgot-password`,
         {
           identifier: identifier.trim(),
-        },
-        { headers: { "Content-Type": "application/json" } }
+        }
       );
 
       const msg =

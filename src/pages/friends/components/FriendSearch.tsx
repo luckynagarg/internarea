@@ -6,12 +6,17 @@ import { getAuthHeaders } from "@/lib/authHeaders";
 
 export type FriendSearchResult = {
   _id: string;
+  uid?: string;
   name: string | null;
   username: string | null;
   nickname: string | null;
   photo: string | null;
   headline: string | null;
+  bio?: string | null;
+  mutualFriends?: number;
+  friendCount?: number;
   isFriend: boolean;
+  relationship?: "none" | "request_sent" | "request_received" | "friends";
 };
 
 type Props = {
@@ -21,18 +26,13 @@ type Props = {
   onLoading?: (loading: boolean) => void;
 };
 
-
-
-
 export default function FriendSearch({
   apiBase,
   initialQuery = "",
   onResults,
   onLoading,
 }: Props) {
-
   const [query, setQuery] = useState(initialQuery);
-
   const [loading, setLoading] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
@@ -45,7 +45,6 @@ export default function FriendSearch({
   }, [loading, onLoading]);
 
   useEffect(() => {
-    // Clear results when empty
     if (!trimmed) {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
       if (abortRef.current) abortRef.current.abort();
@@ -59,7 +58,6 @@ export default function FriendSearch({
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
 
     debounceRef.current = window.setTimeout(async () => {
-      // cancel previous
       if (abortRef.current) abortRef.current.abort();
       const controller = new AbortController();
       abortRef.current = controller;
@@ -68,18 +66,21 @@ export default function FriendSearch({
       try {
         const res = await axios.get<{
           data: FriendSearchResult[];
-        }>(`${apiBase}/api/friends/search`, {
-          params: { q: trimmed },
+        }>(`${apiBase}/api/users/search`, {
+          params: { q: trimmed, limit: 20 },
           signal: controller.signal,
           headers: await getAuthHeaders(),
         });
 
-
-        onResults(res.data?.data || [], trimmed);
+        const raw = res.data?.data || [];
+        const normalized = raw.map((u) => ({
+          ...u,
+          isFriend: u.relationship === "friends",
+        }));
+        onResults(normalized, trimmed);
       } catch (e: any) {
         if (axios.isCancel?.(e)) return;
         if (e?.name === "CanceledError" || e?.code === "ERR_CANCELED") return;
-        // keep UI stable; report as empty
         onResults([], trimmed);
       } finally {
         setLoading(false);
@@ -91,12 +92,9 @@ export default function FriendSearch({
     };
   }, [trimmed, apiBase, onResults]);
 
-
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setQuery("");
-      }
+      if (e.key === "Escape") setQuery("");
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -108,7 +106,7 @@ export default function FriendSearch({
       <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search friends..."
+        placeholder="Search people by name or @nickname..."
         className="w-full border rounded-lg px-3 py-2 text-sm text-black"
       />
 
@@ -129,4 +127,3 @@ export default function FriendSearch({
     </div>
   );
 }
-
