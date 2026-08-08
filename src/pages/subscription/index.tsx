@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSelector } from "react-redux";
 import { selectuser } from "@/Feature/Userslice";
 import { openRazorpayCheckout } from "@/lib/razorpay";
+import { API_URL } from "@/config/api";
 import { toast } from "react-toastify";
 import {
   CalendarDays,
@@ -62,11 +63,6 @@ type Invoice = {
   emailStatus: string;
   createdAt: string;
 };
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:5000";
 
 function getDaysRemaining(expiry: string | Date | null | undefined) {
   if (!expiry) return 0;
@@ -406,8 +402,8 @@ export default function SubscriptionPage() {
                         <div className="text-xs text-gray-500">{new Date(inv.createdAt).toDateString()}</div>
                         <div className="text-xs text-gray-600">{inv.emailStatus}</div>
                       </div>
-                      <Link
-                        href={`${API_BASE}/api/subscription/invoices/${inv.invoiceNumber}/download`}
+<Link
+                        href={API_URL(`/api/subscription/invoices/${inv.invoiceNumber}/download`)}
                         target="_blank"
                         className="px-3 py-2 rounded-lg bg-blue-50 text-blue-700 text-sm font-semibold hover:bg-blue-100 transition"
                       >

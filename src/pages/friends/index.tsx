@@ -97,11 +97,11 @@ export default function FriendsPage() {
   const loadFriends = async () => {
     setFriendsLoading(true);
     try {
-      const res = await axiosClient.get('/api/friends');
+      const res = await axiosClient.get('/api/friends/list');
       const arr = res?.data?.data ?? [];
       const list = arr.map((f: any) => ({
-        _id: String(f.friendId || f._id),
-        friendId: String(f.friendId || f._id),
+        _id: String(f.friendId || f._id || f.uid),
+        friendId: String(f.friendId || f._id || f.uid),
         name: f.name ?? null,
         username: f.username ?? null,
         nickname: f.nickname ?? null,
@@ -120,8 +120,17 @@ export default function FriendsPage() {
   const loadRequests = async () => {
     setRequestsLoading(true);
     try {
-      const res = await axiosClient.get('/api/friends/received');
-      setRequests((res?.data?.data ?? []).filter((r: any) => r.status === 'pending'));
+      const res = await axiosClient.get('/api/friends/pending');
+      const arr = res?.data?.data ?? [];
+      const mapped = arr.map((r: any) => ({
+        _id: String(r._id || r.requestId),
+        senderId: String(r.senderId || r.sender?._id || ''),
+        receiverId: String(r.receiverId || ''),
+        status: r.status || 'pending',
+        createdAtISO: r.createdAtISO || new Date().toISOString(),
+        sender: r.sender || null,
+      }));
+      setRequests(mapped.filter((r: any) => r.status === 'pending'));
     } catch (e: any) {
       toast.error("Couldn't load friend requests.");
     } finally {
@@ -133,7 +142,16 @@ export default function FriendsPage() {
     setSentLoading(true);
     try {
       const res = await axiosClient.get('/api/friends/sent');
-      setSent((res?.data?.data ?? []).filter((r: any) => r.status === 'pending'));
+      const arr = res?.data?.data ?? [];
+      const mapped = arr.map((r: any) => ({
+        _id: String(r._id || r.requestId),
+        senderId: String(r.senderId || ''),
+        receiverId: String(r.receiverId || r.receiver?._id || ''),
+        status: r.status || 'pending',
+        createdAtISO: r.createdAtISO || new Date().toISOString(),
+        receiver: r.receiver || null,
+      }));
+      setSent(mapped.filter((r: any) => r.status === 'pending'));
     } catch (e: any) {
       toast.error("Couldn't load sent requests.");
     } finally {
@@ -144,7 +162,7 @@ export default function FriendsPage() {
   const loadSuggestions = async () => {
     setSuggestionsLoading(true);
     try {
-      const res = await axiosClient.get('/api/friends/suggestions', { params: { limit: 12 } });
+      const res = await axiosClient.get('/api/users/suggestions', { params: { limit: 12 } });
       const arr = res?.data?.data ?? [];
       setSuggestions(arr.map((u: any) => ({ ...u, isFriend: u.relationship === 'friends' })));
     } catch (e: any) {
@@ -208,11 +226,11 @@ export default function FriendsPage() {
     }
   };
 
-  const handleCancel = async (target: FriendCardModel) => {
+const handleCancel = async (target: FriendCardModel) => {
     const uid = target.uid || target._id;
     setActionUid(uid);
     try {
-      await axiosClient.delete('/api/friends/request', { data: { friendId: uid } });
+      await axiosClient.post('/api/friends/cancel', { receiver: uid });
       toast.success('Friend request cancelled.');
       // Optimistically remove from sent.
       setSent((prev) => prev.filter((r) => r.receiverId !== uid && r.receiver?._id !== uid));

@@ -221,10 +221,10 @@ className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-cent
                         )}
                       </button>
 {notifOpen ? (
-                        <NotificationDropdown
+<NotificationDropdown
                           open={notifOpen}
                           onClose={() => setNotifOpen(false)}
-                          onUnreadCountChange={setUnreadCount}
+                          onUnreadChange={setUnreadCount}
                         />
                       ) : null}
                     </div>

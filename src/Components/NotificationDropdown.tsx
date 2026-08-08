@@ -1,50 +1,34 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import axiosClient from "@/lib/apiClient";
-import { Bell, X, CheckCheck } from "lucide-react";
+import axiosCoin from "@/lib/axiosClient";
+import { Bell, X, CheckCheck, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
+import { auth } from "../firebase/firebase";
 
 export type NotificationItem = {
   _id: string;
-  type:
-    | "internship"
-    | "application"
-    | "admin_message"
-    | "announcement"
-    | "social"
-    | "payment"
-    | "subscription"
-    | "resume"
-    | string;
+  type: "internship" | "application" | "admin_message" | "announcement" | "social" | string;
   title: string;
   body?: string;
+  createdAt: string;
+  read: boolean;
   actor?: {
-    _id: string;
-    name: string | null;
-    username: string | null;
-    nickname: string | null;
-    photo: string | null;
-    headline: string | null;
+    name?: string;
+    username?: string;
+    photo?: string;
+    headline?: string;
     verified?: boolean;
   } | null;
   link?: string | null;
   action?: string | null;
-  createdAt: string;
-  read: boolean;
 };
 
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  process.env.NEXT_PUBLIC_API_BASE_BASE_URL ||
+  "https://intern-backend-4dlt.onrender.com";
+
 function formatTitle(n: NotificationItem) {
-  return (
-    n.title ||
-    (n.type === "internship"
-      ? "New internship posted"
-      : n.type === "application"
-        ? "Application status update"
-        : n.type === "admin_message"
-          ? "Message from admin"
-          : n.type === "social"
-            ? "Social update"
-            : "Announcement")
-  );
+  return n.title || "Announcement";
 }
 
 function getApiNotificationsPayload(data: any): any[] {
@@ -56,7 +40,6 @@ function getApiNotificationsPayload(data: any): any[] {
 }
 
 function normalizeNotificationItem(raw: any): NotificationItem {
-  // Backend canonical format: {_id,title,body,type,read,createdAt,actor,link,action}
   const _id =
     typeof raw?._id === "string"
       ? raw._id
@@ -84,30 +67,13 @@ function normalizeNotificationItem(raw: any): NotificationItem {
   const read = typeof raw?.read === "boolean" ? raw.read : false;
   const type = typeof raw?.type === "string" ? raw.type : "announcement";
 
-  const actor =
-    raw?.actor && typeof raw.actor === "object"
-      ? {
-          _id: raw.actor._id,
-          name: raw.actor.name ?? null,
-          username: raw.actor.username ?? null,
-          nickname: raw.actor.nickname ?? null,
-          photo: raw.actor.photo ?? null,
-          headline: raw.actor.headline ?? null,
-          verified: !!raw.actor.verified,
-        }
-      : null;
+  // Actor is either embedded (from populateNotificationActors) or raw.fromUser.
+  const actor = raw?.actor || raw?.fromUser || null;
 
-  return {
-    _id,
-    title,
-    body,
-    type,
-    actor,
-    link: raw?.link ?? null,
-    action: raw?.action ?? null,
-    createdAt,
-    read,
-  };
+  const link = typeof raw?.link === "string" ? raw.link : null;
+  const action = typeof raw?.action === "string" ? raw.action : null;
+
+  return { _id, title, body, createdAt, read, type, actor, link, action };
 }
 
 function errorToString(err: any): string {
@@ -128,51 +94,46 @@ export default function NotificationDropdown({
   open,
   onClose,
   onMarkRead,
-  onUnreadCountChange,
+  onUnreadChange,
 }: {
   open: boolean;
   onClose: () => void;
   onMarkRead?: (items: NotificationItem[]) => void;
-  onUnreadCountChange?: (count: number) => void;
+  onUnreadChange?: (count: number) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [errorState, setErrorState] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const onMarkReadRef = useRef(onMarkRead);
   onMarkReadRef.current = onMarkRead;
+  const onUnreadChangeRef = useRef(onUnreadChange);
+  onUnreadChangeRef.current = onUnreadChange;
 
   const unreadCount = useMemo(() => items.filter((x) => !x.read).length, [items]);
 
   useEffect(() => {
-    onUnreadCountChange?.(unreadCount);
-  }, [unreadCount, onUnreadCountChange]);
+    onUnreadChangeRef.current?.(unreadCount);
+  }, [unreadCount]);
 
   useEffect(() => {
     if (!open) return;
-
     let mounted = true;
 
     const run = async () => {
       setLoading(true);
       setErrorState(null);
-
       try {
-        const res = await axiosClient.get("/api/notifications", {
-          params: { limit: 30 },
-        });
-
+        const res = await axiosCoin.get(`${API_BASE}/api/notifications`);
         const rawList = getApiNotificationsPayload(res.data);
         const normalized = rawList.map(normalizeNotificationItem);
-
         if (!mounted) return;
-
         setItems(normalized);
         onMarkReadRef.current?.(normalized);
       } catch (e: any) {
         const msg = errorToString(e);
         if (!mounted) return;
-
         setErrorState(msg);
         toast.error(msg);
       } finally {
@@ -181,42 +142,52 @@ export default function NotificationDropdown({
     };
 
     run();
-
     return () => {
       mounted = false;
     };
   }, [open]);
 
-  const handleMarkOneRead = async (n: NotificationItem) => {
+  async function markRead(n: NotificationItem) {
+    if (n.read) return;
     // Optimistic update.
-    setItems((prev) =>
-      prev.map((x) => (x._id === n._id ? { ...x, read: true } : x))
-    );
-    onMarkRead?.(
-      items.map((x) => (x._id === n._id ? { ...x, read: true } : x))
-    );
-
+    setItems((prev) => prev.map((x) => (x._id === n._id ? { ...x, read: true } : x)));
     try {
-      await axiosClient.post(`/api/notifications/${n._id}/read`);
-    } catch (e: any) {
-      toast.error("Couldn't mark as read.");
-      // rollback
-      setItems((prev) =>
-        prev.map((x) => (x._id === n._id ? { ...x, read: false } : x))
-      );
+      await axiosCoin.post(`${API_BASE}/api/notifications/${encodeURIComponent(n._id)}/read`);
+    } catch (e) {
+      // rollback on failure
+      setItems((prev) => prev.map((x) => (x._id === n._id ? { ...x, read: false } : x)));
     }
-  };
+  }
 
-  const handleMarkAllRead = async () => {
-    setItems((prev) => prev.map((x) => ({ ...x, read: true })));
-    onMarkRead?.(items.map((x) => ({ ...x, read: true })));
+  async function markAllRead() {
     try {
-      await axiosClient.post("/api/notifications/read-all");
+      await axiosCoin.post(`${API_BASE}/api/notifications/read-all`);
+      setItems((prev) => prev.map((x) => ({ ...x, read: true })));
       toast.success("All notifications marked as read.");
     } catch (e: any) {
-      toast.error("Couldn't mark all as read.");
+      toast.error(errorToString(e));
     }
-  };
+  }
+
+  async function removeNotification(n: NotificationItem) {
+    setDeleting(n._id);
+    try {
+      await axiosCoin.delete(`${API_BASE}/api/notifications/${encodeURIComponent(n._id)}`);
+      setItems((prev) => prev.filter((x) => x._id !== n._id));
+      toast.success("Notification deleted.");
+    } catch (e: any) {
+      toast.error(errorToString(e));
+    } finally {
+      setDeleting(null);
+    }
+  }
+
+  function handleOpen(n: NotificationItem) {
+    markRead(n);
+    if (n.link) {
+      window.location.href = n.link;
+    }
+  }
 
   if (!open) return null;
 
@@ -231,15 +202,14 @@ export default function NotificationDropdown({
           </div>
         </div>
         <div className="flex items-center gap-1">
-          {unreadCount > 0 && (
+          {items.some((x) => !x.read) && (
             <button
               type="button"
-              onClick={handleMarkAllRead}
-              className="p-1 rounded-md hover:bg-gray-100 text-xs text-blue-600 inline-flex items-center gap-1"
-              aria-label="Mark all as read"
+              onClick={markAllRead}
+              className="p-1.5 rounded-md hover:bg-gray-100"
+              title="Mark all as read"
             >
-              <CheckCheck size={14} />
-              Mark all
+              <CheckCheck size={16} className="text-gray-600" />
             </button>
           )}
           <button
@@ -273,63 +243,81 @@ export default function NotificationDropdown({
         {!loading && !errorState && items.length === 0 && (
           <div className="p-6 text-center">
             <div className="font-semibold">No notifications yet.</div>
-            <div className="text-sm text-muted-foreground mt-1">
-              You&apos;ll see updates here.
-            </div>
+            <div className="text-sm text-muted-foreground mt-1">You&apos;ll see updates here.</div>
           </div>
         )}
 
         {!loading && !errorState && items.length > 0 && (
           <div className="p-2">
             {items.map((n) => (
-              <button
+              <div
                 key={n._id}
-                type="button"
                 className={`w-full text-left px-3 py-3 rounded-lg hover:bg-accent ${
                   n.read ? "bg-transparent" : "bg-accent/50"
                 }`}
-                onClick={() => handleMarkOneRead(n)}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-2 min-w-0">
-                    {n.actor?.photo ? (
+                  <button
+                    type="button"
+                    className="flex items-start gap-3 flex-1 text-left"
+                    onClick={() => handleOpen(n)}
+                  >
+                    {(n.actor?.photo || n.actor?.name) ? (
                       <img
-                        src={n.actor.photo}
+                        src={n.actor.photo || "https://via.placeholder.com/40"}
                         alt={n.actor.name || "User"}
-                        className="w-8 h-8 rounded-full object-cover shrink-0"
+                        className="w-9 h-9 rounded-full object-cover flex-shrink-0"
                       />
-                    ) : null}
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                        <Bell size={16} className="text-blue-600" />
+                      </div>
+                    )}
                     <div className="min-w-0">
-                      <div className="font-semibold text-foreground text-sm">
+                      <div className="font-semibold text-foreground">
                         {formatTitle(n)}
                         {n.actor?.verified && (
-                          <span className="ml-1 text-blue-500 text-xs" title="Verified">
-                            ✓
+                          <span className="ml-1 text-blue-600 inline-flex">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M12 2l2.4 4.8L20 8l-4 3.9.9 5.6L12 15l-4.9 2.5.9-5.6L4 8l5.6-1.2L12 2z" />
+                            </svg>
                           </span>
                         )}
                       </div>
+                      {n.actor?.name && (
+                        <div className="text-xs text-gray-500">
+                          {n.actor.name}
+                          {n.actor.username ? ` · @${n.actor.username}` : ""}
+                        </div>
+                      )}
                       {typeof n.body === "string" && n.body ? (
                         <div className="text-sm text-foreground/90 mt-1">{n.body}</div>
                       ) : null}
-                      {n.actor?.nickname && (
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          @{n.actor.nickname}
-                        </div>
-                      )}
+                    </div>
+                  </button>
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    <button
+                      type="button"
+                      aria-label="Delete notification"
+                      onClick={() => removeNotification(n)}
+                      disabled={deleting === n._id}
+                      className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-600"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                    <div className="text-[11px] text-muted-foreground whitespace-nowrap">
+                      {n.createdAt ? new Date(n.createdAt).toLocaleString() : ""}
                     </div>
                   </div>
-                  <div className="text-[11px] text-muted-foreground whitespace-nowrap">
-                    {n.createdAt ? new Date(n.createdAt).toLocaleString() : ""}
-                  </div>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         )}
       </div>
 
       <div className="px-4 py-3 border-t border-border text-xs text-muted-foreground">
-        Real-time sync is handled via the notification API.
+        <div>Notifications are kept in sync with the backend in real time.</div>
       </div>
     </div>
   );

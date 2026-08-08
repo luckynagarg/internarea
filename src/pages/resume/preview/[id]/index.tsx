@@ -3,12 +3,6 @@ import { useRouter } from 'next/router';
 import axiosClient from '@/lib/apiClient';
 import { Loader2, AlertCircle, ArrowLeft, Download } from 'lucide-react';
 import Link from 'next/link';
-import { getAuthHeaders } from '@/lib/authHeaders';
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  'http://localhost:5000';
 
 type ResumeData = {
   fullName?: string;
@@ -54,19 +48,17 @@ export default function ResumePreviewPage() {
     };
   }, [resumeId]);
 
-  async function handleDownload() {
+async function handleDownload() {
     if (!resume?._id) return;
     try {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`${API_BASE}/api/resume/resumes/${resume._id}/download`, {
-        headers: { ...headers },
+      const res = await axiosClient.get(`/api/resume/resumes/${resume._id}/download`, {
+        responseType: 'blob',
       });
-      if (!res.ok) throw new Error('Download failed.');
-      const blob = await res.blob();
+      const blob = res.data;
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `resume_${resume._id}.${blob.type.includes('html') ? 'html' : 'pdf'}`;
+      a.download = `resume_${resume._id}.${blob.type?.includes('html') ? 'html' : 'pdf'}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

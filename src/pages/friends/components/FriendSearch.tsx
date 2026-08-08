@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import axios from "axios";
+import axiosClient from "@/lib/apiClient";
 import { Search, X } from "lucide-react";
-import { getAuthHeaders } from "@/lib/authHeaders";
 
 
 export type FriendSearchResult = {
@@ -64,12 +63,13 @@ export default function FriendSearch({
 
       setLoading(true);
       try {
-        const res = await axios.get<{
+        // Use axiosClient so the backend base URL + Firebase auth token are
+        // applied automatically regardless of the frontend origin.
+        const res = await axiosClient.get<{
           data: FriendSearchResult[];
-        }>(`${apiBase}/api/users/search`, {
+        }>("/api/users/search", {
           params: { q: trimmed, limit: 20 },
           signal: controller.signal,
-          headers: await getAuthHeaders(),
         });
 
         const raw = res.data?.data || [];
@@ -79,7 +79,6 @@ export default function FriendSearch({
         }));
         onResults(normalized, trimmed);
       } catch (e: any) {
-        if (axios.isCancel?.(e)) return;
         if (e?.name === "CanceledError" || e?.code === "ERR_CANCELED") return;
         onResults([], trimmed);
       } finally {

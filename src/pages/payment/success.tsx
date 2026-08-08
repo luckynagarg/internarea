@@ -2,10 +2,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle, Loader2, ArrowRight } from 'lucide-react';
-import axios from 'axios';
-import { getAuthHeaders } from '@/lib/authHeaders';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+import axiosClient from '@/lib/apiClient';
 
 export default function PaymentSuccessPage() {
   const router = useRouter();
@@ -22,11 +19,10 @@ export default function PaymentSuccessPage() {
       setError('Missing payment details. Please check your email for confirmation.');
       return;
     }
-    // Verify payment status on the backend
+// Verify payment status on the backend
     const verify = async () => {
       try {
-        const headers = await getAuthHeaders();
-        const res = await axios.get(`${API_BASE}/api/subscriptions/payments/${order_id}`, { headers });
+        const res = await axiosClient.get(`/api/subscriptions/payments/${order_id}`);
         setResult(res?.data?.data);
         setVerifying(false);
       } catch (e: any) {
