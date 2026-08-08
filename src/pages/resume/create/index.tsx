@@ -3,20 +3,38 @@ import { useSelector } from 'react-redux';
 import { selectuser } from '@/Feature/Userslice';
 import { useRouter } from 'next/router';
 import axiosClient from '@/lib/apiClient';
+import { openRazorpayCheckout } from '@/lib/razorpay';
 import { toast } from 'react-toastify';
+import { Lock, Loader2, CheckCircle2, ArrowRight } from 'lucide-react';
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  'http://localhost:5000';
+/**
+ * Payment-first Resume Creation
+ * ----------------------------
+ * Required flow:
+ *   Create Resume -> auth check -> Razorpay payment -> verify -> resume form -> create resume
+ *
+ * The form is shown ONLY after a successful (server-verified) payment. A paid
+ * entitlement is created on the backend (`paid_not_generated` resume doc). The
+ * user fills the form, saves it, then generates the PDF.
+ */
+
+type Step = 'auth' | 'pay' | 'form' | 'done';
 
 const ResumeCreatePage = () => {
   const router = useRouter();
   const user = useSelector(selectuser) as any;
 
-  // Edit mode: ?edit=<resumeId>
+  // Edit mode: ?edit=<resumeId> (existing resume dashboard feature, kept intact)
   const { edit } = router.query;
   const editId = typeof edit === 'string' ? edit : null;
+
+  const [step, setStep] = useState<Step>('auth');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Paid resume entitlement (created after payment). null until paid.
+  const [resumeId, setResumeId] = useState<string>('');
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     fullName: '',
@@ -31,262 +49,273 @@ const ResumeCreatePage = () => {
     },
   });
 
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
-  const [step, setStep] = useState<'form' | 'otp' | 'pay' | 'done'>('form');
-  const [testMode, setTestMode] = useState(true); // Test bypass ON by default for easy testing
+  const canProceed = useMemo(() => {
+    return !!(form.fullName.trim() && form.qualifications.trim() && form.experience.trim());
+  }, [form]);
 
-  const [resumeId, setResumeId] = useState<string>('');
-  const [otp, setOtp] = useState('');
-  const [otpExpiresAt, setOtpExpiresAt] = useState<string>('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Load existing resume for edit mode.
+  // On mount: if in edit mode load the existing resume; otherwise check access.
   useEffect(() => {
-    if (!editId) return;
-    let mounted = true;
-    (async () => {
-      try {
-        const res = await axiosClient.get(`/api/resume/${editId}`);
-        const data = res?.data?.data;
-        if (!data || !mounted) return;
-        setForm({
-          fullName: data.resumeData?.fullName || '',
-          qualifications: data.resumeData?.qualifications || '',
-          experience: data.resumeData?.experience || '',
-          personalInfo: {
-            email: data.resumeData?.personalInfo?.email || user?.email || '',
-            phone: data.resumeData?.personalInfo?.phone || '',
-            location: data.resumeData?.personalInfo?.location || '',
-            linkedin: data.resumeData?.personalInfo?.linkedin || '',
-            website: data.resumeData?.personalInfo?.website || '',
-          },
-        });
-        setPhotoUrl(data.photoUrl || null);
-        setResumeId(String(data._id));
-        setStep('form');
-      } catch (e: any) {
-        if (mounted) setError(e?.response?.data?.error?.message || e?.message || 'Failed to load resume.');
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
+    if (editId) {
+      loadExisting();
+    } else {
+      checkAccess();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editId]);
 
-  const canProceed = useMemo(() => {
-    return !!form.fullName && !!form.qualifications && !!form.experience && !!form.personalInfo;
-  }, [form]);
-
-  function buildResumePayload() {
-    return {
-      resumeData: {
-        fullName: form.fullName,
-        qualifications: form.qualifications,
-        experience: form.experience,
-        personalInfo: { ...form.personalInfo },
-      },
-      photoUrl,
-    };
-  }
-
-  // Save/update the resume (works in both normal and test mode via PATCH for edit).
-  async function handleSaveDraft() {
-    if (editId) {
-      setError(null);
-      setLoading(true);
-      try {
-        await axiosClient.patch(`/api/resume/${editId}`, { resumeData: buildResumePayload().resumeData, photoUrl });
-        toast.success('Resume saved.');
-      } catch (e: any) {
-        setError(e?.response?.data?.error?.message || e?.message || 'Failed to save resume.');
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
-    // New resume in test mode: instantly generate (no OTP, no payment).
-    if (testMode) {
-      setError(null);
-      setLoading(true);
-      try {
-        const res = await axiosClient.post(`/api/resume/test/generate`, buildResumePayload());
-        const data = res?.data?.data;
-        setResumeId(String(data?._id || ''));
-        setStep('done');
-        toast.success('Resume generated (test mode).');
-      } catch (e: any) {
-        setError(e?.response?.data?.error?.message || e?.message || 'Failed to generate resume.');
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
-    // Normal mode: start the OTP purchase flow.
-    await handleSendOtp();
-  }
-
-  async function handleSendOtp() {
-    setError(null);
+  async function loadExisting() {
+    if (!editId) return;
     setLoading(true);
-    try {
-      const headers: Record<string, string> = {};
-      // Test bypass header skips premium check + OTP on backend.
-      if (testMode) headers['x-resume-test-bypass'] = 'true';
-
-      const res = await axiosClient.post(
-        `/api/resume/purchase/start`,
-        buildResumePayload(),
-        { headers }
-      );
-
-      setResumeId(res.data?.data?.resumeId);
-      setOtpExpiresAt(res.data?.data?.otpExpiresAt);
-      // In test mode backend auto-verifies OTP -> skip straight to pay step.
-      setStep(testMode ? 'pay' : 'otp');
-      if (testMode) toast.info('OTP auto-verified (test mode).');
-    } catch (e: any) {
-      setError(e?.response?.data?.message || e?.response?.data?.error?.message || e?.message || 'Failed to start purchase');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleVerifyOtp() {
     setError(null);
-    setLoading(true);
     try {
-      await axiosClient.post(`/api/resume/purchase/otp/verify`, {
-        resumeId,
-        otp,
+      const res = await axiosClient.get(`/api/resume/${editId}`);
+      const data = res?.data?.data;
+      if (!data) throw new Error('Resume not found.');
+      setForm({
+        fullName: data.resumeData?.fullName || '',
+        qualifications: data.resumeData?.qualifications || '',
+        experience: data.resumeData?.experience || '',
+        personalInfo: {
+          email: data.resumeData?.personalInfo?.email || user?.email || '',
+          phone: data.resumeData?.personalInfo?.phone || '',
+          location: data.resumeData?.personalInfo?.location || '',
+          linkedin: data.resumeData?.personalInfo?.linkedin || '',
+          website: data.resumeData?.personalInfo?.website || '',
+        },
       });
-      setStep('pay');
+      setPhotoUrl(data.photoUrl || null);
+      setResumeId(String(data._id));
+      setStep('form');
     } catch (e: any) {
-      setError(e?.response?.data?.message || e?.response?.data?.error?.message || e?.message || 'OTP verification failed');
+      setError(e?.response?.data?.error?.message || e?.message || 'Failed to load resume.');
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleSkipPayment() {
-    // TEST MODE: simulate successful Razorpay verification -> generate resume PDF.
-    setError(null);
+  /**
+   * Payment-first guard: determine whether the user has paid for a resume
+   * entitlement already. If not authenticated -> 'auth' step; if no entitlement
+   * -> 'pay' step; if already entitled -> 'form' step.
+   */
+  async function checkAccess() {
     setLoading(true);
+    setError(null);
     try {
-      await axiosClient.post(`/api/resume/test/verify-payment`, { resumeId });
-      setStep('done');
-      toast.success('Payment simulated (test mode). Resume generated.');
+      const res = await axiosClient.get('/api/resume/create-access');
+      const access = res?.data?.data;
+      if (access?.allowed) {
+        setResumeId(String(access.resumeId || ''));
+        // User already paid — go straight to the form.
+        setStep('form');
+      } else {
+        setStep('pay');
+      }
     } catch (e: any) {
-      setError(e?.response?.data?.error?.message || e?.response?.data?.message || e?.message || 'Failed to verify payment');
+      const status = e?.response?.status;
+      if (status === 401) {
+        // Not signed in.
+        setStep('auth');
+      } else {
+        // Backend error — fall through to payment screen, surface error.
+        setError(e?.response?.data?.error?.message || e?.message || 'Could not check resume access.');
+        setStep('pay');
+      }
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleGeneratePayment() {
+  async function handlePay() {
     setError(null);
     setLoading(true);
     try {
-      const res = await axiosClient.post(`/api/resume/purchase/razorpay/create-order`, {
-        resumeId,
-      });
+      // 1. Create Razorpay order on the backend (no form data required).
+      const { data } = await axiosClient.post('/api/resume/payment/create-order', {});
+      const { orderId, amount, currency, keyId } = data?.data || {};
+      if (!orderId) throw new Error('Razorpay orderId missing.');
 
-      const { orderId } = res.data?.data || {};
-      if (!orderId) throw new Error('Razorpay orderId missing');
-
-      const rzp = new (window as any).Razorpay({
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: '5000',
-        currency: 'INR',
+      // 2. Open Razorpay checkout.
+      await openRazorpayCheckout({
+        key: keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '',
+        amount: amount * 100,
+        currency: currency || 'INR',
         order_id: orderId,
         name: 'InternArea',
         description: 'Premium Resume Creation',
-        handler: async (response: any) => {
+        prefill: { name: user?.name || user?.displayName || '', email: user?.email || '' },
+        modal: { ondismiss: () => setLoading(false) },
+        handler: async (response) => {
           try {
-            await axiosClient.post(`/api/resume/purchase/razorpay/verify`, {
-              resumeId,
+            // 3. Verify signature on the backend -> creates paid entitlement.
+            const verifyRes = await axiosClient.post('/api/resume/payment/verify', {
               razorpayOrderId: response.razorpay_order_id,
               razorpayPaymentId: response.razorpay_payment_id,
               razorpaySignature: response.razorpay_signature,
             });
-            setStep('done');
-            toast.success('Resume generated successfully.');
-          } catch (err: any) {
-            setError(err?.response?.data?.message || err?.message || 'Payment verification failed');
+            setResumeId(String(verifyRes?.data?.data?.resumeId || ''));
+            setStep('form');
+            toast.success('Payment successful. Now fill in your resume details.');
+          } catch (verifyErr: any) {
+            const msg = verifyErr?.response?.data?.error?.message || verifyErr?.response?.data?.message || 'Payment verification failed.';
+            setError(msg);
+            setStep('pay');
           } finally {
             setLoading(false);
           }
         },
-        modal: { ondismiss: () => setLoading(false) },
-        prefill: { name: user?.name || '', email: user?.email || '' },
       });
-
-      rzp.open();
+      // Note: keep loading until modal handler/ondismiss resolves.
+      setLoading(false);
     } catch (e: any) {
-      setError(e?.response?.data?.message || e?.message || 'Failed to create Razorpay order');
+      const msg = e?.response?.data?.error?.message || e?.response?.data?.message || 'Failed to start checkout.';
+      setError(msg);
+      setStep('pay');
       setLoading(false);
     }
+  }
+
+  async function handleCreateResume() {
+    if (!resumeId) return;
+    setError(null);
+    setLoading(true);
+    try {
+      const payload = {
+        resumeData: {
+          fullName: form.fullName,
+          qualifications: form.qualifications,
+          experience: form.experience,
+          personalInfo: { ...form.personalInfo },
+        },
+        photoUrl,
+      };
+
+      if (editId) {
+        await axiosClient.patch(`/api/resume/${editId}`, {
+          resumeData: payload.resumeData,
+          photoUrl,
+        });
+        toast.success('Resume updated.');
+        router.push('/resume');
+        return;
+      }
+
+      // Payment-first flow: save the form into the paid entitlement, then generate.
+      await axiosClient.patch(`/api/resume/${resumeId}/resume-data`, {
+        resumeData: payload.resumeData,
+        photoUrl,
+      });
+      await axiosClient.post(`/api/resume/${resumeId}/generate`, {});
+
+      setStep('done');
+      toast.success('Resume generated successfully.');
+    } catch (e: any) {
+      setError(e?.response?.data?.error?.message || e?.message || 'Failed to create resume.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading && step === 'auth') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-gray-50 py-10">
       <div className="max-w-3xl mx-auto px-4">
         <div className="bg-white rounded-2xl shadow-lg p-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                {editId ? 'Edit Resume' : 'Create Resume (Premium)'}
-              </h1>
-              <p className="text-gray-600 mb-2">
-                {editId ? 'Update your resume details.' : 'Fee: ₹50 per resume • OTP verification required.'}
-              </p>
-            </div>
-
-            {/* Test mode toggle */}
-            {!editId && (
-              <button
-                type="button"
-                onClick={() => setTestMode((t) => !t)}
-                className={`shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition ${
-                  testMode
-                    ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                    : 'bg-gray-100 text-gray-600 border border-gray-200'
-                }`}
-              >
-                <span className={`w-2 h-2 rounded-full ${testMode ? 'bg-amber-500' : 'bg-gray-400'}`} />
-                {testMode ? 'Test Mode: ON' : 'Test Mode: OFF'}
-              </button>
-            )}
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-gray-900 mb-1">
+              {editId ? 'Edit Resume' : 'Create Premium Resume'}
+            </h1>
+            <p className="text-gray-600">
+              {editId
+                ? 'Update your resume details.'
+                : 'Pay once (₹50) and create a professional resume. Payment is required before the form.'}
+            </p>
           </div>
 
-          {testMode && !editId && (
-            <div className="mb-4 p-3 rounded bg-amber-50 border border-amber-200 text-amber-800 text-sm">
-              <strong>Test mode active.</strong> Resume will be created and PDF generated instantly — no OTP email, no
-              Razorpay payment, no premium plan required.
+          {error && <div className="mb-4 p-3 rounded bg-red-50 text-red-700 text-sm">{error}</div>}
+
+          {/* AUTH REQUIRED */}
+          {step === 'auth' && (
+            <div className="py-8 text-center">
+              <Lock className="mx-auto h-10 w-10 text-gray-300 mb-3" />
+              <div className="font-semibold text-gray-900">Sign in required</div>
+              <p className="text-sm text-gray-600 mt-1 mb-5">
+                Please sign in to create a premium resume.
+              </p>
+              <button
+                onClick={() => router.push('/login')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+              >
+                Go to Login <ArrowRight size={16} />
+              </button>
             </div>
           )}
 
-          {error && <div className="mb-4 p-3 rounded bg-red-50 text-red-700">{error}</div>}
+          {/* PAYMENT FIRST */}
+          {step === 'pay' && !editId && (
+            <div className="py-6 ">
+              <div className="border border-gray-200 rounded-xl p-5 mb-5 bg-gray-50 flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-semibold text-gray-900">Premium Resume Creation</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Professional PDF resume • Added to your dashboard
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-gray-900">₹50</div>
+              </div>
 
+              <button
+                type="button"
+                disabled={loading}
+                onClick={handlePay}
+                className="w-full inline-flex items-center justify-center gap-2 bg-purple-600 text-white font-semibold py-3 rounded-lg hover:bg-purple-700 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Opening Razorpay...
+                  </>
+                ) : (
+                  <>Pay ₹50 with Razorpay</>
+                )}
+              </button>
+
+              <p className="mt-3 text-xs text-gray-500 text-center">
+                You must complete payment to access the resume form. No charge if cancelled.
+              </p>
+            </div>
+          )}
+
+          {/* RESUME FORM (only after payment in non-edit mode) */}
           {step === 'form' && (
             <>
+              {!editId && (
+                <div className="mb-4 p-3 rounded bg-green-50 border border-green-200 text-green-800 text-sm flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 shrink-0" /> Payment confirmed. Now add your details.
+                </div>
+              )}
+
               <div className="grid grid-cols-1 gap-4">
                 <div>
-                  <label className="text-sm font-medium">Full Name</label>
+                  <label className="text-sm font-medium text-gray-700">Full Name</label>
                   <input
-                    className="mt-1 w-full border rounded px-3 py-2"
+                    className="mt-1 w-full border rounded px-3 py-2 text-gray-900"
                     value={form.fullName}
                     onChange={(e) => setForm((p) => ({ ...p, fullName: e.target.value }))}
+                    placeholder="e.g. Rahul Sharma"
                   />
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium">Qualifications</label>
+                  <label className="text-sm font-medium text-gray-700">Qualifications</label>
                   <textarea
-                    className="mt-1 w-full border rounded px-3 py-2"
+                    className="mt-1 w-full border rounded px-3 py-2 text-gray-900"
                     rows={3}
                     value={form.qualifications}
                     onChange={(e) => setForm((p) => ({ ...p, qualifications: e.target.value }))}
@@ -295,52 +324,77 @@ const ResumeCreatePage = () => {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium">Experience</label>
+                  <label className="text-sm font-medium text-gray-700">Experience</label>
                   <textarea
-                    className="mt-1 w-full border rounded px-3 py-2"
+                    className="mt-1 w-full border rounded px-3 py-2 text-gray-900"
                     rows={3}
                     value={form.experience}
                     onChange={(e) => setForm((p) => ({ ...p, experience: e.target.value }))}
-                    placeholder="Software Engineer Intern at ABC Corp (2024)\n- Built REST APIs\n- Improved performance by 30%"
+                    placeholder={'Software Engineer Intern at ABC Corp (2024)\n- Built REST APIs\n- Improved performance by 30%'}
                   />
                 </div>
 
-                <div>
-                  <label className="text-sm font-medium">Location</label>
-                  <input
-                    className="mt-1 w-full border rounded px-3 py-2"
-                    value={form.personalInfo.location}
-                    onChange={(e) => setForm((p) => ({ ...p, personalInfo: { ...p.personalInfo, location: e.target.value } }))}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium">Phone</label>
-                  <input
-                    className="mt-1 w-full border rounded px-3 py-2"
-                    value={form.personalInfo.phone}
-                    onChange={(e) => setForm((p) => ({ ...p, personalInfo: { ...p.personalInfo, phone: e.target.value } }))}
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Email</label>
+                    <input
+                      className="mt-1 w-full border rounded px-3 py-2 text-gray-900"
+                      value={form.personalInfo.email}
+                      onChange={(e) => setForm((p) => ({ ...p, personalInfo: { ...p.personalInfo, email: e.target.value } }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Phone</label>
+                    <input
+                      className="mt-1 w-full border rounded px-3 py-2 text-gray-900"
+                      value={form.personalInfo.phone}
+                      onChange={(e) => setForm((p) => ({ ...p, personalInfo: { ...p.personalInfo, phone: e.target.value } }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Location</label>
+                    <input
+                      className="mt-1 w-full border rounded px-3 py-2 text-gray-900"
+                      value={form.personalInfo.location}
+                      onChange={(e) => setForm((p) => ({ ...p, personalInfo: { ...p.personalInfo, location: e.target.value } }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">LinkedIn</label>
+                    <input
+                      className="mt-1 w-full border rounded px-3 py-2 text-gray-900"
+                      value={form.personalInfo.linkedin}
+                      onChange={(e) => setForm((p) => ({ ...p, personalInfo: { ...p.personalInfo, linkedin: e.target.value } }))}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-sm font-medium text-gray-700">Website / Portfolio</label>
+                    <input
+                      className="mt-1 w-full border rounded px-3 py-2 text-gray-900"
+                      value={form.personalInfo.website}
+                      onChange={(e) => setForm((p) => ({ ...p, personalInfo: { ...p.personalInfo, website: e.target.value } }))}
+                    />
+                  </div>
                 </div>
               </div>
 
               <div className="mt-6 flex flex-col sm:flex-row gap-3">
                 <button
                   disabled={!canProceed || loading}
-                  onClick={handleSaveDraft}
-                  className={`flex-1 text-white font-medium py-3 rounded disabled:opacity-50 ${
-                    testMode ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'
-                  }`}
+                  onClick={handleCreateResume}
+                  className="flex-1 bg-blue-600 text-white font-medium py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading
-                    ? 'Processing...'
-                    : editId
-                      ? 'Save Resume'
-                      : testMode
-                        ? 'Generate Resume (Test Mode)'
-                        : 'Send OTP & Continue'}
+                  {loading ? (
+                    <span className="inline-flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" /> {editId ? 'Saving...' : 'Generating Resume...'}
+                    </span>
+                  ) : editId ? (
+                    'Save Resume'
+                  ) : (
+                    'Create Resume'
+                  )}
                 </button>
-                {editId && (
+                {(editId || resumeId) && (
                   <button
                     type="button"
                     onClick={() => router.push('/resume')}
@@ -353,71 +407,26 @@ const ResumeCreatePage = () => {
             </>
           )}
 
-          {step === 'otp' && (
-            <>
-              <div className="text-gray-700 mb-3">Enter OTP sent to your registered email.</div>
-              <input
-                className="border w-full rounded px-3 py-2"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                placeholder="6-digit OTP"
-              />
-              <button
-                disabled={loading}
-                onClick={handleVerifyOtp}
-                className="mt-4 w-full bg-green-600 text-white font-medium py-3 rounded disabled:opacity-50"
-              >
-                {loading ? 'Verifying...' : 'Verify OTP'}
-              </button>
-              {otpExpiresAt && <div className="mt-2 text-xs text-gray-500">OTP expires: {new Date(otpExpiresAt).toLocaleString()}</div>}
-            </>
-          )}
-
-          {step === 'pay' && (
-            <>
-              <div className="text-gray-700 mb-4">OTP verified. Proceed with payment.</div>
-
-              {testMode ? (
-                <button
-                  disabled={loading}
-                  onClick={handleSkipPayment}
-                  className="w-full bg-amber-600 text-white font-medium py-3 rounded disabled:opacity-50"
-                >
-                  {loading ? 'Generating...' : 'Skip Payment & Generate (Test Mode)'}
-                </button>
-              ) : (
-                <button
-                  disabled={loading}
-                  onClick={handleGeneratePayment}
-                  className="w-full bg-purple-600 text-white font-medium py-3 rounded disabled:opacity-50"
-                >
-                  {loading ? 'Opening Razorpay...' : 'Pay ₹50 with Razorpay'}
-                </button>
-              )}
-
-              <div className="mt-3 text-xs text-gray-500">
-                After successful payment, your resume will be generated and added to profile.
-              </div>
-            </>
-          )}
-
+          {/* DONE */}
           {step === 'done' && (
             <div className="text-center py-10">
-              <div className="text-green-700 font-semibold text-lg">Resume generated successfully.</div>
+              <CheckCircle2 className="mx-auto h-12 w-12 text-green-600 mb-3" />
+              <div className="text-lg font-semibold text-gray-900">Resume generated successfully.</div>
               <div className="mt-2 text-sm text-gray-600">Your resume is available in the dashboard.</div>
               <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
                 <button
                   onClick={() => router.push('/resume')}
-                  className="px-5 py-2 bg-blue-600 text-white rounded"
+                  className="px-5 py-2 bg-blue-600 text-white rounded-lg"
                 >
                   Go to My Resumes
                 </button>
                 <button
                   onClick={() => {
-                    setStep('form');
-                    setForm({ fullName: '', qualifications: '', experience: '', personalInfo: { email: user?.email || '', phone: '', location: '', linkedin: '', website: '' } });
+                    // Allow creating another (will require another payment via fresh access check).
+                    setStep('auth');
+                    checkAccess();
                   }}
-                  className="px-5 py-2 border rounded text-gray-700 hover:bg-gray-50"
+                  className="px-5 py-2 border rounded-lg text-gray-700 hover:bg-gray-50"
                 >
                   Create Another
                 </button>
