@@ -43,6 +43,13 @@ const firebaseConfig = {
     FALLBACK_CONFIG.measurementId,
 };
 
+console.log("[Firebase Debug]", {
+  apiKey: firebaseConfig.apiKey?.slice(0, 10),
+  authDomain: firebaseConfig.authDomain,
+  projectId: firebaseConfig.projectId,
+  appId: firebaseConfig.appId,
+});
+
 // Initialize exactly once.
 const app = getApps().length ? getApps()[0]! : initializeApp(firebaseConfig);
 
