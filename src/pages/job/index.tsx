@@ -1,4 +1,4 @@
-import axios from "axios";
+import axiosClient from "@/lib/apiClient";
 import {
   ArrowUpRight,
   Calendar,
@@ -125,12 +125,12 @@ const index = () => {
   });
   const [filteredJobs,setjob]=useState<any>([])
   useEffect(()=>{
-    const fetchdata=async()=>{
+const fetchdata=async()=>{
       try {
-        const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
-        const res=await axios.get(`${API_BASE}/api/job`)     
-        setjob(res.data)
-        setfilteredjobs(res.data)
+        const res=await axiosClient.get("/api/job", { skipAuth: true } as any)
+        const list = res?.data?.data ?? res?.data ?? [];
+        setjob(list)
+        setfilteredjobs(list)
 
       } catch (error) {
         console.log(error)

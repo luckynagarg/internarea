@@ -7,7 +7,7 @@ import {
   User,
 } from "lucide-react";
 
-import axios from "axios";
+import axiosClient from "@/lib/axiosClient";
 import { selectuser } from "@/Feature/Userslice";
 import { useSelector } from "react-redux";
 const Applications = [
@@ -74,21 +74,24 @@ const UserApplicationsPage = () => {
   //     "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=64&h=64&fit=crop&crop=faces",
   // });
 
-  const [data, setdata] = useState<any>([]);
+const [data, setdata] = useState<any[]>([]);
   useEffect(() => {
     const fetchdata = async () => {
       try {
-        const res = await axios.get("https://internshala-clone-y2p2.onrender.com/api/application");
-        setdata(res.data);
+        const res = await axiosClient.get("/api/application");
+        setdata(Array.isArray(res.data?.data) ? res.data.data : []);
       } catch (error) {
         console.log(error);
       }
     };
     fetchdata();
   }, []);
-  const userapplication = data.filter(
-    (app:any) => app.user?.name === user?.name
-  );
+// Backend /api/application already scopes results to the authenticated user
+  // (via req.user.uid from the Firebase token). The returned documents carry
+  // `userId` (a firebaseUid), NOT a nested `user` object. Filtering by
+  // `app.user?.name` here would always yield zero results, so we use the full
+  // server-returned list directly.
+  const userapplication = data;
   const filteredapplications = userapplication.filter((application:any) => {
     const searchmatch =
       application.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -223,12 +226,12 @@ const UserApplicationsPage = () => {
                         <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center bg-gray-100 rounded-full">
                           <User className="h-5 w-5 text-gray-600" />
                         </div>
-                        <div className="ml-4">
+<div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
-                            {application.user.name}
+                            {application.user?.name || user?.name || "You"}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {application.user.email}
+                            {application.user?.email || user?.email || "Application"}
                           </div>
                         </div>
                       </div>

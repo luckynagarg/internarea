@@ -1,55 +1,85 @@
 import { useEffect, useMemo, useState } from 'react';
-import { mockData, MockNotification, MockUser } from '@/mockData';
-import { fetchOrMock } from '@/mockData/fetchOrMock';
+import { useSelector } from 'react-redux';
+import { selectuser } from '@/Feature/Userslice';
 import axiosClient from '@/lib/apiClient';
+import { useRouter } from 'next/router';
 
-import { Bell, CheckCircle2, Heart, MessageSquare, FileText } from 'lucide-react';
+import { Bell, CheckCircle2, Heart, MessageSquare, FileText, Inbox } from 'lucide-react';
 
-const API_BASE = '';
-
+interface NotificationItem {
+  _id: string;
+  title?: string;
+  body?: string;
+  message?: string;
+  type?: string;
+  read?: boolean;
+  createdAt?: string | null;
+  createdAtISO?: string | null;
+  link?: string | null;
+  action?: string | null;
+  entityType?: string | null;
+  entityId?: string | null;
+}
 
 export default function NotificationsPage() {
-  const currentUser: MockUser | null = mockData.users[0] ?? null;
+  const user = useSelector(selectuser) as any;
+  const router = useRouter();
 
-  const [items, setItems] = useState<MockNotification[]>([]);
+  const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'unread'>('unread');
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
-
-    async function load() {
-      if (!currentUser) return;
-
-      const data = await fetchOrMock<MockNotification[]>({
-        url: `/api/notifications`,
-        mock: () => mockData.notifications,
-        transform: (d) => {
-          const arr = d?.data?.notifications ?? d?.data ?? d?.notifications ?? d;
-          return Array.isArray(arr) ? arr : [];
-        },
-      });
-
-
-      if (!mounted) return;
-      setItems(data);
+  async function load() {
+    if (!user?.uid) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await axiosClient.get('/api/notifications');
+      const arr = res?.data?.notifications ?? res?.data?.data ?? res?.data ?? [];
+      setItems(Array.isArray(arr) ? arr : []);
+    } catch (e: any) {
+      setError(e?.response?.data?.error?.message || e?.message || 'Failed to load notifications.');
+    } finally {
       setLoading(false);
     }
+  }
 
+  useEffect(() => {
     load();
-    return () => {
-      mounted = false;
-    };
-  }, [currentUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid]);
 
   const unreadCount = useMemo(() => items.filter((x) => !x.read).length, [items]);
 
   const visible = useMemo(() => {
-    const base = items.filter((x) => x.userId === currentUser?.uid || true);
-    const sorted = [...base].sort((a, b) => +new Date(b.createdAtISO) - +new Date(a.createdAtISO));
+    const sorted = [...items].sort(
+      (a, b) => +new Date(b.createdAt ?? b.createdAtISO ?? 0) - +new Date(a.createdAt ?? a.createdAtISO ?? 0)
+    );
     if (filter === 'unread') return sorted.filter((x) => !x.read);
     return sorted;
-  }, [items, filter, currentUser]);
+  }, [items, filter]);
+
+  async function markRead(n: NotificationItem) {
+    if (!n?._id) return;
+    try {
+      await axiosClient.post(`/api/notifications/${n._id}/read`);
+      setItems((prev) => prev.map((x) => (x._id === n._id ? { ...x, read: true } : x)));
+      if (n.link) router.push(n.link);
+    } catch {
+      // ignore read-state update errors
+    }
+  }
+
+  const iconFor = (type?: string) => {
+    if (type === 'social') return <MessageSquare className="text-blue-600" />;
+    if (type === 'post' || type === 'post_like' || type === 'post_comment') return <Heart className="text-red-600" />;
+    if (type === 'application') return <FileText className="text-purple-600" />;
+    return <CheckCircle2 className="text-green-600" />;
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -59,7 +89,7 @@ export default function NotificationsPage() {
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
               <Bell className="text-blue-600" /> Notifications
             </h1>
-            <p className="text-gray-600 mt-1">Unread/read mix with realistic types.</p>
+            <p className="text-gray-600 mt-1">Updates on your applications, friends and posts.</p>
           </div>
           <div className="text-sm font-semibold text-blue-700">{unreadCount} unread</div>
         </div>
@@ -79,34 +109,43 @@ export default function NotificationsPage() {
           </button>
         </div>
 
-        <div className="space-y-3">
-          {loading ? (
-            <div className="bg-white rounded-xl shadow-sm p-5 text-gray-500">Loading notifications...</div>
-          ) : (
-            visible.map((n) => {
-              const icon =
-                n.type === 'social' ? <MessageSquare className="text-blue-600" /> : n.type === 'post' ? <Heart className="text-red-600" /> : n.type === 'application' ? <FileText className="text-purple-600" /> : <CheckCircle2 className="text-green-600" />;
-
-              return (
-                <div key={n._id} className={`bg-white rounded-xl shadow-sm p-4 flex gap-3 ${!n.read ? 'border border-blue-100' : ''}`}>
-                  <div className="mt-1">{icon}</div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="font-semibold text-gray-900">{n.title}</div>
-                      <div className={`text-xs ${n.read ? 'text-gray-400' : 'text-blue-600 font-semibold'}`}>
-                        {new Date(n.createdAtISO).toLocaleString()}
-                      </div>
+        {!user ? (
+          <div className="bg-white rounded-xl shadow-sm p-8 text-center text-gray-500">
+            Please sign in to view your notifications.
+          </div>
+        ) : error ? (
+          <div className="bg-white rounded-xl shadow-sm p-8 text-center text-red-600">{error}</div>
+        ) : loading ? (
+          <div className="bg-white rounded-xl shadow-sm p-5 text-gray-500">Loading notifications...</div>
+        ) : visible.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-sm p-8 text-center text-gray-500 flex flex-col items-center gap-2">
+            <Inbox className="w-8 h-8 text-gray-300" />
+            No notifications here.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {visible.map((n) => (
+              <button
+                key={n._id}
+                onClick={() => markRead(n)}
+                className={`w-full text-left bg-white rounded-xl shadow-sm p-4 flex gap-3 hover:bg-gray-50 ${!n.read ? 'border border-blue-100' : ''}`}
+              >
+                <div className="mt-1">{iconFor(n.type)}</div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="font-semibold text-gray-900">{n.title || 'Notification'}</div>
+                    <div className={`text-xs ${n.read ? 'text-gray-400' : 'text-blue-600 font-semibold'}`}>
+                      {n.createdAt ? new Date(n.createdAt).toLocaleString() : ''}
                     </div>
-                    <div className="text-gray-600 text-sm mt-1">{n.message}</div>
-                    <div className="text-xs text-gray-500 mt-2">Type: {n.type}</div>
                   </div>
+                  <div className="text-gray-600 text-sm mt-1">{n.body || n.message || ''}</div>
+                  {n.link ? <div className="text-xs text-blue-600 mt-2">View →</div> : null}
                 </div>
-              );
-            })
-          )}
-        </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
-

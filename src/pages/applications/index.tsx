@@ -1,4 +1,4 @@
-import axios from "axios";
+import axiosClient from "@/lib/apiClient";
 import {
   Building2,
   Calendar,
@@ -69,11 +69,14 @@ const ApplicationsPage = () => {
   const [filter, setFilter] = useState<FilterStatus>("all");
   const [data, setdata] = useState<Application[]>([]);
 
-  useEffect(() => {
+useEffect(() => {
     const fetchdata = async () => {
       try {
-        const res = await axios.get("https://internshala-clone-y2p2.onrender.com/api/application");
-        setdata(res.data);
+        // Backend returns { success: true, data: [...] } for the authenticated
+        // user's own applications. The axiosClient attaches the Firebase token.
+        const res = await axiosClient.get("/api/application");
+        const arr = res?.data?.data ?? res?.data ?? [];
+        setdata(Array.isArray(arr) ? arr : []);
       } catch (error) {
         console.log(error);
       }
@@ -81,23 +84,23 @@ const ApplicationsPage = () => {
     fetchdata();
   }, []);
   // console.log(data);
-  const filteredapplications = data.filter((application) => {
+  const filteredapplications = data.filter((application: any) => {
 
     const searchmatch =
-      application.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      application.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      application.user.name.toLowerCase().includes(searchTerm.toLowerCase());
+      (application.company || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (application.category || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (application.user?.name || application.userId || "").toLowerCase().includes(searchTerm.toLowerCase());
     if (filter === "all") return searchmatch;
-    return searchmatch && application.status.toLowerCase() === filter;
+    return searchmatch && (application.status || "").toLowerCase() === filter;
   });
   const handleacceptandreject = async (id: any, action: any) => {
     try {
-      const res = await axios.put(
-        `https://internshala-clone-y2p2.onrender.com/api/application/${id}`,
-        { action }
-      );
+      // Note: the backend scopes updates to the authenticated owner, so
+      // accept/reject here only affects the caller's own applications.
+      const res = await axiosClient.put(`/api/application/${id}`, { action });
+      const updated = res?.data?.data;
       const updateappliacrtion = data.map((app: any) =>
-        app._id === id ? res.data.data : app
+        app._id === id ? (updated ?? app) : app
       );
       setdata(updateappliacrtion);
       toast.success("updated successfully");
@@ -238,12 +241,12 @@ const ApplicationsPage = () => {
                         <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center bg-gray-100 rounded-full">
                           <User className="h-5 w-5 text-gray-600" />
                         </div>
-                        <div className="ml-4">
+<div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
-                            {application.user.name}
+                            {application.user?.name || application.userId || "You"}
                           </div>
-                          <div className="text-sm text-gray-500">
-                            {application.user.email}
+<div className="text-sm text-gray-500">
+                            {application.user?.email || "Application"}
                           </div>
                         </div>
                       </div>
@@ -251,10 +254,12 @@ const ApplicationsPage = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center text-sm text-gray-500">
                         <Calendar className="h-4 w-4 mr-1" />
-                        {
-                          new Date(application.createdAt)
-                            .toISOString()
-                            .split("T")[0]
+{
+                          application.createdAt
+                            ? new Date(application.createdAt)
+                                .toISOString()
+                                .split("T")[0]
+                            : "—"
                         }
                       </div>
                     </td>

@@ -12,7 +12,7 @@ import {
   MapPin,
 } from "lucide-react";
 import Link from "next/link";
-import axios from "axios";
+import axiosClient from "@/lib/apiClient";
 
 export default function SvgSlider() {
   const categories = [
@@ -116,19 +116,18 @@ export default function SvgSlider() {
   const [internships, setinternship] = useState<any>([]);
   const [jobs, setjob] = useState<any>([]);
   useEffect(() => {
-    const fetchdata = async () => {
+const fetchdata = async () => {
       try {
-        const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
         const [internshipres, jobres] = await Promise.all([
-          axios.get(`${API_BASE}/api/internship`),
-          axios.get(`${API_BASE}/api/job`),
+          axiosClient.get("/api/internship", { skipAuth: true } as any),
+          axiosClient.get("/api/job", { skipAuth: true } as any),
         ]);
 
+        const internshipData = internshipres?.data?.data ?? internshipres?.data ?? [];
+        const jobData = jobres?.data?.data ?? jobres?.data ?? [];
 
-
-
-        setinternship(internshipres.data);
-        setjob(jobres.data);
+        setinternship(Array.isArray(internshipData) ? internshipData : []);
+        setjob(Array.isArray(jobData) ? jobData : []);
       } catch (error) {
         console.log(error);
       }

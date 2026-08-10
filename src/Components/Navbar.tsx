@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import axiosClient from "@/lib/apiClient";
 import Link from "next/link";
 import { auth } from "@/lib/firebase";
-import { Bell, Search, Globe } from "lucide-react";
+import { Bell, Search, Globe, Menu, X } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useSelector } from "react-redux";
 import { selectuser } from "@/Feature/Userslice";
@@ -12,6 +12,7 @@ import { useRouter } from "next/router";
 import { useGlobalSearchSuggestions } from "@/hooks/useGlobalSearchSuggestions";
 import { useT, LANG_LABELS, type SupportedLang } from "@/i18n/runtime";
 import { toast } from "react-toastify";
+import { getFrenchOtpStatus } from "@/Feature/frenchOtp";
 
 function GlobalSearchBox() {
   const router = useRouter();
@@ -89,8 +90,9 @@ const user = useSelector(selectuser);
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const { t, lang, setLang } = useT();
-  const [langOpen, setLangOpen] = useState(false);
+const [langOpen, setLangOpen] = useState(false);
   const [frenchOtpOpen, setFrenchOtpOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
 
   // Fetch unread notification count on mount / whenever dropdown state changes.
@@ -112,12 +114,23 @@ const user = useSelector(selectuser);
   }, [user, notifOpen]);
 
 // Intercept language selection. French requires OTP verification first.
-  const handleSelectLang = (l: SupportedLang) => {
+  const handleSelectLang = async (l: SupportedLang) => {
     if (l === "fr") {
       setLangOpen(false);
       if (!user) {
         toast.error("Please login to switch to French.");
         return;
+      }
+      // Validate against the backend first: if the user already verified
+      // French via OTP, allow switching directly. Otherwise require OTP.
+      try {
+        const status = await getFrenchOtpStatus();
+        if (status.ok && status.verified) {
+          setLang("fr");
+          return;
+        }
+      } catch {
+        // fall through to OTP flow
       }
       setFrenchOtpOpen(true);
       return;
@@ -145,11 +158,20 @@ const user = useSelector(selectuser);
       <nav className="bg-white shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
-            <div className="flex-shrink-0">
+<div className="flex-shrink-0">
               <a href="/" className="text-xl font-bold text-blue-600">
                 <img src={"/logo.png"} alt="" className="h-16" />
               </a>
             </div>
+
+            <button
+              type="button"
+              className="md:hidden p-2 rounded-md text-gray-700 hover:bg-gray-100"
+              onClick={() => setMobileOpen((v) => !v)}
+              aria-label="Toggle menu"
+            >
+              {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
 
             <div className="hidden md:flex items-center space-x-8">
               <button className="flex items-center space-x-1 text-gray-700 hover:text-blue-600">
@@ -256,8 +278,61 @@ className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-cent
               </div>
             </div>
 </div>
-        </div>
+</div>
       </nav>
+
+      {/* Mobile menu */}
+      {mobileOpen ? (
+        <div className="md:hidden bg-white border-t border-gray-200 shadow-md">
+          <div className="px-4 py-3 space-y-1">
+            <Link href="/internship" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
+              {t('navbar.internships')}
+            </Link>
+            <Link href="/job" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
+              {t('navbar.jobs')}
+            </Link>
+            <Link href="/public" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
+              {t('navbar.publicSpace')}
+            </Link>
+            <Link href="/friends" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
+              {t('navbar.friends')}
+            </Link>
+            <Link href="/search" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
+              Search
+            </Link>
+            {user ? (
+              <>
+                <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
+                  Dashboard
+                </Link>
+                <Link href="/profile" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
+                  Profile
+                </Link>
+                <Link href="/notifications" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
+                  Notifications
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => { setMobileOpen(false); handlelogout(); }}
+                  className="w-full text-left px-3 py-2 rounded-md text-red-500 hover:bg-gray-100"
+                >
+                  {t('navbar.logout')}
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/login" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-blue-600 hover:bg-gray-100">
+                  Login
+                </Link>
+                <Link href="/adminlogin" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
+                  {t('navbar.admin')}
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+      ) : null}
+
       <FrenchOtpModal
         isOpen={frenchOtpOpen}
         onClose={() => setFrenchOtpOpen(false)}

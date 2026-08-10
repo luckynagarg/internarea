@@ -147,8 +147,8 @@ export default function SearchPage() {
                       ) : null}
                     </div>
 
-                    <Link
-                      href={`/detailinternship/${item._id}`}
+<Link
+                      href={`/detailiternship/${item._id}`}
                       className="text-blue-600 mt-3 block inline-flex items-center gap-1"
                     >
                       View details <ArrowUpRight size={16} />

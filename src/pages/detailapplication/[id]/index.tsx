@@ -1,4 +1,4 @@
-import axios from "axios";
+import axiosClient from "@/lib/apiClient";
 import { Building2, Calendar, FileText, Loader2, User } from "lucide-react";
 import { useRouter } from "next/router";
 import React, { useEffect, useState } from "react";
@@ -7,18 +7,18 @@ const index = () => {
   const router = useRouter();
   const { id } = router.query;
   const [loading, setloading] = useState(false);
-  const [data, setdata] = useState<any>([]);
+  const [data, setdata] = useState<any>(null);
   useEffect(() => {
     const fetchdata = async () => {
       try {
         setloading(true);
-        const res = await axios.get(
-          `https://internshala-clone-y2p2.onrender.com/api/application/${id}`
-        );
-        console.log(res.data);
-        setdata(res.data);
+        // Backend returns { success: true, data: {...} } and requires the
+        // authenticated user's Firebase token (axiosClient attaches it).
+        const res = await axiosClient.get(`/api/application/${id}`);
+        setdata(res?.data?.data ?? res?.data ?? null);
       } catch (error) {
         console.log(error);
+        setdata(null);
       } finally {
         setloading(false);
       }
@@ -27,13 +27,20 @@ const index = () => {
       fetchdata();
     }
   }, [id]);
-  if (loading) {
+if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
         <span className="ml-2 text-gray-600">
           Loading application details...
         </span>
+      </div>
+    );
+  }
+  if (!data) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-600">Application not found.</p>
       </div>
     );
   }

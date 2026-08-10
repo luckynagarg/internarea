@@ -1,4 +1,3 @@
-import { User, Lock } from "lucide-react";
 import React, { useState } from "react";
 import {
   Briefcase,
@@ -11,7 +10,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
+import axiosClient from "@/lib/apiClient";
 import { toast } from "react-toastify";
 const index = () => {
   const [formData, setFormData] = useState({
@@ -46,9 +45,9 @@ const index = () => {
       return;
     }
     try {
-      setisloading(true);
-      const res = await axios.post("https://internshala-clone-y2p2.onrender.com/api/internship", formData);
-      toast.success("job posted successfuly");
+setisloading(true);
+      const res = await axiosClient.post("/api/internship", formData);
+      toast.success("internship posted successfully");
       router.push("/adminpanel");
     } catch (error) {
       console.log(error);

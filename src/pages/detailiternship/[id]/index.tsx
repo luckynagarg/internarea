@@ -1,11 +1,10 @@
-import { selectuser } from "@/Feature/Userslice";
-import axios from "axios";
+ import { selectuser } from "@/Feature/Userslice";
+import axiosClient from "@/lib/apiClient";
 import {
   ArrowUpRight,
   Calendar,
   Clock,
   DollarSign,
-  ExternalLink,
   MapPin,
   X,
 } from "lucide-react";
@@ -14,7 +13,6 @@ import { useRouter } from "next/router";
 import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { getAuthHeaders } from "@/lib/authHeaders";
 // export const internships = [
 //   {
 //     _id: "1",
@@ -77,12 +75,12 @@ const index = () => {
   const { id } = router.query;
   const [internshipData, setinternship] = useState<any>(null);
 
-  useEffect(() => {
+useEffect(() => {
     const fetchdata = async () => {
       try {
-        const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
-        const res = await axios.get(`${API_BASE}/api/internship/${id}`);
-        setinternship(res.data);
+        const res = await axiosClient.get(`/api/internship/${id}`, { skipAuth: true } as any);
+        const data = res?.data?.data ?? res?.data;
+        setinternship(data || null);
       } catch (error) {
         console.log(error);
       }
@@ -97,13 +95,11 @@ const [availability, setAvailability] = useState("");
   const [quota, setQuota] = useState<any>(null);
   const user=useSelector(selectuser)
 
-  useEffect(() => {
+useEffect(() => {
     if (user) {
       (async () => {
         try {
-          const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
-          const headers = await getAuthHeaders();
-          const res = await axios.get(`${API_BASE}/api/subscription/me`, { headers });
+          const res = await axiosClient.get("/api/subscription/me");
           setQuota(res.data?.data);
         } catch (e) {
           console.log(e);
@@ -143,9 +139,7 @@ const applicationdata={
         Application:id,
         availability
       }
-      const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
-      const headers = await getAuthHeaders();
-      await axios.post(`${API_BASE}/api/application`,applicationdata, { headers })
+await axiosClient.post("/api/application", applicationdata);
       toast.success("Application submit successfully")
       router.push('/internship')
 
@@ -199,14 +193,8 @@ const applicationdata={
           <h2 className="text-xl font-bold text-gray-900 mb-4">
             About {internshipData.company}
           </h2>
-          <div className="flex items-center space-x-2 mb-4">
-            <a
-              href="#"
-              className="text-blue-600 hover:text-blue-700 flex items-center space-x-1"
-            >
-              <span>Visit company website</span>
-              <ExternalLink className="h-4 w-4" />
-            </a>
+<div className="flex items-center space-x-2 mb-4">
+            <span className="text-gray-500">Company profile available on the platform</span>
           </div>
           <p className="text-gray-600">{internshipData.aboutCompany}</p>
         </div>
@@ -346,8 +334,8 @@ const applicationdata={
                     Submit Application
                   </button>
                 ) : (
-                  <Link
-                    href={`/`}
+<Link
+                    href={`/signup`}
                     className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
                   >
                     Sign up to apply

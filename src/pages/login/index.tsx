@@ -7,6 +7,11 @@ import { toast } from "react-toastify";
 import { auth, googleProvider } from "@/lib/firebase";
 import PhoneOtpLogin from "@/auth/PhoneOtpLogin";
 import Link from "next/link";
+import {
+  startLoginGate,
+  verifyLoginOtp,
+  resendLoginOtp,
+} from "@/Feature/loginSecurity";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,6 +21,41 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+
+// Chrome OTP gate state
+  const [otpRequired, setOtpRequired] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [isOtpLoading, setIsOtpLoading] = useState(false);
+
+  // After a successful Firebase sign-in, run the server-side login gate
+  // (Chrome OTP + mobile time restriction). If OTP is required, block access.
+  const runLoginGate = useCallback(
+    async (method: "google" | "password" | "phone") => {
+      let result;
+      try {
+        result = await startLoginGate(method);
+      } catch (e: any) {
+        // Server-side block (e.g. mobile outside allowed hours, or Chrome w/o email).
+        const msg =
+          e?.response?.data?.message ??
+          e?.response?.data?.error ??
+          e?.message ??
+          "Login restricted.";
+        await auth.signOut().catch(() => {});
+        setLoginError(msg);
+        toast.error(msg);
+        return;
+      }
+      if (result.otpRequired) {
+        setOtpRequired(true);
+        setOtp("");
+        return;
+      }
+      toast.success("Logged in successfully");
+      router.push("/");
+    },
+    [router]
+  );
 
   // Pre-fill email from localStorage if "Remember Me" was checked
   useEffect(() => {
@@ -30,10 +70,9 @@ export default function LoginPage() {
     if (isGoogleLoading) return;
     setIsGoogleLoading(true);
     setLoginError(null);
-    try {
+try {
       await signInWithPopup(auth, googleProvider);
-      toast.success("Logged in successfully");
-      router.push("/");
+      await runLoginGate("google");
     } catch (e: any) {
       if (e?.code === "auth/cancelled-popup-request") return;
       const msg = e?.message ?? "Google login failed.";
@@ -42,7 +81,7 @@ export default function LoginPage() {
     } finally {
       setIsGoogleLoading(false);
     }
-  }, [isGoogleLoading, router]);
+  }, [isGoogleLoading, router, runLoginGate]);
 
   const handleEmailLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +96,7 @@ export default function LoginPage() {
       return;
     }
 
-    setIsEmailLoading(true);
+setIsEmailLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email.trim(), password);
 
@@ -67,8 +106,7 @@ export default function LoginPage() {
         localStorage.removeItem("internarea_remembered_email");
       }
 
-      toast.success("Logged in successfully");
-      router.push("/");
+      await runLoginGate("password");
     } catch (e: any) {
       const msg = e?.message ?? "Email login failed.";
       setLoginError(msg);
@@ -76,7 +114,7 @@ export default function LoginPage() {
     } finally {
       setIsEmailLoading(false);
     }
-  }, [email, password, rememberMe, router]);
+  }, [email, password, rememberMe, router, runLoginGate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
@@ -89,9 +127,69 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {loginError && (
+{loginError && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-400">
               {loginError}
+            </div>
+          )}
+
+          {/* Chrome email OTP verification gate */}
+          {otpRequired && (
+            <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                Email verification required
+              </h2>
+              <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
+                We sent a one-time code to your email. Enter it below to continue.
+              </p>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
+                placeholder="Enter OTP"
+                maxLength={6}
+                className="w-full px-3 py-2 mb-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm"
+              />
+              <button
+                type="button"
+                disabled={isOtpLoading || otp.length < 4}
+                onClick={async () => {
+                  setIsOtpLoading(true);
+                  try {
+                    const res = await verifyLoginOtp(otp);
+                    if (res.accessGranted) {
+                      setOtpRequired(false);
+                      toast.success("Verified successfully");
+                      router.push("/");
+                    } else {
+                      toast.error(res.message || "Invalid OTP.");
+                    }
+                  } catch (e: any) {
+                    toast.error(e?.response?.data?.message ?? e?.message ?? "Invalid OTP.");
+                  } finally {
+                    setIsOtpLoading(false);
+                  }
+                }}
+                className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg text-sm"
+              >
+                {isOtpLoading ? "Verifying..." : "Verify OTP"}
+              </button>
+              <button
+                type="button"
+                disabled={isOtpLoading}
+                onClick={async () => {
+                  try {
+                    await resendLoginOtp();
+                    toast.success("OTP resent to your email.");
+                  } catch (e: any) {
+                    toast.error(e?.response?.data?.message ?? "Could not resend OTP.");
+                  }
+                }}
+                className="w-full text-center text-xs text-blue-600 hover:underline mt-3"
+              >
+                Resend OTP
+              </button>
             </div>
           )}
 

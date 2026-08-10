@@ -16,6 +16,8 @@ interface User {
 const index = () => {
   const user = useSelector(selectuser);
   const [resumes, setResumes] = useState<any[]>([]);
+  const [activeApplications, setActiveApplications] = useState(0);
+  const [acceptedApplications, setAcceptedApplications] = useState(0);
 
   useEffect(() => {
     async function loadResumes() {
@@ -27,6 +29,26 @@ const index = () => {
       }
     }
     loadResumes();
+  }, []);
+
+  useEffect(() => {
+    async function loadApplicationStats() {
+      try {
+        const res = await axiosClient.get("/api/application");
+        const list = res?.data?.data ?? res?.data ?? [];
+        const apps = Array.isArray(list) ? list : [];
+        setActiveApplications(apps.length);
+        setAcceptedApplications(
+          apps.filter(
+            (a: any) =>
+              a?.status === "accepted" || a?.status === "shortlisted"
+          ).length
+        );
+      } catch (e) {
+        // ignore
+      }
+    }
+    loadApplicationStats();
   }, []);
 
   function ResumesList() {
@@ -93,12 +115,12 @@ const index = () => {
             <div className="space-y-6">
               {/* Quick Stats */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-blue-50 rounded-lg p-4 text-center">
-                  <span className="text-blue-600 font-semibold text-2xl">0</span>
+<div className="bg-blue-50 rounded-lg p-4 text-center">
+                  <span className="text-blue-600 font-semibold text-2xl">{activeApplications}</span>
                   <p className="text-blue-600 text-sm mt-1">Active Applications</p>
                 </div>
                 <div className="bg-green-50 rounded-lg p-4 text-center">
-                  <span className="text-green-600 font-semibold text-2xl">0</span>
+                  <span className="text-green-600 font-semibold text-2xl">{acceptedApplications}</span>
                   <p className="text-green-600 text-sm mt-1">Accepted Applications</p>
                 </div>
               </div>

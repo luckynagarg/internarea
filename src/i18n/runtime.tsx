@@ -28,11 +28,12 @@ import React, {
 } from 'react';
 
 // ─── Types & Constants ─────────────────────────────────────────────────
+// Requirement: exactly 6 supported languages (en/es/hi/pt/zh/fr).
 export type SupportedLang =
-  | 'en' | 'es' | 'hi' | 'pt' | 'zh' | 'fr' | 'de';
+  | 'en' | 'es' | 'hi' | 'pt' | 'zh' | 'fr';
 
 export const SUPPORTED_LANGS: SupportedLang[] = [
-  'en', 'es', 'hi', 'pt', 'zh', 'fr', 'de',
+  'en', 'es', 'hi', 'pt', 'zh', 'fr',
 ];
 
 export const DEFAULT_LANG: SupportedLang = 'en';
@@ -44,7 +45,6 @@ export const LANG_LABELS: Record<SupportedLang, string> = {
   pt: 'Português',
   zh: '中文',
   fr: 'Français',
-  de: 'Deutsch',
 };
 
 const STORAGE_KEY = 'internarea_lang';
@@ -60,7 +60,6 @@ import fr from './dictionaries/fr';
 import es from './dictionaries/es';
 import pt from './dictionaries/pt';
 import zh from './dictionaries/zh';
-import de from './dictionaries/de';
 
 type LocaleDict = Record<string, any>;
 
@@ -79,7 +78,6 @@ const localeData: Record<string, LocaleDict> = {
   es: resolveLocaleModule(es, 'es'),
   pt: resolveLocaleModule(pt, 'pt'),
   zh: resolveLocaleModule(zh, 'zh'),
-  de: resolveLocaleModule(de, 'de'),
 };
 
 // ─── Warning tracker ───────────────────────────────────────────────────

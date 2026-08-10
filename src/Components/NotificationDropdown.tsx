@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import axiosCoin from "@/lib/axiosClient";
 import { Bell, X, CheckCheck, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
-import { auth } from "../firebase/firebase";
 
 export type NotificationItem = {
   _id: string;
@@ -22,11 +21,7 @@ export type NotificationItem = {
   action?: string | null;
 };
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  process.env.NEXT_PUBLIC_API_BASE_BASE_URL ||
-  "https://intern-backend-4dlt.onrender.com";
-
+// axiosClient already sets the API base URL. Use relative paths only.
 function formatTitle(n: NotificationItem) {
   return n.title || "Announcement";
 }
@@ -125,7 +120,7 @@ export default function NotificationDropdown({
       setLoading(true);
       setErrorState(null);
       try {
-        const res = await axiosCoin.get(`${API_BASE}/api/notifications`);
+const res = await axiosCoin.get("/api/notifications");
         const rawList = getApiNotificationsPayload(res.data);
         const normalized = rawList.map(normalizeNotificationItem);
         if (!mounted) return;
@@ -152,7 +147,7 @@ export default function NotificationDropdown({
     // Optimistic update.
     setItems((prev) => prev.map((x) => (x._id === n._id ? { ...x, read: true } : x)));
     try {
-      await axiosCoin.post(`${API_BASE}/api/notifications/${encodeURIComponent(n._id)}/read`);
+await axiosCoin.post(`/api/notifications/${encodeURIComponent(n._id)}/read`);
     } catch (e) {
       // rollback on failure
       setItems((prev) => prev.map((x) => (x._id === n._id ? { ...x, read: false } : x)));
@@ -161,7 +156,7 @@ export default function NotificationDropdown({
 
   async function markAllRead() {
     try {
-      await axiosCoin.post(`${API_BASE}/api/notifications/read-all`);
+await axiosCoin.post("/api/notifications/read-all");
       setItems((prev) => prev.map((x) => ({ ...x, read: true })));
       toast.success("All notifications marked as read.");
     } catch (e: any) {
@@ -172,7 +167,7 @@ export default function NotificationDropdown({
   async function removeNotification(n: NotificationItem) {
     setDeleting(n._id);
     try {
-      await axiosCoin.delete(`${API_BASE}/api/notifications/${encodeURIComponent(n._id)}`);
+await axiosCoin.delete(`/api/notifications/${encodeURIComponent(n._id)}`);
       setItems((prev) => prev.filter((x) => x._id !== n._id));
       toast.success("Notification deleted.");
     } catch (e: any) {
