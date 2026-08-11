@@ -10,6 +10,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { login, logout } from "@/Feature/Userslice";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { Analytics } from "@vercel/analytics/next";
 
 import { I18nProvider } from "@/i18n/runtime";
 
