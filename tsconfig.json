@@ -28,7 +28,7 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx"
-  ],
+, "src/pages/api/create"  ],
   "exclude": [
     "node_modules",
     "src/__tests__"
