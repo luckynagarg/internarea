@@ -438,6 +438,7 @@ export default function SubscriptionPage() {
             <h3 className="text-lg font-bold text-gray-900 mb-2">Scan to Pay</h3>
             <p className="text-sm text-gray-600 mb-4">Scan this QR with any UPI app to complete payment.</p>
             {qrData.qrUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={qrData.qrUrl}
                 alt="Payment QR"
