@@ -5,7 +5,6 @@ import { signInWithPopup, signInWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { auth, googleProvider } from "@/lib/firebase";
-import PhoneOtpLogin from "@/auth/PhoneOtpLogin";
 import Link from "next/link";
 import {
   startLoginGate,
@@ -297,11 +296,6 @@ setIsEmailLoading(true);
               {isEmailLoading ? "Signing in..." : "Sign in"}
             </button>
           </form>
-
-          {/* Phone OTP section */}
-          <div className="mt-6">
-            <PhoneOtpLogin onVerified={() => toast.success("Phone verified")} />
-          </div>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-500 dark:text-gray-400">
