@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axiosClient from "@/lib/apiClient";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { useSelector } from "react-redux";
 import { selectuser } from "@/Feature/Userslice";
 import { openRazorpayCheckout } from "@/lib/razorpay";
@@ -14,6 +15,8 @@ import {
   RotateCcw,
   Shield,
   X,
+  AlertTriangle,
+  ArrowRight,
 } from "lucide-react";
 
 type PlanKey = "free" | "bronze" | "silver" | "gold";
@@ -64,6 +67,19 @@ type Invoice = {
   createdAt: string;
 };
 
+type PlanOption = {
+  key: PlanKey;
+  label: string;
+  price: string;
+  amountINR: number;
+};
+
+const PLANS: PlanOption[] = [
+  { key: "bronze", label: "Bronze", price: "₹100", amountINR: 100 },
+  { key: "silver", label: "Silver", price: "₹300", amountINR: 300 },
+  { key: "gold", label: "Gold", price: "₹1000", amountINR: 1000 },
+];
+
 function getDaysRemaining(expiry: string | Date | null | undefined) {
   if (!expiry) return 0;
   const end = new Date(expiry).getTime();
@@ -79,6 +95,7 @@ function badgeStyles(status: string) {
 }
 
 export default function SubscriptionPage() {
+  const router = useRouter();
   const user = useSelector(selectuser);
 
   const [loading, setLoading] = useState(false);
@@ -89,6 +106,29 @@ export default function SubscriptionPage() {
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [qrData, setQrData] = useState<any>(null);
   const [qrLoading, setQrLoading] = useState(false);
+
+  const remaining = quota?.remainingApplications ?? 0;
+  const used = quota?.applicationsUsed ?? 0;
+  const limit = quota?.monthlyLimit ?? 0;
+  const unlimited = limit === Number.POSITIVE_INFINITY;
+
+  const progress = useMemo(() => {
+    if (!quota) return 0;
+    if (unlimited) return 100;
+    if (!Number.isFinite(limit) || limit <= 0) return 0;
+    return Math.max(0, Math.min(100, (used / limit) * 100));
+  }, [quota, used, limit, unlimited]);
+
+  const pendingPayments = useMemo(
+    () => payments.filter((p) => p.status === "created"),
+    [payments]
+  );
+
+  useEffect(() => {
+    if (!user) {
+      router.replace("/login");
+    }
+  }, [user, router]);
 
   async function refreshAll() {
     setLoading(true);
@@ -131,10 +171,9 @@ export default function SubscriptionPage() {
 
       const { orderId, amount, currency, subscriptionName } = data.data;
 
-      // Load the order and open Razorpay checkout.
       await openRazorpayCheckout({
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "",
-        amount: amount * 100, // paise
+        amount: amount * 100,
         currency,
         order_id: orderId,
         name: "InternArea",
@@ -151,12 +190,51 @@ export default function SubscriptionPage() {
               razorpayPaymentId: response.razorpay_payment_id,
               razorpaySignature: response.razorpay_signature,
             });
-            toast.success("Payment successful! Your plan has been upgraded.");
-            await refreshAll();
+            router.push({
+              pathname: "/payment/success",
+              query: {
+                order_id: response.razorpay_order_id,
+                payment_id: response.razorpay_payment_id,
+                plan: planKey,
+              },
+            });
           } catch (verifyErr: any) {
-            const msg = verifyErr?.response?.data?.error?.message || verifyErr?.response?.data?.message || "Payment verification failed.";
-            setError(msg);
+            const msg =
+              verifyErr?.response?.data?.error?.message ||
+              verifyErr?.response?.data?.message ||
+              "Payment verification failed.";
+            router.push({
+              pathname: "/payment/failed",
+              query: { order_id: response.razorpay_order_id, plan: planKey, reason: msg },
+            });
           }
+        },
+        modal: {
+          ondismiss: () => {
+            if (!orderId) return;
+            axiosClient
+              .get(`/api/subscription/payments/${orderId}`)
+              .then((res) => {
+                const status = res?.data?.data?.status;
+                if (status === "failed") {
+                  router.push({
+                    pathname: "/payment/failed",
+                    query: { order_id: orderId, plan: planKey },
+                  });
+                } else {
+                  router.push({
+                    pathname: "/payment/cancel",
+                    query: { order_id: orderId, plan: planKey },
+                  });
+                }
+              })
+              .catch(() => {
+                router.push({
+                  pathname: "/payment/cancel",
+                  query: { order_id: orderId, plan: planKey },
+                });
+              });
+          },
         },
       });
     } catch (e: any) {
@@ -176,7 +254,7 @@ export default function SubscriptionPage() {
     setQrData(null);
     setError(null);
     try {
-      const res = await axiosClient.post("/api/subscriptions/qr", { planKey });
+      const res = await axiosClient.post("/api/subscription/qr", { planKey });
       setQrData(res?.data?.data);
       toast.success("QR generated. Scan with any UPI app to pay.");
     } catch (e: any) {
@@ -187,17 +265,19 @@ export default function SubscriptionPage() {
     }
   }
 
-  const remaining = quota?.remainingApplications ?? 0;
-  const used = quota?.applicationsUsed ?? 0;
-  const limit = quota?.monthlyLimit ?? 0;
-  const unlimited = limit === Number.POSITIVE_INFINITY;
+  const currentPlanKey = (quota?.planKey || "free") as PlanKey;
+  const currentPlan = PLANS.find((p) => p.key === currentPlanKey);
 
-  const progress = useMemo(() => {
-    if (!quota) return 0;
-    if (unlimited) return 100;
-    if (!Number.isFinite(limit) || limit <= 0) return 0;
-    return Math.max(0, Math.min(100, (used / limit) * 100));
-  }, [quota, used, limit, unlimited]);
+  const ctaLabel = (plan: PlanOption) => {
+    if (plan.key === currentPlanKey) return "Current Plan";
+    const order = { free: 0, bronze: 1, silver: 2, gold: 3 } as Record<PlanKey, number>;
+    if (order[plan.key] > order[currentPlanKey]) return "Upgrade";
+    return "Downgrade";
+  };
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -214,6 +294,19 @@ export default function SubscriptionPage() {
             </span>
           </div>
         </div>
+
+        {pendingPayments.length > 0 && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-4 mb-4 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 mt-0.5" />
+            <div>
+              <div className="text-sm font-semibold">Pending Payment</div>
+              <div className="text-sm mt-1">
+                You have {pendingPayments.length} pending payment{pendingPayments.length === 1 ? '' : 's'}.
+                Complete the payment to activate your plan.
+              </div>
+            </div>
+          </div>
+        )}
 
         {loading && (
           <div className="bg-white rounded-xl shadow-sm p-6 flex items-center justify-center">
@@ -283,38 +376,52 @@ export default function SubscriptionPage() {
                   </div>
                 </div>
 
-                {/* Upgrade */}
+                {/* Plan actions */}
                 <div className="mt-6 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
                   <div className="text-sm text-gray-600 flex items-center gap-2">
                     <Lock className="h-4 w-4" />
-                    Upgrade to increase monthly applications.
+                    {unlimited
+                      ? "You have unlimited access."
+                      : "Upgrade to increase monthly applications."}
                   </div>
-                  <div className="flex gap-2">
-                    {([
-                      { key: "bronze", label: "Bronze", price: "₹100" },
-                      { key: "silver", label: "Silver", price: "₹300" },
-                      { key: "gold", label: "Gold", price: "₹1000" },
-                    ] as const).map((p) => (
-                      <button
-                        key={p.key}
-                        type="button"
-                        disabled={checkoutLoading === p.key}
-                        onClick={() => handleUpgrade(p.key)}
-                        className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
-                      >
-                        {checkoutLoading === p.key ? (
-                          <Loader2 className="h-4 w-4 animate-spin inline mr-1" />
-                        ) : null}
-                        {checkoutLoading === p.key ? "Starting..." : `Upgrade ${p.label} (${p.price})`}
-                      </button>
-                    ))}
+                  <div className="flex flex-wrap gap-2">
+                    {PLANS.map((p) => {
+                      const isCurrent = p.key === currentPlanKey;
+                      return (
+                        <button
+                          key={p.key}
+                          type="button"
+                          disabled={checkoutLoading === p.key || isCurrent}
+                          onClick={() => handleUpgrade(p.key)}
+                          className={`px-4 py-2 rounded-lg text-sm font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed ${
+                            isCurrent
+                              ? "bg-gray-100 text-gray-500 cursor-default"
+                              : "bg-blue-600 text-white hover:bg-blue-700"
+                          }`}
+                        >
+                          {checkoutLoading === p.key ? (
+                            <Loader2 className="h-4 w-4 animate-spin inline mr-1" />
+                          ) : null}
+                          {checkoutLoading === p.key
+                            ? "Starting..."
+                            : isCurrent
+                            ? "Current Plan"
+                            : `${ctaLabel(p)} ${p.label} (${p.price})`}
+                        </button>
+                      );
+                    })}
                     <button
                       type="button"
                       onClick={() => handleShowQr("gold")}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 text-sm font-semibold hover:bg-gray-50 transition"
+                      disabled={qrLoading}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 text-sm font-semibold hover:bg-gray-50 transition disabled:opacity-60"
                     >
-                      <QrCode className="h-4 w-4" />
-                      Pay via QR
+                      {qrLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <QrCode className="h-4 w-4" />
+                      )}
+                      {qrLoading ? "Generating..." : "Pay via QR"}
                     </button>
                   </div>
                 </div>
@@ -325,7 +432,9 @@ export default function SubscriptionPage() {
                 <div className="mt-3 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Plan price</span>
-                    <span className="text-sm font-semibold text-gray-900">{unlimited ? "₹1000" : "—"}</span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {currentPlan ? currentPlan.price : "—"}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Applications used</span>
@@ -352,6 +461,12 @@ export default function SubscriptionPage() {
               <div className="bg-white rounded-xl shadow-sm p-5">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold text-gray-900">Payment History</h2>
+                  <Link
+                    href="/subscription/history"
+                    className="text-sm text-blue-700 hover:text-blue-800 font-medium"
+                  >
+                    View all
+                  </Link>
                 </div>
                 <div className="space-y-3">
                   {payments.length === 0 && (
@@ -381,7 +496,19 @@ export default function SubscriptionPage() {
                         </div>
                       </div>
                       {p.failureReason && <div className="text-xs text-red-600 mt-2">{p.failureReason}</div>}
-                      {p.invoiceNumber && <div className="text-xs text-blue-600 mt-2">Invoice: {p.invoiceNumber}</div>}
+                      {p.invoiceNumber && (
+                        <div className="text-xs text-blue-600 mt-2">
+                          Invoice:{" "}
+                          <a
+                            href={API_URL(`/api/subscription/invoices/${encodeURIComponent(p.invoiceNumber)}/download`)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="underline"
+                          >
+                            {p.invoiceNumber}
+                          </a>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -402,8 +529,8 @@ export default function SubscriptionPage() {
                         <div className="text-xs text-gray-500">{new Date(inv.createdAt).toDateString()}</div>
                         <div className="text-xs text-gray-600">{inv.emailStatus}</div>
                       </div>
-<Link
-                        href={API_URL(`/api/subscription/invoices/${inv.invoiceNumber}/download`)}
+                      <Link
+                        href={API_URL(`/api/subscription/invoices/${encodeURIComponent(inv.invoiceNumber)}/download`)}
                         target="_blank"
                         className="px-3 py-2 rounded-lg bg-blue-50 text-blue-700 text-sm font-semibold hover:bg-blue-100 transition"
                       >

@@ -9,6 +9,7 @@ import {
   BriefcaseBusiness,
   Building2,
   Bookmark,
+  ArrowRight,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { selectuser } from "@/Feature/Userslice";
@@ -39,6 +40,8 @@ export default function DashboardPage() {
   const [posts, setPosts] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
   const [internships, setInternships] = useState<any[]>([]);
+  const [subscription, setSubscription] = useState<any>(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -93,6 +96,17 @@ export default function DashboardPage() {
         const list = res?.data?.data ?? [];
         if (mounted) setSuggestedConnections(Array.isArray(list) ? list : []);
       } catch { /* ignore */ }
+
+      if (user?.uid) {
+        try {
+          setSubscriptionLoading(true);
+          const res = await axiosClient.get("/api/subscription/me");
+          if (mounted) setSubscription(res?.data?.data || null);
+        } catch { /* ignore */ }
+        finally {
+          if (mounted) setSubscriptionLoading(false);
+        }
+      }
     }
 
     load();
@@ -190,6 +204,56 @@ export default function DashboardPage() {
           </aside>
 
           <main className="lg:col-span-7 space-y-6">
+            {subscription && (
+              <section className="bg-white rounded-xl shadow-sm p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-lg font-semibold text-gray-900">Your Plan</h2>
+                  <Link href="/subscription" className="text-sm text-blue-700 hover:text-blue-800 font-medium inline-flex items-center gap-1">
+                    Manage <ArrowRight size={14} />
+                  </Link>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className="flex-1">
+                    <div className="text-sm text-gray-500">Current plan</div>
+                    <div className="text-xl font-bold text-gray-900">{subscription.planName}</div>
+                    <div className="mt-1 flex items-center gap-2 text-sm text-gray-600">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                        subscription.subscriptionStatus === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {subscription.subscriptionStatus}
+                      </span>
+                      <span>• {subscription.monthlyLimit === Number.POSITIVE_INFINITY ? 'Unlimited' : `${subscription.monthlyLimit} / month`}</span>
+                    </div>
+                  </div>
+                  <div className="sm:text-right">
+                    <div className="text-sm text-gray-500">Days remaining</div>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {subscription.subscriptionExpiry
+                        ? Math.max(0, Math.ceil((new Date(subscription.subscriptionExpiry).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
+                        : 0}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {subscription.subscriptionExpiry ? `until ${new Date(subscription.subscriptionExpiry).toDateString()}` : '—'}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+                    <span>Applications used: <span className="font-semibold text-gray-900">{subscription.applicationsUsed ?? 0}</span></span>
+                    <span>Remaining: <span className="font-semibold text-gray-900">{subscription.remainingApplications ?? 0}</span></span>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-600"
+                      style={{
+                        width: `${subscription.monthlyLimit && subscription.monthlyLimit !== Number.POSITIVE_INFINITY ? Math.max(0, Math.min(100, ((subscription.applicationsUsed || 0) / subscription.monthlyLimit) * 100)) : 100}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </section>
+            )}
+
             <section className="bg-white rounded-xl shadow-sm p-5">
               <h2 className="text-lg font-semibold text-gray-900 mb-3">Public Posts</h2>
               <div className="space-y-3">

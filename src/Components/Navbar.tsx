@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import axiosClient from "@/lib/apiClient";
 import Link from "next/link";
 import { auth } from "@/lib/firebase";
-import { Bell, Search, Globe, Menu, X } from "lucide-react";
+import { Bell, Search, Globe, Menu, X, Shield } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useSelector } from "react-redux";
 import { selectuser } from "@/Feature/Userslice";
@@ -90,9 +90,10 @@ const user = useSelector(selectuser);
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const { t, lang, setLang } = useT();
-const [langOpen, setLangOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
   const [frenchOtpOpen, setFrenchOtpOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [planName, setPlanName] = useState<string>("");
   const langRef = useRef<HTMLDivElement>(null);
 
   // Fetch unread notification count on mount / whenever dropdown state changes.
@@ -112,6 +113,24 @@ const [langOpen, setLangOpen] = useState(false);
       mounted = false;
     };
   }, [user, notifOpen]);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadPlan() {
+      if (!user?.uid) return;
+      try {
+        const res = await axiosClient.get("/api/subscription/me");
+        const data = res?.data?.data;
+        if (mounted && data?.planName) setPlanName(data.planName);
+      } catch {
+        // ignore
+      }
+    }
+    loadPlan();
+    return () => {
+      mounted = false;
+    };
+  }, [user?.uid]);
 
 // Intercept language selection. French requires OTP verification first.
   const handleSelectLang = async (l: SupportedLang) => {
@@ -226,9 +245,14 @@ className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-cent
                   )}
                 </div>
 
-                {user ? (
-                  <>
-                    <div className="relative">
+                 {user ? (
+                   <>
+                     {planName && (
+                       <span className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-100">
+                         <Shield size={12} /> {planName}
+                       </span>
+                     )}
+                     <div className="relative">
                       <button
                         type="button"
                         className="relative p-2 rounded-full hover:bg-gray-100"
