@@ -22,6 +22,15 @@ function AuthListener() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (authuser) => {
+      if (process.env.NODE_ENV !== 'production') {
+        console.debug('[Auth Debug] onAuthStateChanged', {
+          uid: authuser?.uid ?? null,
+          email: authuser?.email ?? null,
+          displayName: authuser?.displayName ?? null,
+          photoURL: authuser?.photoURL ?? null,
+          emailVerified: authuser?.emailVerified ?? null,
+        });
+      }
       if (authuser) {
         dispatch(
           login({

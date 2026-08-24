@@ -31,7 +31,15 @@ export default function LoginPage() {
   // After a successful Firebase sign-in, run the server-side login gate
   // (Chrome OTP + mobile time restriction). If OTP is required, block access.
   const runLoginGate = useCallback(
-    async (method: "google" | "password" | "phone") => {
+    async (method: "google" | "password" | "phone", firebaseUser?: any) => {
+      if (process.env.NODE_ENV !== 'production') {
+        console.debug('[Auth Debug] runLoginGate start', {
+          method,
+          firebaseUid: firebaseUser?.uid ?? null,
+          email: firebaseUser?.email ?? null,
+          authCurrentUserUid: (await import('@/lib/firebase')).auth.currentUser?.uid ?? null,
+        });
+      }
       let result;
       try {
         result = await startLoginGate(method);
@@ -41,15 +49,29 @@ export default function LoginPage() {
           e?.response?.data?.error ??
           e?.message ??
           t('auth.firebaseErrors.loginRestricted');
+        if (process.env.NODE_ENV !== 'production') {
+          console.debug('[Auth Debug] runLoginGate FAILED', {
+            method,
+            status: e?.response?.status ?? null,
+            data: e?.response?.data ?? null,
+            message: msg,
+          });
+        }
         await auth.signOut().catch(() => {});
         setLoginError(msg);
         toast.error(msg);
         return;
       }
       if (result.otpRequired) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.debug('[Auth Debug] runLoginGate OTP required', { method });
+        }
         setOtpRequired(true);
         setOtp("");
         return;
+      }
+      if (process.env.NODE_ENV !== 'production') {
+        console.debug('[Auth Debug] runLoginGate SUCCESS → redirecting to /', { method });
       }
       toast.success(t('auth.firebaseErrors.loggedInSuccessfully'));
       router.push("/");
