@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import axiosCoin from "@/lib/axiosClient";
 import { Bell, X, CheckCheck, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
+import { useT } from "@/i18n/runtime";
 
 export type NotificationItem = {
   _id: string;
@@ -22,10 +23,6 @@ export type NotificationItem = {
 };
 
 // axiosClient already sets the API base URL. Use relative paths only.
-function formatTitle(n: NotificationItem) {
-  return n.title || "Announcement";
-}
-
 function getApiNotificationsPayload(data: any): any[] {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.notifications)) return data.notifications;
@@ -71,20 +68,6 @@ function normalizeNotificationItem(raw: any): NotificationItem {
   return { _id, title, body, createdAt, read, type, actor, link, action };
 }
 
-function errorToString(err: any): string {
-  const apiErr = err?.response?.data?.error;
-  if (typeof apiErr === "string") return apiErr;
-  if (apiErr && typeof apiErr === "object") {
-    if (typeof apiErr.message === "string") return apiErr.message;
-  }
-  if (typeof err?.message === "string") return err.message;
-  try {
-    return JSON.stringify(err);
-  } catch {
-    return "Something went wrong";
-  }
-}
-
 export default function NotificationDropdown({
   open,
   onClose,
@@ -96,6 +79,7 @@ export default function NotificationDropdown({
   onMarkRead?: (items: NotificationItem[]) => void;
   onUnreadChange?: (count: number) => void;
 }) {
+  const { t } = useT();
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [errorState, setErrorState] = useState<string | null>(null);
@@ -107,6 +91,24 @@ export default function NotificationDropdown({
   onUnreadChangeRef.current = onUnreadChange;
 
   const unreadCount = useMemo(() => items.filter((x) => !x.read).length, [items]);
+
+  function formatTitle(n: NotificationItem) {
+    return n.title || t('notifications.defaultTitle');
+  }
+
+  function errorToString(err: any): string {
+    const apiErr = err?.response?.data?.error;
+    if (typeof apiErr === "string") return apiErr;
+    if (apiErr && typeof apiErr === "object") {
+      if (typeof apiErr.message === "string") return apiErr.message;
+    }
+    if (typeof err?.message === "string") return err.message;
+    try {
+      return JSON.stringify(err);
+    } catch {
+      return t('common.somethingWentWrong');
+    }
+  }
 
   useEffect(() => {
     onUnreadChangeRef.current?.(unreadCount);
@@ -158,7 +160,7 @@ await axiosCoin.post(`/api/notifications/${encodeURIComponent(n._id)}/read`);
     try {
 await axiosCoin.post("/api/notifications/read-all");
       setItems((prev) => prev.map((x) => ({ ...x, read: true })));
-      toast.success("All notifications marked as read.");
+      toast.success(t('notifications.markAllReadSuccess'));
     } catch (e: any) {
       toast.error(errorToString(e));
     }
@@ -169,7 +171,7 @@ await axiosCoin.post("/api/notifications/read-all");
     try {
 await axiosCoin.delete(`/api/notifications/${encodeURIComponent(n._id)}`);
       setItems((prev) => prev.filter((x) => x._id !== n._id));
-      toast.success("Notification deleted.");
+      toast.success(t('notifications.notificationDeleted'));
     } catch (e: any) {
       toast.error(errorToString(e));
     } finally {
@@ -192,8 +194,8 @@ await axiosCoin.delete(`/api/notifications/${encodeURIComponent(n._id)}`);
         <div className="flex items-center gap-2">
           <Bell size={18} className="text-foreground" />
           <div>
-            <div className="font-semibold text-foreground">Notifications</div>
-            <div className="text-xs text-muted-foreground">{unreadCount} unread</div>
+            <div className="font-semibold text-foreground">{t('notifications.title')}</div>
+            <div className="text-xs text-muted-foreground">{unreadCount} {t('notifications.unread')}</div>
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -202,7 +204,7 @@ await axiosCoin.delete(`/api/notifications/${encodeURIComponent(n._id)}`);
               type="button"
               onClick={markAllRead}
               className="p-1.5 rounded-md hover:bg-gray-100"
-              title="Mark all as read"
+              title={t('notifications.markAllAsRead')}
             >
               <CheckCheck size={16} className="text-gray-600" />
             </button>
@@ -211,7 +213,7 @@ await axiosCoin.delete(`/api/notifications/${encodeURIComponent(n._id)}`);
             type="button"
             className="p-1 rounded-md hover:bg-gray-100"
             onClick={onClose}
-            aria-label="Close notifications"
+            aria-label={t('ui.close')}
           >
             <X size={16} className="text-gray-700" />
           </button>
@@ -237,8 +239,8 @@ await axiosCoin.delete(`/api/notifications/${encodeURIComponent(n._id)}`);
 
         {!loading && !errorState && items.length === 0 && (
           <div className="p-6 text-center">
-            <div className="font-semibold">No notifications yet.</div>
-            <div className="text-sm text-muted-foreground mt-1">You&apos;ll see updates here.</div>
+            <div className="font-semibold">{t('notifications.noNotifications')}</div>
+            <div className="text-sm text-muted-foreground mt-1">{t('notifications.signinPrompt')}</div>
           </div>
         )}
 
@@ -293,7 +295,7 @@ await axiosCoin.delete(`/api/notifications/${encodeURIComponent(n._id)}`);
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
                     <button
                       type="button"
-                      aria-label="Delete notification"
+                      aria-label={t('notifications.delete')}
                       onClick={() => removeNotification(n)}
                       disabled={deleting === n._id}
                       className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-600"
@@ -312,7 +314,7 @@ await axiosCoin.delete(`/api/notifications/${encodeURIComponent(n._id)}`);
       </div>
 
       <div className="px-4 py-3 border-t border-border text-xs text-muted-foreground">
-        <div>Notifications are kept in sync with the backend in real time.</div>
+        <div>{t('notifications.keepInSync')}</div>
       </div>
     </div>
   );

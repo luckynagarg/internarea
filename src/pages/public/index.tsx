@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useT } from '@/i18n/runtime';
 import { toast } from "react-toastify";
 import { uploadMedia } from "@/firebase/uploadMedia";
 import { Camera, Heart, MessageCircle, Share2, Trash2 } from "lucide-react";
@@ -24,6 +25,7 @@ type Post = {
 
 
 export default function PublicSpacePage() {
+  const { t } = useT();
   const [caption, setCaption] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [creating, setCreating] = useState(false);
@@ -32,7 +34,6 @@ export default function PublicSpacePage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loadingFeed, setLoadingFeed] = useState(false);
 
-  // Comments open/toggle state
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
   const [commentTextByPostId, setCommentTextByPostId] = useState<Record<string, string>>({});
   const [commentsByPostId, setCommentsByPostId] = useState<Record<string, any[]>>({});
@@ -49,11 +50,9 @@ export default function PublicSpacePage() {
       return;
     }
     try {
-      // Backend derives userId from the Firebase token; no query param needed.
       const res = await axiosClient.get(`/api/public/friends/count`);
       setLimit(res.data);
     } catch {
-      // If auth is unavailable, fall back to a zero limit.
       setLimit({ friendsCount: 0, allowedPerDay: 0 });
     }
   }
@@ -64,18 +63,15 @@ export default function PublicSpacePage() {
       const res = await axiosClient.get(`/api/public/posts?limit=20`);
       setPosts(res.data.posts || []);
     } catch (e: any) {
-      toast.error(e?.response?.data?.error || e.message || "Failed to load feed");
+      toast.error(t('common.error'));
     } finally {
       setLoadingFeed(false);
     }
   }
 
-  // Initial load
   useEffect(() => {
-    // Load both the feed and the per-day posting limit.
     fetchLimit();
     fetchFeed();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
 
@@ -84,17 +80,16 @@ export default function PublicSpacePage() {
 
   async function handleCreatePost() {
     if (!userId) {
-      toast.error("Please login to post.");
+      toast.error(t('common.pleaseLogin'));
       return;
     }
     if (!file) {
-      toast.error("Select an image/video.");
+      toast.error(t('common.selectMedia'));
       return;
     }
 
-    // optimistic local UX hint based on last fetched limit
     if (limit && limit.allowedPerDay !== Infinity && limit.allowedPerDay <= 0) {
-      toast.error("You can’t post yet. Add friends to start.");
+      toast.error(t('public.cantPost'));
       return;
     }
 
@@ -102,7 +97,6 @@ export default function PublicSpacePage() {
       setCreating(true);
       const { mediaType, mediaUrl } = await uploadMedia(file);
 
-      // userId is derived server-side from the Firebase token.
       const res = await axiosClient.post(`/api/public/posts`, {
         name: currentUser?.displayName || currentUser?.name || "",
         photo: currentUser?.photo || "",
@@ -111,14 +105,14 @@ export default function PublicSpacePage() {
         mediaUrl,
       });
 
-      toast.success("Posted successfully");
+      toast.success(t('common.postedSuccessfully'));
       setCaption("");
       setFile(null);
       setPosts((prev) => [res.data, ...prev]);
 
       await fetchLimit();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error || e.message || "Failed to post");
+      toast.error(t('common.postingFailed'));
     } finally {
       setCreating(false);
     }
@@ -140,22 +134,21 @@ export default function PublicSpacePage() {
 
   async function toggleLike(post: Post) {
 
-
     if (!userId) {
-      toast.error("Login required");
+      toast.error(t('common.loginRequired'));
       return;
     }
     try {
       await axiosClient.post(`/api/public/posts/${post._id}/like`);
       await fetchFeed();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error || e.message || "Failed");
+      toast.error(t('common.error'));
     }
   }
 
   async function addComment(postId: string) {
     if (!userId) {
-      toast.error("Login required");
+      toast.error(t('common.loginRequired'));
       return;
     }
     const text = (commentTextByPostId[postId] || "").trim();
@@ -167,45 +160,45 @@ export default function PublicSpacePage() {
         photo: currentUser?.photo || "",
         text,
       });
-      toast.success("Comment added");
+      toast.success(t('common.addComment'));
       setCommentTextByPostId((prev) => ({ ...prev, [postId]: "" }));
       await fetchFeed();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error || e.message || "Failed");
+      toast.error(t('common.error'));
     }
   }
 
   const friendsHint = (() => {
     if (!limit) return "";
-    if (limit.friendsCount === 0) return "You can’t post yet. Add friends to start.";
-    if (limit.allowedPerDay === Infinity) return "Posting is unlimited for you today.";
-    return `You can post ${limit.allowedPerDay} time(s) today.`;
+    if (limit.friendsCount === 0) return t('public.cantPost');
+    if (limit.allowedPerDay === Infinity) return t('public.postingUnlimited');
+    return t('public.canPostTimes', { values: { count: limit.allowedPerDay } });
   })();
 
 
   return (
     <div className="max-w-5xl mx-auto p-4 py-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Public Space</h1>
-        <p className="text-gray-600 mt-2">Upload, like, comment, and share with the community.</p>
+        <h1 className="text-3xl font-bold text-gray-900">{t('public.pageTitle')}</h1>
+        <p className="text-gray-600 mt-2">{t('public.pageDesc')}</p>
         {friendsHint && <p className="mt-3 text-sm text-blue-700">{friendsHint}</p>}
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm p-4 mb-6">
-        <h2 className="font-semibold text-gray-900 mb-3">Create a post</h2>
+        <h2 className="font-semibold text-gray-900 mb-3">{t('public.createPost')}</h2>
 
         <textarea
           value={caption}
           onChange={(e) => setCaption(e.target.value)}
           className="w-full border rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Share something..."
+          placeholder={t('public.shareSomething')}
           rows={3}
         />
 
         <div className="flex items-center gap-3 mt-3">
           <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 rounded-lg border hover:bg-gray-500 text-black text-sm">
             <Camera size={16} />
-            <span>{file ? file.name : "Upload image/video"}</span>
+            <span>{file ? file.name : t('public.uploadImageVideo')}</span>
             <input
               type="file"
               accept="image/*,video/*"
@@ -221,7 +214,7 @@ export default function PublicSpacePage() {
               type="button"
             >
               <Trash2 size={16} />
-              Remove
+              {t('public.remove')}
             </button>
           )}
         </div>
@@ -232,15 +225,15 @@ export default function PublicSpacePage() {
           className="mt-4 w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-xl"
           type="button"
         >
-          {creating ? "Posting..." : "Post"}
+          {creating ? t('public.posting') : t('public.post')}
         </button>
       </div>
 
       <div className="space-y-4">
-        {loadingFeed && <div className="text-gray-500">Loading feed...</div>}
+        {loadingFeed && <div className="text-gray-500">{t('public.loadingFeed')}</div>}
 
         {!loadingFeed && posts.length === 0 && (
-          <div className="text-gray-500 bg-white rounded-2xl shadow-sm p-6">No posts yet.</div>
+          <div className="text-gray-500 bg-white rounded-2xl shadow-sm p-6">{t('public.noPosts')}</div>
         )}
 
         {posts.map((post) => (
@@ -248,13 +241,13 @@ export default function PublicSpacePage() {
             <div className="flex items-start gap-3">
               <img
                 src={post.author?.photo || "/logo.png"}
-                alt={post.author?.name || "user"}
+                alt={post.author?.name || t('common.nA')}
                 className="w-10 h-10 rounded-full object-cover"
               />
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="font-semibold text-gray-900">{post.author?.name || "User"}</div>
+                    <div className="font-semibold text-gray-900">{post.author?.name || t('common.nA')}</div>
                     <div className="text-xs text-gray-500">{new Date(post.createdAt).toLocaleString()}</div>
                   </div>
                 </div>
@@ -263,7 +256,7 @@ export default function PublicSpacePage() {
                 {post.media?.mediaType === "video" ? (
                   <video src={post.media.url} controls className="mt-3 w-full max-h-[420px] rounded-xl" />
                 ) : (
-                  <img src={post.media?.url} className="mt-3 w-full rounded-xl" alt="post" />
+                  <img src={post.media?.url} className="mt-3 w-full rounded-xl" alt={t('public.post')} />
                 )}
 
                 <div className="flex items-center gap-3 mt-3">
@@ -273,7 +266,7 @@ export default function PublicSpacePage() {
                     type="button"
                   >
                     <Heart size={16} />
-                    Like
+                    {t('public.like')}
                   </button>
 
                   <button
@@ -282,7 +275,6 @@ export default function PublicSpacePage() {
                         ...prev,
                         [post._id]: !prev[post._id],
                       }));
-                      // fetch when opening
                       if (!expandedComments[post._id]) {
                         await fetchComments(post._id);
                       }
@@ -291,30 +283,29 @@ export default function PublicSpacePage() {
                     type="button"
                   >
                     <MessageCircle size={16} />
-                    Comment{typeof post.commentsCount === "number" ? ` (${post.commentsCount})` : ""}
+                    {t('public.comment')}{typeof post.commentsCount === "number" ? ` (${post.commentsCount})` : ""}
                   </button>
 
 
                   <button
                     onClick={async () => {
-                      // Share the post-specific URL on the public space page.
                       const postUrl = `${window.location.origin}/public#post-${post._id}`;
                       try {
                         if (navigator.share) {
-                          await navigator.share({ title: "Post", url: postUrl });
+                          await navigator.share({ title: t('public.post'), url: postUrl });
                         } else {
                           await navigator.clipboard.writeText(postUrl);
-                          toast.success("Link copied");
+                          toast.success(t('common.linkCopied'));
                         }
                       } catch {
-                        toast.error("Share failed");
+                        toast.error(t('common.shareFailed'));
                       }
                     }}
                     className="ml-auto inline-flex items-center gap-2 text-gray-700 hover:text-blue-600 text-sm"
                     type="button"
                   >
                     <Share2 size={16} />
-                    Share
+                    {t('public.share')}
                   </button>
                 </div>
 
@@ -324,7 +315,7 @@ export default function PublicSpacePage() {
                       <div className="space-y-2 mb-2">
                         {(commentsByPostId[post._id] || []).map((c: any) => (
                           <div key={c._id} className="text-sm text-gray-700 bg-gray-50 p-2 rounded-lg">
-                            <div className="font-medium text-gray-900">{c.author?.name || "User"}</div>
+                            <div className="font-medium text-gray-900">{c.author?.name || t('common.nA')}</div>
                             <div>{c.text}</div>
                           </div>
                         ))}
@@ -339,7 +330,7 @@ export default function PublicSpacePage() {
                           [post._id]: e.target.value,
                         }))
                       }
-                      placeholder="Write a comment..."
+                      placeholder={t('public.writeComment')}
                       className="w-full border rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <button
@@ -350,7 +341,7 @@ export default function PublicSpacePage() {
                       className="mt-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
                       type="button"
                     >
-                      Add comment
+                      {t('public.addComment')}
                     </button>
                   </div>
                 )}

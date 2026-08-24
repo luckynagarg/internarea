@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import { useT } from "@/i18n/runtime";
 // const Applications = [
 //   {
 //     _id: "1",
@@ -65,11 +66,12 @@ const getStatusColor = (status: string) => {
 };
 
 const ApplicationsPage = () => {
+  const { t } = useT();
   const [searchTerm, setsearchTerm] = useState<string>("");
   const [filter, setFilter] = useState<FilterStatus>("all");
   const [data, setdata] = useState<Application[]>([]);
 
-useEffect(() => {
+  useEffect(() => {
     const fetchdata = async () => {
       try {
         // Backend returns { success: true, data: [...] } for the authenticated
@@ -103,10 +105,10 @@ useEffect(() => {
         app._id === id ? (updated ?? app) : app
       );
       setdata(updateappliacrtion);
-      toast.success("updated successfully");
+      toast.success(t('common.success'));
     } catch (error) {
       console.log(error);
-      toast.error("error updating");
+      toast.error(t('common.error'));
     }
   };
   return (
@@ -115,9 +117,9 @@ useEffect(() => {
         <div className="bg-white rounded-lg shadow-sm">
           {/* Header */}
           <div className="border-b border-gray-200 px-6 py-4">
-            <h1 className="text-2xl font-bold text-gray-900">Applications</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t('applications.pageTitle')}</h1>
             <p className="mt-1 text-sm text-gray-500">
-              Manage and review all applications
+              {t('applications.pageDesc')}
             </p>
           </div>
 
@@ -130,7 +132,7 @@ useEffect(() => {
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setsearchTerm(e.target.value)}
-                    placeholder="Search by company, category, or applicant..."
+                    placeholder={t('applications.searchPlaceholder')}
                     className="text-black w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <Mail className="absolute top-3 left-3 text-gray-400" />
@@ -145,7 +147,7 @@ useEffect(() => {
                       : "bg-gray-100 text-gray-800"
                   }`}
                 >
-                  All
+                  {t('applications.all')}
                 </button>
                 <button
                   onClick={() => setFilter("pending")}
@@ -155,7 +157,7 @@ useEffect(() => {
                       : "bg-gray-100 text-gray-800"
                   }`}
                 >
-                  Pending
+                  {t('applications.pending')}
                 </button>
                 <button
                   onClick={() => setFilter("approved")}
@@ -165,7 +167,7 @@ useEffect(() => {
                       : "bg-gray-100 text-gray-800"
                   }`}
                 >
-                  Approved
+                  {t('applications.approved')}
                 </button>
                 <button
                   onClick={() => setFilter("rejected")}
@@ -175,7 +177,7 @@ useEffect(() => {
                       : "bg-gray-100 text-gray-800"
                   }`}
                 >
-                  Rejected
+                  {t('applications.rejected')}
                 </button>
               </div>
             </div>
@@ -189,31 +191,31 @@ useEffect(() => {
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Company & Category
+                    {t('applications.companyCategory')}
                   </th>
                   <th
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Applicant
+                    {t('applications.applicant')}
                   </th>
                   <th
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Applied Date
+                    {t('applications.appliedDate')}
                   </th>
                   <th
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Status
+                    {t('applications.status')}
                   </th>
                   <th
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Actions
+                    {t('applications.actions')}
                   </th>
                 </tr>
               </thead>
@@ -278,7 +280,7 @@ useEffect(() => {
                           href={`/detailapplication/${application._id}`}
                           className="text-blue-600 hover:text-blue-900"
                         >
-                          View Details
+                          {t('applications.viewDetails')}
                         </Link>
                         <button
                           onClick={() => {
@@ -312,4 +314,3 @@ useEffect(() => {
 };
 
 export default ApplicationsPage;
-

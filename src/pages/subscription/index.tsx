@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useT } from '@/i18n/runtime';
 import axiosClient from "@/lib/apiClient";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -95,6 +96,7 @@ function badgeStyles(status: string) {
 }
 
 export default function SubscriptionPage() {
+  const { t } = useT();
   const router = useRouter();
   const user = useSelector(selectuser);
 
@@ -145,8 +147,7 @@ export default function SubscriptionPage() {
       setPayments(payRes.data.data || []);
       setInvoices(invRes.data.data || []);
     } catch (e: any) {
-      const msg = e?.response?.data?.error?.message || e.message || "Failed to load subscription data";
-      setError(msg);
+      setError(t('common.error'));
     } finally {
       setLoading(false);
     }
@@ -154,12 +155,11 @@ export default function SubscriptionPage() {
 
   useEffect(() => {
     refreshAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleUpgrade(planKey: PlanKey) {
     if (!user) {
-      setError("Please sign in to upgrade your plan.");
+      setError(t('common.pleaseLogin'));
       return;
     }
     setCheckoutLoading(planKey);
@@ -177,7 +177,7 @@ export default function SubscriptionPage() {
         currency,
         order_id: orderId,
         name: "InternArea",
-        description: `Subscription: ${subscriptionName}`,
+        description: t('subscription.title'),
         prefill: {
           name: user?.name || user?.displayName || "",
           email: user?.email || "",
@@ -247,7 +247,7 @@ export default function SubscriptionPage() {
 
   async function handleShowQr(planKey: PlanKey) {
     if (!user) {
-      setError("Please sign in to upgrade your plan.");
+      setError(t('common.pleaseLogin'));
       return;
     }
     setQrLoading(true);
@@ -256,7 +256,7 @@ export default function SubscriptionPage() {
     try {
       const res = await axiosClient.post("/api/subscription/qr", { planKey });
       setQrData(res?.data?.data);
-      toast.success("QR generated. Scan with any UPI app to pay.");
+      toast.success(t('common.success'));
     } catch (e: any) {
       const msg = e?.response?.data?.error?.message || e?.response?.data?.message || "Failed to generate QR.";
       setError(msg);
@@ -269,10 +269,10 @@ export default function SubscriptionPage() {
   const currentPlan = PLANS.find((p) => p.key === currentPlanKey);
 
   const ctaLabel = (plan: PlanOption) => {
-    if (plan.key === currentPlanKey) return "Current Plan";
+    if (plan.key === currentPlanKey) return t('subscription.currentPlan');
     const order = { free: 0, bronze: 1, silver: 2, gold: 3 } as Record<PlanKey, number>;
-    if (order[plan.key] > order[currentPlanKey]) return "Upgrade";
-    return "Downgrade";
+    if (order[plan.key] > order[currentPlanKey]) return t('subscription.upgradeInfo');
+    return t('subscription.upgradeInfo');
   };
 
   if (!user) {
@@ -284,13 +284,13 @@ export default function SubscriptionPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Subscription & Billing</h1>
-            <p className="text-gray-600 mt-1">Manage your plan, payments, and invoices.</p>
+            <h1 className="text-3xl font-bold text-gray-900">{t('subscription.title')}</h1>
+            <p className="text-gray-600 mt-1">{t('subscription.subtitle')}</p>
           </div>
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-2 text-sm text-gray-600">
               <Shield className="h-4 w-4" />
-              Backend-enforced limits
+              {t('dashboard.backendLimits')}
             </span>
           </div>
         </div>
@@ -299,10 +299,9 @@ export default function SubscriptionPage() {
           <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-4 mb-4 flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 mt-0.5" />
             <div>
-              <div className="text-sm font-semibold">Pending Payment</div>
+              <div className="text-sm font-semibold">{t('dashboard.pending')}</div>
               <div className="text-sm mt-1">
-                You have {pendingPayments.length} pending payment{pendingPayments.length === 1 ? '' : 's'}.
-                Complete the payment to activate your plan.
+                {t('subscription.tip')}
               </div>
             </div>
           </div>
@@ -311,7 +310,7 @@ export default function SubscriptionPage() {
         {loading && (
           <div className="bg-white rounded-xl shadow-sm p-6 flex items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-            <span className="ml-3 text-gray-700">Loading...</span>
+            <span className="ml-3 text-gray-700">{t('subscription.loading')}</span>
           </div>
         )}
 
@@ -323,35 +322,33 @@ export default function SubscriptionPage() {
 
         {!loading && !error && quota && (
           <>
-            {/* Current plan */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
               <div className="bg-white rounded-xl shadow-sm p-5 lg:col-span-2">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <div className="text-sm font-medium text-gray-500">Current Plan</div>
+                    <div className="text-sm font-medium text-gray-500">{t('subscription.currentPlan')}</div>
                     <div className="text-2xl font-bold text-gray-900">{quota.planName}</div>
                     <div className="mt-2 flex items-center gap-2">
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${badgeStyles(quota.subscriptionStatus)}`}>
-                        {quota.subscriptionStatus}
+                        {t(`status.${quota.subscriptionStatus}`)}
                       </span>
-                      <span className="text-sm text-gray-600">• {unlimited ? "Unlimited" : `${quota.monthlyLimit} / month`}</span>
+                      <span className="text-sm text-gray-600">• {unlimited ? t('dashboard.unlimited') : `${quota.monthlyLimit} / ${t('subscription.monthlyLimit')}`}</span>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-medium text-gray-500">Days remaining</div>
+                    <div className="text-sm font-medium text-gray-500">{t('subscription.daysRemaining')}</div>
                     <div className="text-2xl font-bold text-gray-900">{getDaysRemaining(quota.subscriptionExpiry)}</div>
-                    <div className="text-sm text-gray-600">until {new Date(quota.subscriptionExpiry).toDateString()}</div>
+                    <div className="text-sm text-gray-600">{t('subscription.until')} {new Date(quota.subscriptionExpiry).toDateString()}</div>
                   </div>
                 </div>
 
-                {/* Progress */}
                 <div className="mt-5">
                   <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
                     <span>
-                      Applications: <span className="font-semibold text-gray-900">{used}</span> used
+                      {t('subscription.applications')}: <span className="font-semibold text-gray-900">{used}</span> {t('subscription.used')}
                     </span>
                     <span>
-                      Remaining: <span className="font-semibold text-gray-900">{unlimited ? "∞" : remaining}</span>
+                      {t('subscription.remaining')}: <span className="font-semibold text-gray-900">{unlimited ? "∞" : remaining}</span>
                     </span>
                   </div>
                   <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
@@ -363,26 +360,25 @@ export default function SubscriptionPage() {
                   <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
                     <CalendarDays className="h-5 w-5 text-blue-600" />
                     <div>
-                      <div className="text-xs text-gray-500">Start date</div>
+                      <div className="text-xs text-gray-500">{t('subscription.startDate')}</div>
                       <div className="text-sm font-semibold text-gray-900">{new Date(quota.subscriptionStart).toDateString()}</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
                     <RotateCcw className="h-5 w-5 text-blue-600" />
                     <div>
-                      <div className="text-xs text-gray-500">Monthly reset</div>
-                      <div className="text-sm font-semibold text-gray-900">1st of each IST month</div>
+                      <div className="text-xs text-gray-500">{t('subscription.monthlyReset')}</div>
+                      <div className="text-sm font-semibold text-gray-900">{t('subscription.resetInfo')}</div>
                     </div>
                   </div>
                 </div>
 
-                {/* Plan actions */}
                 <div className="mt-6 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
                   <div className="text-sm text-gray-600 flex items-center gap-2">
                     <Lock className="h-4 w-4" />
                     {unlimited
-                      ? "You have unlimited access."
-                      : "Upgrade to increase monthly applications."}
+                      ? t('dashboard.unlimited')
+                      : t('subscription.upgradeInfo')}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {PLANS.map((p) => {
@@ -403,10 +399,10 @@ export default function SubscriptionPage() {
                             <Loader2 className="h-4 w-4 animate-spin inline mr-1" />
                           ) : null}
                           {checkoutLoading === p.key
-                            ? "Starting..."
+                            ? t('subscription.loading')
                             : isCurrent
-                            ? "Current Plan"
-                            : `${ctaLabel(p)} ${p.label} (${p.price})`}
+                            ? t('subscription.currentPlan')
+                            : `${ctaLabel(p)} ${t(`subscription.planName.${p.key}`)} (${p.price})`}
                         </button>
                       );
                     })}
@@ -421,64 +417,63 @@ export default function SubscriptionPage() {
                       ) : (
                         <QrCode className="h-4 w-4" />
                       )}
-                      {qrLoading ? "Generating..." : "Pay via QR"}
+                      {qrLoading ? t('common.generating') : t('common.payWithRazorpay')}
                     </button>
                   </div>
                 </div>
               </div>
 
               <div className="bg-white rounded-xl shadow-sm p-5">
-                <div className="text-sm font-medium text-gray-500">Your usage</div>
+                <div className="text-sm font-medium text-gray-500">{t('subscription.yourUsage')}</div>
                 <div className="mt-3 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Plan price</span>
+                    <span className="text-sm text-gray-600">{t('subscription.planPrice')}</span>
                     <span className="text-sm font-semibold text-gray-900">
                       {currentPlan ? currentPlan.price : "—"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Applications used</span>
+                    <span className="text-sm text-gray-600">{t('subscription.applicationsUsed')}</span>
                     <span className="text-sm font-semibold text-gray-900">{used}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Applications remaining</span>
+                    <span className="text-sm text-gray-600">{t('subscription.applicationsRemaining')}</span>
                     <span className="text-sm font-semibold text-gray-900">{unlimited ? "∞" : remaining}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Monthly limit</span>
-                    <span className="text-sm font-semibold text-gray-900">{unlimited ? "Unlimited" : `${limit}`}</span>
+                    <span className="text-sm text-gray-600">{t('subscription.monthlyLimit')}</span>
+                    <span className="text-sm font-semibold text-gray-900">{unlimited ? t('dashboard.unlimited') : `${limit}`}</span>
                   </div>
                 </div>
 
                 <div className="mt-5 pt-4 border-t border-gray-100 text-sm text-gray-600">
-                  Tip: Monthly limits are enforced on the backend when you submit an application.
+                  {t('subscription.tip')}
                 </div>
               </div>
             </div>
 
-            {/* Payment history + invoices */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="bg-white rounded-xl shadow-sm p-5">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold text-gray-900">Payment History</h2>
+                  <h2 className="text-lg font-bold text-gray-900">{t('subscription.paymentHistory')}</h2>
                   <Link
                     href="/subscription/history"
                     className="text-sm text-blue-700 hover:text-blue-800 font-medium"
                   >
-                    View all
+                    {t('common.view')}
                   </Link>
                 </div>
                 <div className="space-y-3">
                   {payments.length === 0 && (
-                    <div className="text-sm text-gray-500">No payments yet.</div>
+                    <div className="text-sm text-gray-500">{t('subscription.noPayments')}</div>
                   )}
                   {payments.slice(0, 10).map((p) => (
                     <div key={p._id} className="border border-gray-100 rounded-lg p-3">
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <div className="text-sm font-semibold text-gray-900">{p.planKey.toUpperCase()}</div>
-                          <div className="text-xs text-gray-500">Order: {p.razorpayOrderId}</div>
-                          <div className="text-xs text-gray-500">Payment: {p.razorpayPaymentId || "—"}</div>
+                          <div className="text-xs text-gray-500">{t('subscription.invoices')}: {p.razorpayOrderId}</div>
+                          <div className="text-xs text-gray-500">{t('subscription.paymentHistory')}: {p.razorpayPaymentId || "—"}</div>
                         </div>
                         <div className="text-right">
                           <div className="text-sm font-bold text-gray-900">₹{p.amount}</div>
@@ -498,7 +493,7 @@ export default function SubscriptionPage() {
                       {p.failureReason && <div className="text-xs text-red-600 mt-2">{p.failureReason}</div>}
                       {p.invoiceNumber && (
                         <div className="text-xs text-blue-600 mt-2">
-                          Invoice:{" "}
+                          {t('subscription.invoices')}:{" "}
                           <a
                             href={API_URL(`/api/subscription/invoices/${encodeURIComponent(p.invoiceNumber)}/download`)}
                             target="_blank"
@@ -516,11 +511,11 @@ export default function SubscriptionPage() {
 
               <div className="bg-white rounded-xl shadow-sm p-5">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold text-gray-900">Invoices</h2>
+                  <h2 className="text-lg font-bold text-gray-900">{t('subscription.invoices')}</h2>
                 </div>
                 <div className="space-y-3">
                   {invoices.length === 0 && (
-                    <div className="text-sm text-gray-500">No invoices yet.</div>
+                    <div className="text-sm text-gray-500">{t('subscription.noInvoices')}</div>
                   )}
                   {invoices.slice(0, 10).map((inv) => (
                     <div key={inv._id} className="border border-gray-100 rounded-lg p-3 flex items-center justify-between gap-3">
@@ -534,7 +529,7 @@ export default function SubscriptionPage() {
                         target="_blank"
                         className="px-3 py-2 rounded-lg bg-blue-50 text-blue-700 text-sm font-semibold hover:bg-blue-100 transition"
                       >
-                        Download PDF
+                        {t('subscription.downloadPdf')}
                       </Link>
                     </div>
                   ))}
@@ -546,12 +541,11 @@ export default function SubscriptionPage() {
 
         {!loading && !quota && (
           <div className="bg-white rounded-xl shadow-sm p-6">
-            <div className="text-sm text-gray-600">Subscription data unavailable.</div>
+            <div className="text-sm text-gray-600">{t('subscription.dataUnavailable')}</div>
           </div>
         )}
       </div>
 
-      {/* QR Code Modal */}
       {qrData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 relative">
@@ -562,13 +556,12 @@ export default function SubscriptionPage() {
             >
               <X size={20} />
             </button>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Scan to Pay</h3>
-            <p className="text-sm text-gray-600 mb-4">Scan this QR with any UPI app to complete payment.</p>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">{t('common.payWithRazorpay')}</h3>
+            <p className="text-sm text-gray-600 mb-4">{t('subscription.tip')}</p>
             {qrData.qrUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={qrData.qrUrl}
-                alt="Payment QR"
+                alt={t('common.view')}
                 className="mx-auto w-64 h-64 object-contain border rounded-lg"
               />
             )}
@@ -578,7 +571,7 @@ export default function SubscriptionPage() {
               </div>
             )}
             <div className="mt-4 text-xs text-gray-500 text-center">
-              Amount: ₹{qrData.amountPaise ? (qrData.amountPaise / 100).toFixed(2) : "—"} | Status: {qrData.status}
+              {t('subscription.planPrice')}: ₹{qrData.amountPaise ? (qrData.amountPaise / 100).toFixed(2) : "—"} | {t('status.pending')}: {qrData.status}
             </div>
           </div>
         </div>

@@ -2,8 +2,10 @@ import axiosClient from "@/lib/apiClient";
 import { Building2, Calendar, FileText, Loader2, User } from "lucide-react";
 import { useRouter } from "next/router";
 import React, { useEffect, useState } from "react";
+import { useT } from "@/i18n/runtime";
 
 const index = () => {
+  const { t } = useT();
   const router = useRouter();
   const { id } = router.query;
   const [loading, setloading] = useState(false);
@@ -32,7 +34,7 @@ if (loading) {
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
         <span className="ml-2 text-gray-600">
-          Loading application details...
+          {t('applications.loadingDetails')}
         </span>
       </div>
     );
@@ -40,7 +42,7 @@ if (loading) {
   if (!data) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">Application not found.</p>
+        <p className="text-gray-600">{t('applications.notFound')}</p>
       </div>
     );
   }
@@ -52,7 +54,7 @@ if (loading) {
             {/* Image Section */}
             <div className="relative">
               <img
-                alt="Applicant photo"
+                alt={t('applications.applicantPhoto')}
                 className="w-full h-full object-cover"
                 src={data?.user?.photo}
               />
@@ -67,7 +69,7 @@ if (loading) {
                   }`}
                 >
                   <span className="font-semibold capitalize">
-                    {data.status}
+                    {t(`status.${data.status}`)}
                   </span>
                 </div>
               )}
@@ -78,7 +80,7 @@ if (loading) {
               <div className="mb-8">
                 <div className="flex items-center mb-6">
                   <Building2 className="w-5 h-5 text-blue-600 mr-2" />
-                  <h2 className="text-sm font-medium text-gray-500">Company</h2>
+                  <h2 className="text-sm font-medium text-gray-500">{t('applications.company')}</h2>
                 </div>
                 <h1 className="text-2xl font-bold text-gray-900 mb-4">
                   {data.company}
@@ -89,7 +91,7 @@ if (loading) {
                 <div className="flex items-center mb-4">
                   <FileText className="w-5 h-5 text-blue-600 mr-2" />
                   <h2 className="text-sm font-medium text-gray-500">
-                    Cover Letter
+                    {t('applications.coverLetter')}
                   </h2>
                 </div>
                 <p className="text-gray-600 leading-relaxed">
@@ -102,7 +104,7 @@ if (loading) {
                   <div className="flex items-center mb-2">
                     <Calendar className="w-5 h-5 text-blue-600 mr-2" />
                     <span className="text-sm font-medium text-gray-500">
-                      Application Date
+                      {t('applications.appliedDate')}
                     </span>
                   </div>
                   <p className="text-gray-900 font-semibold">
@@ -118,7 +120,7 @@ if (loading) {
                   <div className="flex items-center mb-2">
                     <User className="w-5 h-5 text-blue-600 mr-2" />
                     <span className="text-sm font-medium text-gray-500">
-                      Applied By
+                      {t('applications.appliedBy')}
                     </span>
                   </div>
                   <p className="text-gray-900 font-semibold">

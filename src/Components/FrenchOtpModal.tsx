@@ -4,6 +4,7 @@ import {
   requestFrenchOtp,
   verifyFrenchOtp,
 } from "@/Feature/frenchOtp";
+import { useT } from "@/i18n/runtime";
 
 type Props = {
   isOpen: boolean;
@@ -21,8 +22,9 @@ export default function FrenchOtpModal({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  const { t } = useT();
 
-  const title = useMemo(() => "Verify OTP for language switching", []);
+  const title = useMemo(() => t('auth.frenchOtp.title'), [t]);
 
   // Request a fresh OTP whenever the modal opens.
   useEffect(() => {
@@ -43,7 +45,7 @@ export default function FrenchOtpModal({
           setError(
             e?.response?.data?.error?.message ||
               e?.response?.data?.message ||
-              "Failed to send OTP. Please try again."
+              t('auth.frenchOtp.sendOtpFailed')
           );
         }
       } finally {
@@ -54,7 +56,7 @@ export default function FrenchOtpModal({
     return () => {
       mounted = false;
     };
-  }, [isOpen]);
+  }, [isOpen, t]);
 
   if (!isOpen) return null;
 
@@ -64,7 +66,7 @@ export default function FrenchOtpModal({
     try {
       const res = await verifyFrenchOtp(otp);
       if (!res.ok) {
-        setError("Invalid OTP. Please try again.");
+        setError(t('auth.frenchOtp.invalidOtp'));
         return;
       }
 
@@ -74,7 +76,7 @@ export default function FrenchOtpModal({
       setError(
         e?.response?.data?.error?.message ||
           e?.response?.data?.message ||
-          "OTP verification failed. Please try again."
+          t('auth.frenchOtp.verificationFailed')
       );
     } finally {
       setSubmitting(false);
@@ -96,7 +98,7 @@ export default function FrenchOtpModal({
             type="button"
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
-            aria-label="Close"
+            aria-label={t('ui.close')}
           >
             <X className="h-5 w-5" />
           </button>
@@ -104,12 +106,12 @@ export default function FrenchOtpModal({
 
         <p className="text-sm text-gray-600 mb-4">
           {sending
-            ? "Sending OTP to your email…"
-            : "Enter the OTP sent to your email to switch to Français."}
+            ? t('auth.frenchOtp.sending')
+            : t('auth.frenchOtp.enterOtp')}
         </p>
 
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          OTP
+          {t('auth.frenchOtp.otpLabel')}
         </label>
         <input
           value={otp}
@@ -117,7 +119,7 @@ export default function FrenchOtpModal({
           type="text"
           inputMode="numeric"
           className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-          placeholder="Enter OTP"
+          placeholder={t('auth.frenchOtp.otpPlaceholder')}
           disabled={submitting || sending}
         />
 
@@ -130,7 +132,7 @@ export default function FrenchOtpModal({
             className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
             disabled={submitting}
           >
-            Cancel
+            {t('auth.frenchOtp.cancel')}
           </button>
           <button
             type="button"
@@ -138,7 +140,7 @@ export default function FrenchOtpModal({
             className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-60"
             disabled={submitting || sending || otp.trim().length === 0}
           >
-            {submitting ? "Verifying…" : "Verify & Switch"}
+            {submitting ? t('auth.frenchOtp.verifying') : t('auth.frenchOtp.verifySwitch')}
           </button>
         </div>
       </div>

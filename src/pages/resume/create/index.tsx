@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useT } from '@/i18n/runtime';
 import { useSelector } from 'react-redux';
 import { selectuser } from '@/Feature/Userslice';
 import { useRouter } from 'next/router';
@@ -21,10 +22,10 @@ import { Lock, Loader2, CheckCircle2, ArrowRight } from 'lucide-react';
 type Step = 'auth' | 'pay' | 'form' | 'done';
 
 const ResumeCreatePage = () => {
+  const { t } = useT();
   const router = useRouter();
   const user = useSelector(selectuser) as any;
 
-  // Edit mode: ?edit=<resumeId> (existing resume dashboard feature, kept intact)
   const { edit } = router.query;
   const editId = typeof edit === 'string' ? edit : null;
 
@@ -32,7 +33,6 @@ const ResumeCreatePage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Paid resume entitlement (created after payment). null until paid.
   const [resumeId, setResumeId] = useState<string>('');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
@@ -53,14 +53,12 @@ const ResumeCreatePage = () => {
     return !!(form.fullName.trim() && form.qualifications.trim() && form.experience.trim());
   }, [form]);
 
-  // On mount: if in edit mode load the existing resume; otherwise check access.
   useEffect(() => {
     if (editId) {
       loadExisting();
     } else {
       checkAccess();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editId]);
 
   async function loadExisting() {
@@ -87,17 +85,12 @@ const ResumeCreatePage = () => {
       setResumeId(String(data._id));
       setStep('form');
     } catch (e: any) {
-      setError(e?.response?.data?.error?.message || e?.message || 'Failed to load resume.');
+      setError(t('common.error'));
     } finally {
       setLoading(false);
     }
   }
 
-  /**
-   * Payment-first guard: determine whether the user has paid for a resume
-   * entitlement already. If not authenticated -> 'auth' step; if no entitlement
-   * -> 'pay' step; if already entitled -> 'form' step.
-   */
   async function checkAccess() {
     setLoading(true);
     setError(null);
@@ -106,7 +99,6 @@ const ResumeCreatePage = () => {
       const access = res?.data?.data;
       if (access?.allowed) {
         setResumeId(String(access.resumeId || ''));
-        // User already paid — go straight to the form.
         setStep('form');
       } else {
         setStep('pay');
@@ -114,11 +106,9 @@ const ResumeCreatePage = () => {
     } catch (e: any) {
       const status = e?.response?.status;
       if (status === 401) {
-        // Not signed in.
         setStep('auth');
       } else {
-        // Backend error — fall through to payment screen, surface error.
-        setError(e?.response?.data?.error?.message || e?.message || 'Could not check resume access.');
+        setError(t('common.error'));
         setStep('pay');
       }
     } finally {
@@ -130,24 +120,21 @@ const ResumeCreatePage = () => {
     setError(null);
     setLoading(true);
     try {
-      // 1. Create Razorpay order on the backend (no form data required).
       const { data } = await axiosClient.post('/api/resume/payment/create-order', {});
       const { orderId, amount, currency, keyId } = data?.data || {};
       if (!orderId) throw new Error('Razorpay orderId missing.');
 
-      // 2. Open Razorpay checkout.
       await openRazorpayCheckout({
         key: keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '',
         amount: amount * 100,
         currency: currency || 'INR',
         order_id: orderId,
         name: 'InternArea',
-        description: 'Premium Resume Creation',
+        description: t('common.premiumResumeCreation'),
         prefill: { name: user?.name || user?.displayName || '', email: user?.email || '' },
         modal: { ondismiss: () => setLoading(false) },
         handler: async (response) => {
           try {
-            // 3. Verify signature on the backend -> creates paid entitlement.
             const verifyRes = await axiosClient.post('/api/resume/payment/verify', {
               razorpayOrderId: response.razorpay_order_id,
               razorpayPaymentId: response.razorpay_payment_id,
@@ -155,7 +142,7 @@ const ResumeCreatePage = () => {
             });
             setResumeId(String(verifyRes?.data?.data?.resumeId || ''));
             setStep('form');
-            toast.success('Payment successful. Now fill in your resume details.');
+            toast.success(t('common.paymentSuccessful'));
           } catch (verifyErr: any) {
             const msg = verifyErr?.response?.data?.error?.message || verifyErr?.response?.data?.message || 'Payment verification failed.';
             setError(msg);
@@ -165,7 +152,6 @@ const ResumeCreatePage = () => {
           }
         },
       });
-      // Note: keep loading until modal handler/ondismiss resolves.
       setLoading(false);
     } catch (e: any) {
       const msg = e?.response?.data?.error?.message || e?.response?.data?.message || 'Failed to start checkout.';
@@ -195,12 +181,11 @@ const ResumeCreatePage = () => {
           resumeData: payload.resumeData,
           photoUrl,
         });
-        toast.success('Resume updated.');
+        toast.success(t('common.resumeUpdated'));
         router.push('/resume');
         return;
       }
 
-      // Payment-first flow: save the form into the paid entitlement, then generate.
       await axiosClient.patch(`/api/resume/${resumeId}/resume-data`, {
         resumeData: payload.resumeData,
         photoUrl,
@@ -208,9 +193,9 @@ const ResumeCreatePage = () => {
       await axiosClient.post(`/api/resume/${resumeId}/generate`, {});
 
       setStep('done');
-      toast.success('Resume generated successfully.');
+      toast.success(t('common.resumeGeneratedSuccessfully'));
     } catch (e: any) {
-      setError(e?.response?.data?.error?.message || e?.message || 'Failed to create resume.');
+      setError(t('common.error'));
     } finally {
       setLoading(false);
     }
@@ -230,42 +215,40 @@ const ResumeCreatePage = () => {
         <div className="bg-white rounded-2xl shadow-lg p-6">
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-gray-900 mb-1">
-              {editId ? 'Edit Resume' : 'Create Premium Resume'}
+              {editId ? t('resume.editResume') : t('resume.createTitle')}
             </h1>
             <p className="text-gray-600">
               {editId
-                ? 'Update your resume details.'
-                : 'Pay once (₹50) and create a professional resume. Payment is required before the form.'}
+                ? t('resume.updateResumeDetails')
+                : t('resume.createFee')}
             </p>
           </div>
 
           {error && <div className="mb-4 p-3 rounded bg-red-50 text-red-700 text-sm">{error}</div>}
 
-          {/* AUTH REQUIRED */}
           {step === 'auth' && (
             <div className="py-8 text-center">
               <Lock className="mx-auto h-10 w-10 text-gray-300 mb-3" />
-              <div className="font-semibold text-gray-900">Sign in required</div>
+              <div className="font-semibold text-gray-900">{t('common.signinRequired')}</div>
               <p className="text-sm text-gray-600 mt-1 mb-5">
-                Please sign in to create a premium resume.
+                {t('common.signInToContinue')}
               </p>
               <button
                 onClick={() => router.push('/login')}
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
               >
-                Go to Login <ArrowRight size={16} />
+                {t('common.goToLogin')} <ArrowRight size={16} />
               </button>
             </div>
           )}
 
-          {/* PAYMENT FIRST */}
           {step === 'pay' && !editId && (
             <div className="py-6 ">
               <div className="border border-gray-200 rounded-xl p-5 mb-5 bg-gray-50 flex items-center justify-between">
                 <div>
-                  <div className="text-sm font-semibold text-gray-900">Premium Resume Creation</div>
+                  <div className="text-sm font-semibold text-gray-900">{t('common.premiumResumeCreation')}</div>
                   <div className="text-xs text-gray-500 mt-1">
-                    Professional PDF resume • Added to your dashboard
+                    {t('common.professionalPdfResume')}
                   </div>
                 </div>
                 <div className="text-2xl font-bold text-gray-900">₹50</div>
@@ -279,31 +262,30 @@ const ResumeCreatePage = () => {
               >
                 {loading ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Opening Razorpay...
+                    <Loader2 className="h-4 w-4 animate-spin" /> {t('common.openingRazorpay')}
                   </>
                 ) : (
-                  <>Pay ₹50 with Razorpay</>
+                  <>{t('common.payWithRazorpay')}</>
                 )}
               </button>
 
               <p className="mt-3 text-xs text-gray-500 text-center">
-                You must complete payment to access the resume form. No charge if cancelled.
+                {t('resume.afterPayHint')}
               </p>
             </div>
           )}
 
-          {/* RESUME FORM (only after payment in non-edit mode) */}
           {step === 'form' && (
             <>
               {!editId && (
                 <div className="mb-4 p-3 rounded bg-green-50 border border-green-200 text-green-800 text-sm flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 shrink-0" /> Payment confirmed. Now add your details.
+                  <CheckCircle2 className="h-4 w-4 shrink-0" /> {t('common.paymentConfirmed')}
                 </div>
               )}
 
               <div className="grid grid-cols-1 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Full Name</label>
+                  <label className="text-sm font-medium text-gray-700">{t('resume.fullName')}</label>
                   <input
                     className="mt-1 w-full border rounded px-3 py-2 text-gray-900"
                     value={form.fullName}
@@ -313,7 +295,7 @@ const ResumeCreatePage = () => {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Qualifications</label>
+                  <label className="text-sm font-medium text-gray-700">{t('resume.qualifications')}</label>
                   <textarea
                     className="mt-1 w-full border rounded px-3 py-2 text-gray-900"
                     rows={3}
@@ -324,7 +306,7 @@ const ResumeCreatePage = () => {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Experience</label>
+                  <label className="text-sm font-medium text-gray-700">{t('resume.experience')}</label>
                   <textarea
                     className="mt-1 w-full border rounded px-3 py-2 text-gray-900"
                     rows={3}
@@ -344,7 +326,7 @@ const ResumeCreatePage = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700">Phone</label>
+                    <label className="text-sm font-medium text-gray-700">{t('resume.phone')}</label>
                     <input
                       className="mt-1 w-full border rounded px-3 py-2 text-gray-900"
                       value={form.personalInfo.phone}
@@ -352,7 +334,7 @@ const ResumeCreatePage = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700">Location</label>
+                    <label className="text-sm font-medium text-gray-700">{t('resume.location')}</label>
                     <input
                       className="mt-1 w-full border rounded px-3 py-2 text-gray-900"
                       value={form.personalInfo.location}
@@ -386,12 +368,12 @@ const ResumeCreatePage = () => {
                 >
                   {loading ? (
                     <span className="inline-flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" /> {editId ? 'Saving...' : 'Generating Resume...'}
+                      <Loader2 className="h-4 w-4 animate-spin" /> {editId ? t('common.loading') : t('common.generating')}
                     </span>
                   ) : editId ? (
-                    'Save Resume'
+                    t('common.save')
                   ) : (
-                    'Create Resume'
+                    t('common.create')
                   )}
                 </button>
                 {(editId || resumeId) && (
@@ -400,35 +382,33 @@ const ResumeCreatePage = () => {
                     onClick={() => router.push('/resume')}
                     className="px-4 py-3 border rounded-lg text-gray-700 hover:bg-gray-50"
                   >
-                    Back to Dashboard
+                    {t('common.backToDashboard')}
                   </button>
                 )}
               </div>
             </>
           )}
 
-          {/* DONE */}
           {step === 'done' && (
             <div className="text-center py-10">
               <CheckCircle2 className="mx-auto h-12 w-12 text-green-600 mb-3" />
-              <div className="text-lg font-semibold text-gray-900">Resume generated successfully.</div>
-              <div className="mt-2 text-sm text-gray-600">Your resume is available in the dashboard.</div>
+              <div className="text-lg font-semibold text-gray-900">{t('common.resumeGeneratedSuccessfully')}</div>
+              <div className="mt-2 text-sm text-gray-600">{t('common.resumeAvailableInDashboard')}</div>
               <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
                 <button
                   onClick={() => router.push('/resume')}
                   className="px-5 py-2 bg-blue-600 text-white rounded-lg"
                 >
-                  Go to My Resumes
+                  {t('resume.goToProfile')}
                 </button>
                 <button
                   onClick={() => {
-                    // Allow creating another (will require another payment via fresh access check).
                     setStep('auth');
                     checkAccess();
                   }}
                   className="px-5 py-2 border rounded-lg text-gray-700 hover:bg-gray-50"
                 >
-                  Create Another
+                  {t('common.createAnother')}
                 </button>
               </div>
             </div>
@@ -440,4 +420,3 @@ const ResumeCreatePage = () => {
 };
 
 export default ResumeCreatePage;
-

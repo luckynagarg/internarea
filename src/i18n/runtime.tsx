@@ -9,11 +9,14 @@
  *      If even English is missing, returns the last segment of the key.
  *   3. Language is persisted in localStorage, restored on mount.
  *   4. setLang() triggers immediate re-render via React context.
+ *   5. t() supports interpolation ({name}) and pluralization (count option).
  *
  * Usage:
  *   import { useT } from '@/i18n/runtime';
  *   const { t, lang, setLang } = useT();
  *   <h1>{t('home.hero.title')}</h1>
+ *   {t('public.canPostTimes', { count: 3 })}
+ *   {t.plural('item', { one: '1 item', other: '{count} items' }, n)}
  */
 
 'use client';
@@ -83,11 +86,60 @@ const localeData: Record<string, LocaleDict> = {
 // ─── Warning tracker ───────────────────────────────────────────────────
 let warnedKeys = new Set<string>();
 
+// ─── Interpolation ─────────────────────────────────────────────────────
+const VAR_RE = /\{(\w+)\}/g;
+
+export function interpolate(
+  text: string,
+  values?: Record<string, string | number>
+): string {
+  if (!values) return text;
+  return text.replace(VAR_RE, (_m, k: string) => {
+    const v = values[k];
+    return v != null ? String(v) : `{${k}}`;
+  });
+}
+
+/**
+ * Resolve pluralization. Tries suffixed keys (`_zero`, `_one`, `_other`)
+ * within the dictionary, then falls back to the base key.
+ */
+export function resolvePlural(
+  dict: LocaleDict,
+  enDict: LocaleDict,
+  key: string,
+  count: number
+): string | undefined {
+  const langsOrder: string[] = ['zero', 'one', 'other'];
+  for (const form of langsOrder) {
+    const suffixKey = form === 'other' ? `${key}` : `${key}_${form}`;
+    // try `key_one`, `key_other`, `key_zero`
+    let v = getByPath(dict, suffixKey);
+    if (v == null) v = getByPath(enDict, suffixKey);
+    if (typeof v === 'string') return v;
+  }
+  // bare key with {count} interpolation
+  let v = getByPath(dict, key);
+  if (typeof v !== 'string') v = getByPath(enDict, key);
+  return typeof v === 'string' ? v : undefined;
+}
+
 // ─── Context ───────────────────────────────────────────────────────────
+export type TranslateOptions = {
+  values?: Record<string, string | number>;
+  count?: number;
+};
+
 interface I18nContextValue {
   lang: SupportedLang;
   setLang: (lang: SupportedLang) => void;
-  t: (key: string) => string;
+  t: ((key: string, options?: TranslateOptions) => string) & {
+    plural?: (
+      key: string,
+      forms: { zero?: string; one: string; other: string },
+      count: number
+    ) => string;
+  };
 }
 
 const I18nContext = createContext<I18nContextValue | null>(null);
@@ -107,28 +159,67 @@ function normalizeLang(maybe: string | null): SupportedLang {
   return DEFAULT_LANG;
 }
 
+/**
+ * Return an ISO locale tag for the current language (e.g. 'en-US', 'hi-IN',
+ * 'zh-CN', 'fr-FR'). Used by Intl formatters for date/currency/number.
+ */
+export function langToLocale(lang: SupportedLang): string {
+  const map: Record<SupportedLang, string> = {
+    en: 'en-US',
+    es: 'es-ES',
+    hi: 'hi-IN',
+    pt: 'pt-BR',
+    zh: 'zh-CN',
+    fr: 'fr-FR',
+  };
+  return map[lang] || 'en-US';
+}
+
 // ─── Pure t() factory ──────────────────────────────────────────────────
-function createT(lang: SupportedLang): (key: string) => string {
+function createT(lang: SupportedLang): I18nContextValue['t'] {
   const dict = localeData[lang];
   const enDict = localeData[DEFAULT_LANG];
 
-  return (key: string): string => {
-    // 1. Try selected language's dictionary
-    if (dict) {
-      const v = getByPath(dict, key);
-      if (typeof v === 'string') return v;
+  const tFn = (key: string, options?: TranslateOptions): string => {
+    let text: string | undefined;
+
+    // Pluralization path
+    if (options && typeof options.count === 'number') {
+      const resolved = resolvePlural(dict, enDict, key, options.count);
+      if (resolved) {
+        text = interpolate(resolved, {
+          ...options.values,
+          count: options.count,
+        });
+      }
     }
 
-    // 2. Fallback to English dictionary
-    if (enDict) {
-      const v = getByPath(enDict, key);
-      if (typeof v === 'string') return v;
+    // Normal lookup
+    if (!text) {
+      // 1. Try selected language's dictionary
+      if (dict) {
+        const v = getByPath(dict, key);
+        if (typeof v === 'string') text = v;
+      }
+      // 2. Fallback to English dictionary
+      if (!text && enDict) {
+        const v = getByPath(enDict, key);
+        if (typeof v === 'string') text = v;
+      }
+      // 3. Interpolate values
+      if (text && options?.values) {
+        text = interpolate(text, options.values);
+      }
+      if (text && typeof options?.count === 'number' && text.includes('{count}')) {
+        text = interpolate(text, { count: options.count });
+      }
     }
 
-    // 3. Warn in dev only (once per key)
+    // 4. Warn in dev only (once per key)
     if (
       typeof window !== 'undefined' &&
       process.env.NODE_ENV === 'development' &&
+      !text &&
       !warnedKeys.has(key)
     ) {
       warnedKeys.add(key);
@@ -138,11 +229,29 @@ function createT(lang: SupportedLang): (key: string) => string {
       );
     }
 
-    // 4. NEVER show raw keys — return last segment of path
+    // 5. NEVER show raw keys — return last segment of path
     //    e.g. "navbar.jobs" → "jobs"
-    const segs = key.split('.');
-    return segs[segs.length - 1] || key;
+    if (!text) {
+      const segs = key.split('.');
+      return segs[segs.length - 1] || key;
+    }
+    return text;
   };
+
+  // Explicit plural helper: t.plural('item', { one, other, zero }, count)
+  tFn.plural = (
+    key: string,
+    forms: { zero?: string; one: string; other: string },
+    count: number
+  ): string => {
+    let chosen: string;
+    if (count === 0 && forms.zero != null) chosen = forms.zero;
+    else if (count === 1) chosen = forms.one;
+    else chosen = forms.other;
+    return interpolate(chosen, { count });
+  };
+
+  return tFn;
 }
 
 // ─── Provider ──────────────────────────────────────────────────────────
@@ -175,10 +284,8 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // t() changes whenever lang changes → all subscribers re-render
-  const t = useCallback(
-    (key: string): string => {
-      return createT(lang)(key);
-    },
+  const t = useMemo(
+    () => createT(lang),
     [lang]
   );
 

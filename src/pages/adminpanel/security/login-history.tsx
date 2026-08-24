@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { API_URL } from '@/config/api';
 import { getAuthHeaders } from '@/lib/authHeaders';
+import { useT } from '@/i18n/runtime';
 
 type Row = {
   id?: string;
@@ -23,6 +24,8 @@ type Row = {
 };
 
 export default function AdminLoginHistoryPage() {
+  const { t } = useT();
+
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -60,7 +63,7 @@ export default function AdminLoginHistoryPage() {
         setTotalPages(pagination?.totalPages || 1);
       } catch (e: any) {
         if (!mounted) return;
-        setError(e?.message || 'Failed to load login history');
+        setError(e?.message || t('errors.generic'));
         setRows([]);
       } finally {
         if (mounted) setLoading(false);
@@ -101,8 +104,8 @@ export default function AdminLoginHistoryPage() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-6xl mx-auto px-4">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Security → Login History</h1>
-          <p className="mt-1 text-sm text-gray-500">Monitor all login events across devices.</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('admin.loginHistory.title')}</h1>
+          <p className="mt-1 text-sm text-gray-500">{t('admin.loginHistory.subtitle')}</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow p-5">
@@ -112,7 +115,7 @@ export default function AdminLoginHistoryPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search name/email/ip"
+              placeholder={t('admin.loginHistory.searchPlaceholder')}
               className="border rounded-lg px-3 py-2 text-sm"
             />
 
@@ -121,7 +124,7 @@ export default function AdminLoginHistoryPage() {
               onChange={(e) => setStatus(e.target.value)}
               className="border rounded-lg px-3 py-2 text-sm"
             >
-              <option value="">All statuses</option>
+              <option value="">{t('admin.loginHistory.allStatuses')}</option>
               <option value="SUCCESS">SUCCESS</option>
               <option value="FAILED">FAILED</option>
               <option value="BLOCKED">BLOCKED</option>
@@ -130,11 +133,10 @@ export default function AdminLoginHistoryPage() {
             <button
               onClick={() => {
                 setPage(1);
-                // effect reloads
               }}
               className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm hover:bg-blue-700"
             >
-              Apply
+              {t('common.apply')}
             </button>
 
             <div className="flex gap-2">
@@ -142,13 +144,13 @@ export default function AdminLoginHistoryPage() {
                 onClick={exportCsv}
                 className="bg-gray-100 hover:bg-gray-200 rounded-lg px-4 py-2 text-sm border"
               >
-                Export CSV
+                {t('common.exportCsv')}
               </button>
               <button
                 onClick={exportExcel}
                 className="bg-gray-100 hover:bg-gray-200 rounded-lg px-4 py-2 text-sm border"
               >
-                Export Excel
+                {t('common.exportExcel')}
               </button>
             </div>
           </div>
@@ -160,26 +162,26 @@ export default function AdminLoginHistoryPage() {
               ))}
             </div>
           ) : rows.length === 0 ? (
-            <div className="py-10 text-center text-gray-500">No login records found.</div>
+            <div className="py-10 text-center text-gray-500">{t('admin.loginHistory.noRecords')}</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-[1100px] w-full text-sm">
                 <thead>
                   <tr className="text-left text-gray-600 border-b">
-                    <th className="py-3 pr-3">User</th>
-                    <th className="py-3 pr-3">Email</th>
-                    <th className="py-3 pr-3">Login Time</th>
-                    <th className="py-3 pr-3">Browser</th>
-                    <th className="py-3 pr-3">Browser Version</th>
-                    <th className="py-3 pr-3">Device</th>
-                    <th className="py-3 pr-3">OS</th>
-                    <th className="py-3 pr-3">IP</th>
-                    <th className="py-3 pr-3">Country</th>
-                    <th className="py-3 pr-3">City</th>
-                    <th className="py-3 pr-3">Login Method</th>
-                    <th className="py-3 pr-3">OTP Verified</th>
-                    <th className="py-3 pr-3">Status</th>
-                    <th className="py-3 pr-3">Failure Reason</th>
+                    <th className="py-3 pr-3">{t('admin.loginHistory.cols.user')}</th>
+                    <th className="py-3 pr-3">{t('admin.loginHistory.cols.email')}</th>
+                    <th className="py-3 pr-3">{t('admin.loginHistory.cols.loginTime')}</th>
+                    <th className="py-3 pr-3">{t('admin.loginHistory.cols.browser')}</th>
+                    <th className="py-3 pr-3">{t('admin.loginHistory.cols.browserVersion')}</th>
+                    <th className="py-3 pr-3">{t('admin.loginHistory.cols.device')}</th>
+                    <th className="py-3 pr-3">{t('admin.loginHistory.cols.os')}</th>
+                    <th className="py-3 pr-3">{t('admin.loginHistory.cols.ip')}</th>
+                    <th className="py-3 pr-3">{t('admin.loginHistory.cols.country')}</th>
+                    <th className="py-3 pr-3">{t('admin.loginHistory.cols.city')}</th>
+                    <th className="py-3 pr-3">{t('admin.loginHistory.cols.loginMethod')}</th>
+                    <th className="py-3 pr-3">{t('admin.loginHistory.cols.otpVerified')}</th>
+                    <th className="py-3 pr-3">{t('admin.loginHistory.cols.status')}</th>
+                    <th className="py-3 pr-3">{t('admin.loginHistory.cols.failureReason')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -196,7 +198,7 @@ export default function AdminLoginHistoryPage() {
                       <td className="py-3 pr-3">{x.country || ''}</td>
                       <td className="py-3 pr-3">{x.city || ''}</td>
                       <td className="py-3 pr-3">{x.loginMethod || ''}</td>
-                      <td className="py-3 pr-3">{x.otpVerified ? 'Yes' : 'No'}</td>
+                      <td className="py-3 pr-3">{x.otpVerified ? t('common.yes') : t('common.no')}</td>
                       <td className="py-3 pr-3">{x.status || ''}</td>
                       <td className="py-3 pr-3">{x.failureReason || ''}</td>
                     </tr>
@@ -213,17 +215,17 @@ export default function AdminLoginHistoryPage() {
               disabled={page <= 1 || loading}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
             >
-              Prev
+              {t('common.prev')}
             </button>
             <div className="text-sm text-gray-600">
-              Page {page} of {totalPages}
+              {t('common.pageOf', { values: { page: String(page), total: String(totalPages) } })}
             </div>
             <button
               className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
               disabled={page >= totalPages || loading}
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             >
-              Next
+              {t('common.next')}
             </button>
           </div>
         </div>
@@ -231,4 +233,3 @@ export default function AdminLoginHistoryPage() {
     </div>
   );
 }
-

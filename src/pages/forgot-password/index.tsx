@@ -4,6 +4,7 @@ import React, { useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { toast } from "react-toastify";
 import axiosClient from "@/lib/axiosClient";
+import { useT } from "@/i18n/runtime";
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -19,6 +20,7 @@ function isValidPhone(digits: string) {
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
+  const { t } = useT();
 
   const [identifier, setIdentifier] = useState("");
   const [loading, setLoading] = useState(false);
@@ -42,12 +44,9 @@ export default function ForgotPasswordPage() {
 
     try {
       if (!detectedMethod) {
-        throw new Error("Please enter a valid email address or phone number.");
+        throw new Error(t('auth.forgotPassword.invalidInput'));
       }
 
-      // Use the centralized axiosClient so the request resolves to the real
-      // backend (NEXT_PUBLIC_API_BASE_URL / localhost:5000), not the Next.js
-      // origin. An empty NEXT_PUBLIC_BACKEND_URL caused a 404 to /api/auth/...
       const res = await axiosClient.post(
         `/api/auth/forgot-password`,
         {
@@ -57,21 +56,20 @@ export default function ForgotPasswordPage() {
 
       const msg =
         res?.data?.message ||
-        "If an account exists, we will send a new password to your registered email.";
+        t('auth.forgotPassword.desc');
 
-      // If the user has already reset today, surface the once-per-day message.
       if (res?.data?.success === false) {
         setErrorMessage(msg);
         toast.error(msg);
       } else {
         setMessage(msg);
-        toast.success("Password reset requested.");
+        toast.success(t('auth.forgotPassword.resetSent'));
       }
     } catch (e: any) {
       const msg =
         e?.response?.data?.message ||
         e?.response?.data?.error?.message ||
-        "Request failed";
+        t('auth.forgotPassword.requestFailed');
       setErrorMessage(msg);
       toast.error(msg);
     } finally {
@@ -87,13 +85,11 @@ export default function ForgotPasswordPage() {
       <div className="max-w-xl mx-auto px-4">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow p-6 md:p-8">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Forgot Password
+            {t('auth.forgotPassword.title')}
           </h1>
 
           <p className="text-gray-600 dark:text-gray-300 mt-2">
-            Enter your registered email address or phone number. We will send a
-            new temporary password to your registered email. This option can be
-            used only once per day.
+            {t('auth.forgotPassword.desc')}
           </p>
 
           <div className="mt-6">
@@ -101,7 +97,7 @@ export default function ForgotPasswordPage() {
               htmlFor="identifier"
               className="block text-sm font-medium text-gray-700 dark:text-gray-200"
             >
-              Email or Phone Number
+              {t('auth.forgotPassword.label')}
             </label>
 
             <input
@@ -117,7 +113,7 @@ export default function ForgotPasswordPage() {
                 setMessage("");
                 setErrorMessage("");
               }}
-              placeholder="you@example.com or +91 98765 43210"
+              placeholder={t('auth.forgotPassword.placeholder')}
               aria-invalid={!!identifier.trim() && !detectedMethod}
               aria-describedby="identifier-help"
             />
@@ -128,12 +124,12 @@ export default function ForgotPasswordPage() {
             >
               {detectedMethod ? (
                 detectedMethod === "email" ? (
-                  <span>Email looks valid.</span>
+                  <span>{t('auth.forgotPassword.emailValid')}</span>
                 ) : (
-                  <span>Phone number looks valid.</span>
+                  <span>{t('auth.forgotPassword.phoneValid')}</span>
                 )
               ) : identifier.trim().length ? (
-                <span>Please enter a valid email address or phone number.</span>
+                <span>{t('auth.forgotPassword.invalidInput')}</span>
               ) : (
                 <span>&nbsp;</span>
               )}
@@ -169,10 +165,10 @@ export default function ForgotPasswordPage() {
             {loading ? (
               <>
                 <span className="inline-block h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                Sending...
+                {t('auth.forgotPassword.sending')}
               </>
             ) : (
-              "Send New Password"
+              t('auth.forgotPassword.sendBtn')
             )}
           </button>
 
@@ -182,7 +178,7 @@ export default function ForgotPasswordPage() {
               className="underline hover:text-gray-700 dark:hover:text-gray-200"
               onClick={() => router.push("/login")}
             >
-              Back to Login
+              {t('auth.forgotPassword.backToLogin')}
             </button>
           </div>
         </div>

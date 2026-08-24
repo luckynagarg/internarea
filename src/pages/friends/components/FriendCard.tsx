@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { useT } from '@/i18n/runtime';
 import { MoreVertical, UserPlus, UserCheck, UserMinus, Clock, Check, X } from "lucide-react";
 
 export type FriendCardModel = {
@@ -42,6 +43,7 @@ export default function FriendCard({
   removing,
   actionLoading,
 }: Props) {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const safeFriend = friend ?? ({} as FriendCardModel);
   const safeName = safeFriend.nickname || safeFriend.name || "Unknown";
@@ -58,13 +60,13 @@ export default function FriendCard({
             onEditNickname?.(friend);
           }}
         >
-          Edit Nickname
+          {t('common.editNickname')}
         </button>
         <button
           className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded"
           onClick={() => setOpen(false)}
         >
-          View Profile
+          {t('common.viewProfile')}
         </button>
         <button
           className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded text-red-600"
@@ -74,11 +76,11 @@ export default function FriendCard({
           }}
           disabled={!!removing}
         >
-          {removing ? "Removing..." : "Remove Friend"}
+          {removing ? t('common.removing') : t('common.removeFriend')}
         </button>
       </div>
     );
-  }, [open, friend, onEditNickname, onRemove, removing]);
+  }, [open, friend, onEditNickname, onRemove, removing, t]);
 
   function renderAction() {
     if (rel === "friends") {
@@ -86,7 +88,7 @@ export default function FriendCard({
         <div className="relative">
           <button
             type="button"
-            aria-label="More"
+            aria-label={t('common.manage')}
             className="p-1 rounded hover:bg-gray-100"
             onClick={() => setOpen((v) => !v)}
           >
@@ -106,7 +108,7 @@ export default function FriendCard({
           className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-50"
         >
           <Clock size={14} />
-          Requested
+          {t('common.requested')}
         </button>
       );
     }
@@ -121,7 +123,7 @@ export default function FriendCard({
             className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-green-50 text-green-700 hover:bg-green-100 disabled:opacity-50"
           >
             <Check size={14} />
-            Accept
+            {t('common.accept')}
           </button>
           <button
             type="button"
@@ -130,13 +132,12 @@ export default function FriendCard({
             className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50"
           >
             <X size={14} />
-            Reject
+            {t('common.reject')}
           </button>
         </div>
       );
     }
 
-    // none
     return (
       <button
         type="button"
@@ -145,7 +146,7 @@ export default function FriendCard({
         className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:opacity-50"
       >
         <UserPlus size={14} />
-        Add
+        {t('common.add')}
       </button>
     );
   }
@@ -154,7 +155,7 @@ export default function FriendCard({
     <div className="border rounded-lg p-3 relative flex items-center gap-3">
       <img
         src={safeFriend.photo || FALLBACK_IMG}
-        alt={safeFriend.name || "Friend"}
+        alt={safeFriend.name || t('friends.friend')}
         className="w-10 h-10 rounded-full object-cover"
       />
       <div className="min-w-0 flex-1">
@@ -167,7 +168,7 @@ export default function FriendCard({
           <div className="text-xs text-gray-500 truncate">{safeFriend.headline || ""}</div>
         )}
         {(safeFriend.mutualFriends ?? 0) > 0 && (
-          <div className="text-xs text-gray-400 truncate">{safeFriend.mutualFriends} mutual friends</div>
+          <div className="text-xs text-gray-400 truncate">{safeFriend.mutualFriends ?? 0} {t('friends.connections', { values: { count: safeFriend.mutualFriends ?? 0 } })}</div>
         )}
       </div>
 

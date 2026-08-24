@@ -11,9 +11,11 @@ import {
   verifyLoginOtp,
   resendLoginOtp,
 } from "@/Feature/loginSecurity";
+import { useT } from "@/i18n/runtime";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t } = useT();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,7 +23,7 @@ export default function LoginPage() {
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
-// Chrome OTP gate state
+  // Chrome OTP gate state
   const [otpRequired, setOtpRequired] = useState(false);
   const [otp, setOtp] = useState("");
   const [isOtpLoading, setIsOtpLoading] = useState(false);
@@ -34,12 +36,11 @@ export default function LoginPage() {
       try {
         result = await startLoginGate(method);
       } catch (e: any) {
-        // Server-side block (e.g. mobile outside allowed hours, or Chrome w/o email).
         const msg =
           e?.response?.data?.message ??
           e?.response?.data?.error ??
           e?.message ??
-          "Login restricted.";
+          t('auth.firebaseErrors.loginRestricted');
         await auth.signOut().catch(() => {});
         setLoginError(msg);
         toast.error(msg);
@@ -50,10 +51,10 @@ export default function LoginPage() {
         setOtp("");
         return;
       }
-      toast.success("Logged in successfully");
+      toast.success(t('auth.firebaseErrors.loggedInSuccessfully'));
       router.push("/");
     },
-    [router]
+    [router, t]
   );
 
   // Pre-fill email from localStorage if "Remember Me" was checked
@@ -69,33 +70,33 @@ export default function LoginPage() {
     if (isGoogleLoading) return;
     setIsGoogleLoading(true);
     setLoginError(null);
-try {
+    try {
       await signInWithPopup(auth, googleProvider);
       await runLoginGate("google");
     } catch (e: any) {
       if (e?.code === "auth/cancelled-popup-request") return;
-      const msg = e?.message ?? "Google login failed.";
+      const msg = e?.message ?? t('auth.firebaseErrors.googleLoginFailed');
       setLoginError(msg);
       toast.error(msg);
     } finally {
       setIsGoogleLoading(false);
     }
-  }, [isGoogleLoading, router, runLoginGate]);
+  }, [isGoogleLoading, router, runLoginGate, t]);
 
   const handleEmailLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
 
     if (!email.trim()) {
-      setLoginError("Email is required.");
+      setLoginError(t('auth.emailRequired'));
       return;
     }
     if (!password) {
-      setLoginError("Password is required.");
+      setLoginError(t('auth.passwordRequired'));
       return;
     }
 
-setIsEmailLoading(true);
+    setIsEmailLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email.trim(), password);
 
@@ -107,26 +108,26 @@ setIsEmailLoading(true);
 
       await runLoginGate("password");
     } catch (e: any) {
-      const msg = e?.message ?? "Email login failed.";
+      const msg = e?.message ?? t('auth.firebaseErrors.emailLoginFailed');
       setLoginError(msg);
       toast.error(msg);
     } finally {
       setIsEmailLoading(false);
     }
-  }, [email, password, rememberMe, router, runLoginGate]);
+  }, [email, password, rememberMe, router, runLoginGate, t]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
       <div className="w-full max-w-md">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Welcome Back</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('auth.welcomeBack')}</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-              Sign in to your account
+              {t('auth.signInToAccount')}
             </p>
           </div>
 
-{loginError && (
+          {loginError && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-400">
               {loginError}
             </div>
@@ -136,17 +137,17 @@ setIsEmailLoading(true);
           {otpRequired && (
             <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
               <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                Email verification required
+                {t('auth.otp.title')}
               </h2>
               <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
-                We sent a one-time code to your email. Enter it below to continue.
+                {t('auth.emailVerification.sent')}
               </p>
               <input
                 type="text"
                 inputMode="numeric"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
-                placeholder="Enter OTP"
+                placeholder={t('auth.otp.otpPlaceholder')}
                 maxLength={6}
                 className="w-full px-3 py-2 mb-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm"
               />
@@ -159,20 +160,20 @@ setIsEmailLoading(true);
                     const res = await verifyLoginOtp(otp);
                     if (res.accessGranted) {
                       setOtpRequired(false);
-                      toast.success("Verified successfully");
+                      toast.success(t('auth.otp.verifiedSuccess'));
                       router.push("/");
                     } else {
-                      toast.error(res.message || "Invalid OTP.");
+                      toast.error(res.message || t('auth.otp.invalidOtp'));
                     }
                   } catch (e: any) {
-                    toast.error(e?.response?.data?.message ?? e?.message ?? "Invalid OTP.");
+                    toast.error(e?.response?.data?.message ?? e?.message ?? t('auth.otp.invalidOtp'));
                   } finally {
                     setIsOtpLoading(false);
                   }
                 }}
                 className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg text-sm"
               >
-                {isOtpLoading ? "Verifying..." : "Verify OTP"}
+                {isOtpLoading ? t('auth.otp.loading') : t('auth.otp.verifyOtp')}
               </button>
               <button
                 type="button"
@@ -180,14 +181,14 @@ setIsEmailLoading(true);
                 onClick={async () => {
                   try {
                     await resendLoginOtp();
-                    toast.success("OTP resent to your email.");
+                    toast.success(t('auth.otp.resendOtp'));
                   } catch (e: any) {
-                    toast.error(e?.response?.data?.message ?? "Could not resend OTP.");
+                    toast.error(e?.response?.data?.message ?? t('auth.otp.resendOtpFailed'));
                   }
                 }}
                 className="w-full text-center text-xs text-blue-600 hover:underline mt-3"
               >
-                Resend OTP
+                {t('auth.otp.resendOtp')}
               </button>
             </div>
           )}
@@ -218,7 +219,7 @@ setIsEmailLoading(true);
               />
             </svg>
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              {isGoogleLoading ? "Signing in..." : "Continue with Google"}
+              {isGoogleLoading ? t('auth.signingInGoogle') : t('auth.continueWithGoogle')}
             </span>
           </button>
 
@@ -228,7 +229,7 @@ setIsEmailLoading(true);
               <div className="w-full border-t border-gray-300 dark:border-gray-600" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="bg-white dark:bg-gray-800 px-2 text-gray-500">OR</span>
+              <span className="bg-white dark:bg-gray-800 px-2 text-gray-500">{t('common.or')}</span>
             </div>
           </div>
 
@@ -236,14 +237,14 @@ setIsEmailLoading(true);
           <form onSubmit={handleEmailLogin} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Email
+                {t('auth.email')}
               </label>
               <input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                placeholder={t('auth.emailPlaceholder')}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm"
                 required
               />
@@ -251,14 +252,14 @@ setIsEmailLoading(true);
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Password
+                {t('auth.password')}
               </label>
               <input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
+                placeholder={t('auth.passwordPlaceholder')}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm"
                 required
               />
@@ -274,7 +275,7 @@ setIsEmailLoading(true);
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
               <label htmlFor="remember-me" className="ml-2 text-sm text-gray-600 dark:text-gray-400">
-                Remember me
+                {t('auth.rememberMe')}
               </label>
             </div>
 
@@ -284,7 +285,7 @@ setIsEmailLoading(true);
                 href="/forgot-password"
                 className="text-sm font-medium text-blue-600 hover:text-blue-500 hover:underline transition-colors"
               >
-                Forgot Password?
+                {t('auth.forgotPassword')}
               </Link>
             </div>
 
@@ -293,22 +294,22 @@ setIsEmailLoading(true);
               disabled={isEmailLoading}
               className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors text-sm"
             >
-              {isEmailLoading ? "Signing in..." : "Sign in"}
+              {isEmailLoading ? t('auth.signingIn') : t('auth.welcomeBack')}
             </button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Don&apos;t have an account?{" "}
+              {t('auth.dontHaveAccount')}{" "}
               <Link href="/signup" className="text-blue-600 hover:text-blue-500 font-medium hover:underline">
-                Sign up
+                {t('auth.createAccount')}
               </Link>
             </p>
           </div>
 
           <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
             <Link href="/" className="hover:text-gray-700 dark:hover:text-gray-300">
-              Back to home
+              {t('auth.backToHome')}
             </Link>
           </div>
         </div>

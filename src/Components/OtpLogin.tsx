@@ -16,11 +16,13 @@ import {
 import { Input } from "@/Components/ui/input";
 import { Button } from "@/Components/ui/button";
 import { useRouter } from "next/navigation";
+import { useT } from "@/i18n/runtime";
 
 const RECATCHA_CONTAINER_ID = "recaptcha-container";
 
 const OtpLogin = () => {
   const router = useRouter();
+  const { t } = useT();
 
   const [phoneNumber, setPhoneNumber] = useState("");
   const [otp, setOtp] = useState("");
@@ -55,7 +57,7 @@ const OtpLogin = () => {
       recaptchaVerifierRef.current = verifier;
     } catch (e) {
       // Leave error visible via OTP send; recaptcha can fail if misconfigured.
-      // (Don’t crash render.)
+      // (Don't crash render.)
       console.error(e);
     }
 
@@ -85,7 +87,7 @@ const OtpLogin = () => {
     } catch (e) {
       console.error(e);
     }
-    // Runs when confirmationResult changes (render flow), but won’t duplicate due to ref guard.
+    // Runs when confirmationResult changes (render flow), but won't duplicate due to ref guard.
   }, [confirmationResult]);
 
   useEffect(() => {
@@ -102,7 +104,7 @@ const OtpLogin = () => {
 
   const sendOTP = async () => {
     if (!phoneNumber) {
-      setError("Please enter a phone number.");
+      setError(t('auth.otp.phoneRequired'));
       return;
     }
 
@@ -112,7 +114,7 @@ const OtpLogin = () => {
     const verifier = getVerifier();
     if (!verifier) {
       setError(
-        "Recaptcha is not ready yet. Please wait a moment and try again."
+        t('auth.otp.recaptchaNotReady')
       );
       return;
     }
@@ -129,10 +131,10 @@ const OtpLogin = () => {
       );
 
       setConfirmationResult(result);
-      setSuccess("OTP sent successfully!");
+      setSuccess(t('common.postedSuccessfully'));
       setResendCountdown(60);
     } catch (err: any) {
-      setError(err?.message ?? "Failed to send OTP.");
+      setError(err?.message ?? t('auth.otp.failedToSendOtp'));
     } finally {
       setIsSendingOtp(false);
     }
@@ -147,7 +149,7 @@ const OtpLogin = () => {
     e.preventDefault();
 
     if (!confirmationResult) {
-      setError("Please request an OTP first.");
+      setError(t('auth.otp.otpRequired'));
       return;
     }
 
@@ -155,10 +157,10 @@ const OtpLogin = () => {
 
     try {
       await confirmationResult.confirm(otp);
-      setSuccess("Phone number verified successfully!");
+      setSuccess(t('auth.otp.verifiedSuccess'));
       router.push("/");
     } catch (err: any) {
-      setError(err?.message ?? "Failed to verify OTP.");
+      setError(err?.message ?? t('auth.otp.invalidOtp'));
     }
   };
 
@@ -166,7 +168,7 @@ const OtpLogin = () => {
     <div className="max-w-md mx-auto mt-10 space-y-6">
       <div id={RECATCHA_CONTAINER_ID}></div>
 
-      <h1 className="text-2xl font-bold text-center">Phone OTP Login</h1>
+      <h1 className="text-2xl font-bold text-center">{t('auth.otp.title')}</h1>
 
       {error && <p className="text-red-500 text-center">{error}</p>}
 
@@ -176,18 +178,17 @@ const OtpLogin = () => {
         <form onSubmit={handleSendOTP} className="space-y-4">
           <Input
             type="tel"
-            placeholder="+91 XXXXXXXXXX"
+            placeholder={t('auth.otp.phonePlaceholder')}
             value={phoneNumber}
             onChange={(e) => setPhoneNumber(e.target.value)}
           />
 
           <p className="text-xs text-gray-500">
-            Please enter your phone number with country code (Example:
-            +91XXXXXXXXXX)
+            {t('auth.otp.phoneHint')}
           </p>
 
           <Button type="submit" disabled={isSendingOtp} className="w-full">
-            {isSendingOtp ? "Sending..." : "Send OTP"}
+            {isSendingOtp ? t('auth.otp.sending') : t('auth.otp.sendOtp')}
           </Button>
         </form>
       ) : (
@@ -217,7 +218,7 @@ const OtpLogin = () => {
               className="w-full"
               disabled={isSendingOtp}
             >
-              Verify OTP
+              {t('auth.otp.verifyOtp')}
             </Button>
           </form>
 
@@ -230,20 +231,19 @@ const OtpLogin = () => {
             className="w-full"
           >
             {isSendingOtp
-              ? "Sending..."
+              ? t('auth.otp.sending')
               : resendCountdown > 0
-              ? `Resend OTP in ${resendCountdown}s`
-              : "Resend OTP"}
+              ? t('auth.otp.resendOtpIn', { values: { count: resendCountdown } })
+              : t('auth.otp.resendOtp')}
           </Button>
         </>
       )}
 
       {isSendingOtp && (
-        <p className="text-center text-sm text-gray-500">Loading...</p>
+        <p className="text-center text-sm text-gray-500">{t('auth.otp.loading')}</p>
       )}
     </div>
   );
 };
 
 export default OtpLogin;
-

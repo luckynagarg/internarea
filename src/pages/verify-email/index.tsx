@@ -10,9 +10,11 @@ import {
   signOut,
 } from "firebase/auth";
 import { toast } from "react-toastify";
+import { useT } from "@/i18n/runtime";
 
 export default function VerifyEmailPage() {
   const router = useRouter();
+  const { t } = useT();
   const { email } = router.query;
 
   const [isLoading, setIsLoading] = useState(false);
@@ -26,17 +28,23 @@ export default function VerifyEmailPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (!user) {
-        // User signed out after registration
         return;
       }
-      // If user is still signed in (shouldn't happen after signOut on signup)
-      // check if they've verified in another tab
       if (user.emailVerified) {
         setIsVerified(true);
       }
     });
     return () => unsubscribe();
   }, []);
+
+  const getFirebaseError = (code: string): string => {
+    const messages: Record<string, string> = {
+      "auth/too-many-requests": t('auth.firebaseErrors.tooManyRequests'),
+      "auth/network-request-failed": t('auth.firebaseErrors.networkRequestFailed'),
+      "auth/user-not-found": t('auth.firebaseErrors.userNotFound'),
+    };
+    return messages[code] || t('auth.firebaseErrors.unexpectedError');
+  };
 
   const handleResendVerification = async () => {
     if (isLoading || cooldown > 0) return;
@@ -46,11 +54,9 @@ export default function VerifyEmailPage() {
     setErrorMessage("");
 
     try {
-      // Need user to be signed in to send verification email
       const currentUser = auth.currentUser;
       if (!currentUser) {
-        // User is not signed in - redirect to login
-        toast.error("Please sign in first to resend verification.");
+        toast.error(t('auth.emailVerification.signInFirst'));
         router.push("/login");
         return;
       }
@@ -59,10 +65,9 @@ export default function VerifyEmailPage() {
         url: `${window.location.origin}/login?verified=true`,
       });
 
-      setMessage("Verification email sent! Check your inbox (and spam folder).");
-      toast.success("Verification email sent!");
+      setMessage(t('auth.emailVerification.sentSuccess'));
+      toast.success(t('auth.emailVerification.sentSuccess'));
 
-      // Set cooldown (60 seconds)
       setCooldown(60);
       const timer = setInterval(() => {
         setCooldown((prev) => {
@@ -87,10 +92,9 @@ export default function VerifyEmailPage() {
     setErrorMessage("");
 
     try {
-      // Reload the user to get latest emailVerified status
       const currentUser = auth.currentUser;
       if (!currentUser) {
-        toast.error("Please sign in first.");
+        toast.error(t('auth.emailVerification.signInFirst'));
         router.push("/login");
         return;
       }
@@ -99,10 +103,10 @@ export default function VerifyEmailPage() {
 
       if (currentUser.emailVerified) {
         setIsVerified(true);
-        toast.success("Email verified! You can now sign in.");
+        toast.success(t('auth.emailVerification.verifiedSuccess'));
       } else {
         setErrorMessage(
-          "Email not verified yet. Please check your inbox and click the verification link."
+          t('auth.emailVerification.notVerifiedYet')
         );
       }
     } catch (e: any) {
@@ -113,7 +117,6 @@ export default function VerifyEmailPage() {
   };
 
   const handleBackToLogin = async () => {
-    // Ensure user is signed out before going to login
     try {
       if (auth.currentUser) {
         await signOut(auth);
@@ -124,7 +127,6 @@ export default function VerifyEmailPage() {
     router.push("/login");
   };
 
-  // If verified
   if (isVerified) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -146,17 +148,17 @@ export default function VerifyEmailPage() {
               </svg>
             </div>
             <h2 className="mt-4 text-2xl font-bold text-gray-900 dark:text-gray-100">
-              Email Verified!
+              {t('auth.emailVerification.verifiedTitle')}
             </h2>
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-              Your email has been verified. You can now sign in to your account.
+              {t('auth.emailVerification.verifiedMsg')}
             </p>
             <div className="mt-6">
               <Link
                 href="/login"
                 className="inline-flex justify-center py-2.5 px-6 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
               >
-                Go to Sign In
+                {t('auth.emailVerification.goToSignIn')}
               </Link>
             </div>
           </div>
@@ -187,16 +189,16 @@ export default function VerifyEmailPage() {
           </div>
 
           <h2 className="mt-4 text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Check your email
+            {t('auth.emailVerification.title')}
           </h2>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            We sent a verification email to{" "}
+            {t('auth.emailVerification.sent')}{" "}
             <strong className="text-gray-900 dark:text-gray-200">
-              {email || "your email"}
+              {email || t('auth.emailVerification.yourEmail')}
             </strong>
-</p>
+          </p>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">
-            {"Click the link in the email to verify your account. If you don't see it, check your spam folder."}
+            {t('auth.emailVerification.linkPrompt')}
           </p>
 
           {/* Messages */}
@@ -220,13 +222,13 @@ export default function VerifyEmailPage() {
               disabled={checkingVerification}
               className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-{checkingVerification ? (
+              {checkingVerification ? (
                 <span className="flex items-center gap-2">
                   <span className="inline-block h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                  Checking...
+                  {t('auth.emailVerification.checking')}
                 </span>
               ) : (
-                "I've verified my email"
+                t('auth.emailVerification.verifiedMyEmail')
               )}
             </button>
 
@@ -239,12 +241,12 @@ export default function VerifyEmailPage() {
               {isLoading ? (
                 <span className="flex items-center gap-2">
                   <span className="inline-block h-4 w-4 rounded-full border-2 border-gray-400 border-t-transparent animate-spin" />
-                  Sending...
+                  {t('ui.loading')}
                 </span>
               ) : cooldown > 0 ? (
-                `Resend in ${cooldown}s`
+                t('auth.emailVerification.resendIn', { values: { count: cooldown } })
               ) : (
-                "Resend verification email"
+                t('auth.emailVerification.resend')
               )}
             </button>
           </div>
@@ -255,20 +257,11 @@ export default function VerifyEmailPage() {
               onClick={() => void handleBackToLogin()}
               className="text-sm font-medium text-blue-600 hover:text-blue-500 hover:underline"
             >
-              Back to Sign In
+              {t('auth.emailVerification.goToSignIn')}
             </button>
           </div>
         </div>
       </div>
     </div>
   );
-}
-
-function getFirebaseError(code: string): string {
-  const messages: Record<string, string> = {
-    "auth/too-many-requests": "Too many requests. Please try again later.",
-    "auth/network-request-failed": "Network error. Please check your connection.",
-    "auth/user-not-found": "User not found. Please sign in again.",
-  };
-  return messages[code] || "An unexpected error occurred. Please try again.";
 }

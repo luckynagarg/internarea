@@ -10,6 +10,7 @@ import {
 import axiosClient from "@/lib/axiosClient";
 import { selectuser } from "@/Feature/Userslice";
 import { useSelector } from "react-redux";
+import { useT } from "@/i18n/runtime";
 const Applications = [
   {
 
@@ -63,7 +64,7 @@ const getStatusColor = (status: string) => {
   }
 };
 const UserApplicationsPage = () => {
-
+  const { t } = useT();
   const [searchTerm, setsearchTerm] = useState("");
   const [filter, setFilter] = useState("all");
   const user=useSelector(selectuser)
@@ -106,9 +107,9 @@ const [data, setdata] = useState<any[]>([]);
         <div className="bg-white rounded-lg shadow-sm">
           {/* Header */}
           <div className="border-b border-gray-200 px-6 py-4">
-            <h1 className="text-2xl font-bold text-gray-900">My Applications</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t('applications.myApplications')}</h1>
             <p className="mt-1 text-sm text-gray-500">
-              Track and manage your job and intenrhsip applications
+              {t('applications.myApplicationsDesc')}
             </p>
           </div>
 
@@ -121,7 +122,7 @@ const [data, setdata] = useState<any[]>([]);
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setsearchTerm(e.target.value)}
-                    placeholder="Search by company, category, or applicant..."
+                    placeholder={t('applications.searchPlaceholder')}
                     className="text-black w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <Mail className="absolute top-3 left-3 text-gray-400" />
@@ -136,7 +137,7 @@ const [data, setdata] = useState<any[]>([]);
                       : "bg-gray-100 text-gray-800"
                   }`}
                 >
-                  All
+                  {t('applications.all')}
                 </button>
                 <button
                   onClick={() => setFilter("pending")}
@@ -146,7 +147,7 @@ const [data, setdata] = useState<any[]>([]);
                       : "bg-gray-100 text-gray-800"
                   }`}
                 >
-                  Pending
+                  {t('applications.pending')}
                 </button>
                 <button
                   onClick={() => setFilter("approved")}
@@ -156,7 +157,7 @@ const [data, setdata] = useState<any[]>([]);
                       : "bg-gray-100 text-gray-800"
                   }`}
                 >
-                  Approved
+                  {t('applications.approved')}
                 </button>
                 <button
                   onClick={() => setFilter("rejected")}
@@ -166,7 +167,7 @@ const [data, setdata] = useState<any[]>([]);
                       : "bg-gray-100 text-gray-800"
                   }`}
                 >
-                  Rejected
+                  {t('applications.rejected')}
                 </button>
               </div>
             </div>
@@ -180,25 +181,25 @@ const [data, setdata] = useState<any[]>([]);
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Company & Category
+                    {t('applications.companyCategory')}
                   </th>
                   <th
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Applicant
+                    {t('applications.applicant')}
                   </th>
                   <th
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Applied Date
+                    {t('applications.appliedDate')}
                   </th>
                   <th
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Status
+                    {t('applications.status')}
                   </th>
                 </tr>
               </thead>
@@ -255,7 +256,7 @@ const [data, setdata] = useState<any[]>([]);
                         {application.status}
                       </span>
                     </td>
-                  
+                   
                   </tr>
                 ))}
               </tbody>
@@ -268,4 +269,3 @@ const [data, setdata] = useState<any[]>([]);
 };
 
 export default UserApplicationsPage;
-

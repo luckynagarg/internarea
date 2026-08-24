@@ -4,8 +4,11 @@ import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import Link from "next/link";
 import { toast } from "react-toastify";
+import { useT } from '@/i18n/runtime';
 
 const index = () => {
+  const { t } = useT();
+
   const [formadata, setformadata] = useState({
     username: "",
     password: "",
@@ -51,10 +54,10 @@ const index = () => {
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <h2 className="text-center text-3xl font-extrabold text-gray-900">
-          Admin Login
+          {t('admin.login.title')}
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Access the admin dashboard to manage internships and applications
+          {t('admin.login.subtitle')}
         </p>
       </div>
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
@@ -65,7 +68,7 @@ const index = () => {
                 htmlFor="username"
                 className="block text-sm font-medium text-gray-700"
               >
-                Username
+                {t('admin.login.username')}
               </label>
               <div className="mt-1 relative rounded-md shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -79,7 +82,7 @@ const index = () => {
                   value={formadata.username}
                   onChange={handlechange}
                   className="block w-full text-black pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="Enter your username"
+                  placeholder={t('admin.login.usernamePlaceholder')}
                 />
               </div>
             </div>
@@ -88,7 +91,7 @@ const index = () => {
                 htmlFor="password"
                 className="block text-sm font-medium text-gray-700"
               >
-                Password
+                {t('admin.login.password')}
               </label>
               <div className="mt-1 relative rounded-md shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -102,7 +105,7 @@ const index = () => {
                   value={formadata.password}
                   onChange={handlechange}
                   className="block w-full text-black pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="Enter your password"
+                  placeholder={t('admin.login.passwordPlaceholder')}
                 />
               </div>
             </div>
@@ -111,7 +114,7 @@ const index = () => {
                 href="/admin-forgot-password"
                 className="text-sm font-medium text-blue-600 hover:text-blue-500 hover:underline transition-colors"
               >
-                Forgot Password?
+                {t('admin.login.forgotPassword')}
               </Link>
             </div>
 
@@ -124,10 +127,10 @@ const index = () => {
                 {isloading ? (
                   <div className="flex items-center">
                     <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></div>
-                    Signing in...
+                    {t('admin.login.signingIn')}
                   </div>
                 ) : (
-                  " Sign in"
+                  t('admin.login.signIn')
                 )}
               </button>
             </div>

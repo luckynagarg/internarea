@@ -3,58 +3,58 @@ import { useT } from "@/i18n/runtime";
 
 const footerLinks = {
   internshipByPlaces: [
-    { label: "New York", href: "/internship" },
-    { label: "Los Angeles", href: "/internship" },
-    { label: "Chicago", href: "/internship" },
-    { label: "San Francisco", href: "/internship" },
-    { label: "Miami", href: "/internship" },
-    { label: "Seattle", href: "/internship" },
+    { labelKey: "footer.links.newYork", href: "/internship" },
+    { labelKey: "footer.links.losAngeles", href: "/internship" },
+    { labelKey: "footer.links.chicago", href: "/internship" },
+    { labelKey: "footer.links.sanFrancisco", href: "/internship" },
+    { labelKey: "footer.links.miami", href: "/internship" },
+    { labelKey: "footer.links.seattle", href: "/internship" },
   ],
   internshipByStream: [
-    { label: "About us", href: "/about" },
-    { label: "Careers", href: "/job" },
-    { label: "Contact", href: "/contact" },
-    { label: "Help center", href: "/help" },
-    { label: "Privacy Policy", href: "/privacy" },
-    { label: "Terms & Conditions", href: "/terms" },
+    { labelKey: "footer.links.about", href: "/about" },
+    { labelKey: "footer.links.careers", href: "/job" },
+    { labelKey: "footer.links.contact", href: "/contact" },
+    { labelKey: "footer.links.helpCenter", href: "/help" },
+    { labelKey: "footer.links.privacy", href: "/privacy" },
+    { labelKey: "footer.links.terms", href: "/terms" },
   ],
   jobPlaces: [
-    { label: "Find Jobs", href: "/job" },
-    { label: "Find Internships", href: "/internship" },
-    { label: "Public Space", href: "/public" },
-    { label: "Friends", href: "/friends" },
-    { label: "Notifications", href: "/notifications" },
-    { label: "Profile", href: "/profile" },
+    { labelKey: "footer.links.findJobs", href: "/job" },
+    { labelKey: "footer.links.findInternships", href: "/internship" },
+    { labelKey: "footer.links.publicSpace", href: "/public" },
+    { labelKey: "footer.links.friends", href: "/friends" },
+    { labelKey: "footer.links.notifications", href: "/notifications" },
+    { labelKey: "footer.links.profile", href: "/profile" },
   ],
   jobsByStreams: [
-    { label: "Startups", href: "/job" },
-    { label: "Enterprise", href: "/job" },
-    { label: "Government", href: "/job" },
-    { label: "SaaS", href: "/job" },
-    { label: "Marketplaces", href: "/job" },
-    { label: "Ecommerce", href: "/job" },
+    { labelKey: "footer.links.startups", href: "/job" },
+    { labelKey: "footer.links.enterprise", href: "/job" },
+    { labelKey: "footer.links.government", href: "/job" },
+    { labelKey: "footer.links.saas", href: "/job" },
+    { labelKey: "footer.links.marketplaces", href: "/job" },
+    { labelKey: "footer.links.ecommerce", href: "/job" },
   ],
 };
 
 const bottomLinks = {
   aboutUs: [
-    { label: "About us", href: "/about" },
-    { label: "Contact", href: "/contact" },
-    { label: "Help", href: "/help" },
+    { labelKey: "footer.links.about", href: "/about" },
+    { labelKey: "footer.links.contact", href: "/contact" },
+    { labelKey: "footer.links.helpCenter", href: "/help" },
   ],
   teamDiary: [
-    { label: "Privacy Policy", href: "/privacy" },
-    { label: "Terms & Conditions", href: "/terms" },
-    { label: "Sign In", href: "/login" },
+    { labelKey: "footer.links.privacy", href: "/privacy" },
+    { labelKey: "footer.links.terms", href: "/terms" },
+    { labelKey: "navbar.login", href: "/login" },
   ],
   termsAndConditions: [
-    { label: "Internships", href: "/internship" },
-    { label: "Jobs", href: "/job" },
-    { label: "Subscription", href: "/subscription" },
+    { labelKey: "footer.links.internships", href: "/internship" },
+    { labelKey: "footer.links.jobs", href: "/job" },
+    { labelKey: "footer.links.subscription", href: "/subscription" },
   ],
   sitemap: [
-    { label: "Home", href: "/" },
-    { label: "Search", href: "/search" },
+    { labelKey: "footer.links.home", href: "/" },
+    { labelKey: "footer.links.search", href: "/search" },
   ],
 };
 
@@ -102,7 +102,8 @@ export default function Footer() {
   );
 }
 
-function FooterSection({ title, items, links }: { title: string; items: { label: string; href: string }[]; links?: boolean }) {
+function FooterSection({ title, items, links }: { title: string; items: { labelKey: string; href: string }[]; links?: boolean }) {
+  const { t } = useT();
   return (
     <div>
       <h3 className="text-sm font-bold text-gray-300">{title}</h3>
@@ -110,11 +111,11 @@ function FooterSection({ title, items, links }: { title: string; items: { label:
         {items.map((item, index) =>
           links ? (
             <a key={index} href={item.href} className="text-gray-400 hover:text-blue-400 hover:underline">
-              {item.label}
+              {t(item.labelKey)}
             </a>
           ) : (
             <a key={index} href={item.href} className="text-gray-400 hover:text-blue-400 hover:underline cursor-pointer">
-              {item.label}
+              {t(item.labelKey)}
             </a>
           )
         )}

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createUserWithEmailAndPassword, sendEmailVerification, signOut } from "firebase/auth";
 import { toast } from "react-toastify";
 import { auth } from "@/lib/firebase";
+import { useT } from "@/i18n/runtime";
 
 function getPasswordStrength(password: string): {
   score: number;
@@ -28,6 +29,7 @@ function getPasswordStrength(password: string): {
 
 export default function SignupPage() {
   const router = useRouter();
+  const { t } = useT();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -48,6 +50,18 @@ export default function SignupPage() {
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) &&
     password.length >= 6 &&
     passwordsMatch;
+
+  const getFirebaseSignupError = (code: string): string => {
+    const messages: Record<string, string> = {
+      "auth/email-already-in-use":
+        t('auth.firebaseErrors.emailAlreadyInUse'),
+      "auth/invalid-email": t('auth.firebaseErrors.invalidEmail'),
+      "auth/weak-password": t('auth.firebaseErrors.weakPassword'),
+      "auth/network-request-failed": t('auth.firebaseErrors.networkRequestFailed'),
+      "auth/too-many-requests": t('auth.firebaseErrors.tooManyRequests'),
+    };
+    return messages[code] || t('auth.firebaseErrors.unexpectedError');
+  };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +85,7 @@ export default function SignupPage() {
       await signOut(auth);
 
       toast.success(
-        "Account created! Please check your email to verify your account."
+        t('auth.emailVerification.sentSuccess')
       );
 
       // Redirect to verify-email page
@@ -89,10 +103,10 @@ export default function SignupPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <h2 className="text-center text-3xl font-extrabold text-gray-900 dark:text-gray-100">
-          Create your account
+          {t('auth.createAccount')}
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-          Join InternArea and start your journey.
+          {t('auth.joinInternArea')}
         </p>
       </div>
 
@@ -111,7 +125,7 @@ export default function SignupPage() {
                 htmlFor="fullName"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-200"
               >
-                Full Name
+                {t('auth.fullName')}
               </label>
               <input
                 id="fullName"
@@ -122,7 +136,7 @@ export default function SignupPage() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 className="mt-2 w-full border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:text-gray-100"
-                placeholder="John Doe"
+                placeholder={t('auth.fullNamePlaceholder')}
               />
             </div>
 
@@ -132,7 +146,7 @@ export default function SignupPage() {
                 htmlFor="email"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-200"
               >
-                Email address
+                {t('auth.email')}
               </label>
               <input
                 id="email"
@@ -143,7 +157,7 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="mt-2 w-full border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:text-gray-100"
-                placeholder="you@example.com"
+                placeholder={t('auth.emailPlaceholder')}
               />
             </div>
 
@@ -153,7 +167,7 @@ export default function SignupPage() {
                 htmlFor="password"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-200"
               >
-                Password
+                {t('auth.password')}
               </label>
               <input
                 id="password"
@@ -166,7 +180,7 @@ export default function SignupPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 onFocus={() => setPasswordTouched(true)}
                 className="mt-2 w-full border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:text-gray-100"
-                placeholder="At least 6 characters"
+                placeholder={t('auth.passwordPlaceholder')}
               />
               {/* Password Strength Indicator */}
               {passwordTouched && password.length > 0 && (
@@ -189,9 +203,11 @@ export default function SignupPage() {
                     className="mt-1 text-xs"
                     style={{ color: passwordStrength.color }}
                   >
-                    {passwordStrength.label}
-                    {passwordStrength.label === "Weak" &&
-                      " - Try adding uppercase, numbers, or symbols"}
+                    {passwordStrength.label === "Weak" && t('auth.passwordStrength.weak')}
+                    {passwordStrength.label === "Medium" && t('auth.passwordStrength.medium')}
+                    {passwordStrength.label === "Strong" && t('auth.passwordStrength.strong')}
+                    {passwordStrength.label === "Very Strong" && t('auth.passwordStrength.veryStrong')}
+                    {passwordStrength.label === "Weak" && ` ${t('auth.passwordHint')}`}
                   </p>
                 </div>
               )}
@@ -203,7 +219,7 @@ export default function SignupPage() {
                 htmlFor="confirmPassword"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-200"
               >
-                Confirm Password
+                {t('auth.confirmPassword')}
               </label>
               <input
                 id="confirmPassword"
@@ -215,15 +231,15 @@ export default function SignupPage() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 onFocus={() => setConfirmTouched(true)}
                 className="mt-2 w-full border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:text-gray-100"
-                placeholder="Re-enter your password"
+                placeholder={t('auth.confirmPassword')}
               />
               {confirmTouched && confirmPassword.length > 0 && !passwordsMatch && (
-                <p className="mt-1 text-xs text-red-600">Passwords do not match.</p>
+                <p className="mt-1 text-xs text-red-600">{t('auth.passwordMismatch')}</p>
               )}
               {confirmTouched &&
                 confirmPassword.length > 0 &&
                 passwordsMatch && (
-                  <p className="mt-1 text-xs text-green-600">Passwords match.</p>
+                  <p className="mt-1 text-xs text-green-600">{t('auth.passwordMatch')}</p>
                 )}
             </div>
 
@@ -235,10 +251,10 @@ export default function SignupPage() {
               {isLoading ? (
                 <span className="flex items-center gap-2">
                   <span className="inline-block h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                  Creating account...
+                  {t('auth.creatingAccount')}
                 </span>
               ) : (
-                "Create Account"
+                t('auth.createAccountBtn')
               )}
             </button>
           </form>
@@ -246,12 +262,12 @@ export default function SignupPage() {
           {/* Login Link */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Already have an account?{" "}
+              {t('auth.alreadyHaveAccount')}{" "}
               <Link
                 href="/login"
                 className="font-medium text-blue-600 hover:text-blue-500 hover:underline"
               >
-                Sign in
+                {t('auth.signInPrompt')}
               </Link>
             </p>
           </div>
@@ -259,16 +275,4 @@ export default function SignupPage() {
       </div>
     </div>
   );
-}
-
-function getFirebaseSignupError(code: string): string {
-  const messages: Record<string, string> = {
-    "auth/email-already-in-use":
-      "An account with this email already exists. Please sign in.",
-    "auth/invalid-email": "Invalid email format.",
-    "auth/weak-password": "Password is too weak. Use at least 6 characters.",
-    "auth/network-request-failed": "Network error. Please check your connection.",
-    "auth/too-many-requests": "Too many attempts. Please try again later.",
-  };
-  return messages[code] || "An unexpected error occurred. Please try again.";
 }

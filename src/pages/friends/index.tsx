@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useT } from '@/i18n/runtime';
 import axiosClient from '@/lib/apiClient';
 import { toast } from 'react-toastify';
 import {
@@ -65,6 +66,7 @@ type SearchTabResult = {
 };
 
 export default function FriendsPage() {
+  const { t } = useT();
   const [tab, setTab] = useState<TabId>('friends');
 
   // Friends (accepted)
@@ -110,8 +112,7 @@ export default function FriendsPage() {
       }));
       setFriends(list);
     } catch (e: any) {
-      // If 401 (no token/demo user), fall back gracefully.
-      toast.error("Couldn't load your friends.");
+      toast.error(t('common.error'));
     } finally {
       setFriendsLoading(false);
     }
@@ -132,7 +133,7 @@ export default function FriendsPage() {
       }));
       setRequests(mapped.filter((r: any) => r.status === 'pending'));
     } catch (e: any) {
-      toast.error("Couldn't load friend requests.");
+      toast.error(t('common.error'));
     } finally {
       setRequestsLoading(false);
     }
@@ -153,7 +154,7 @@ export default function FriendsPage() {
       }));
       setSent(mapped.filter((r: any) => r.status === 'pending'));
     } catch (e: any) {
-      toast.error("Couldn't load sent requests.");
+      toast.error(t('common.error'));
     } finally {
       setSentLoading(false);
     }
@@ -186,16 +187,12 @@ export default function FriendsPage() {
     loadSuggestions();
   };
 
-  // ----------------------------------------------------------------------
-  // Actions
-  // ----------------------------------------------------------------------
   const handleAdd = async (target: FriendCardModel) => {
     const uid = target.uid || target._id;
     setActionUid(uid);
     try {
       await axiosClient.post('/api/friends/request', { receiver: uid });
-      toast.success('Friend request sent.');
-      // Optimistic: move this result to "sent" state.
+      toast.success(t('common.addFriend'));
       setSent((prev) => [
         {
           _id: 'pending-' + uid,
@@ -216,27 +213,22 @@ export default function FriendsPage() {
       ]);
       loadSuggestions();
     } catch (e: any) {
-      const msg =
-        e?.response?.data?.error?.message ||
-        e?.response?.data?.message ||
-        "Couldn't send friend request.";
-      toast.error(msg);
+      toast.error(t('common.error'));
     } finally {
       setActionUid(null);
     }
   };
 
-const handleCancel = async (target: FriendCardModel) => {
+  const handleCancel = async (target: FriendCardModel) => {
     const uid = target.uid || target._id;
     setActionUid(uid);
     try {
       await axiosClient.post('/api/friends/cancel', { receiver: uid });
-      toast.success('Friend request cancelled.');
-      // Optimistically remove from sent.
+      toast.success(t('common.cancelRequest'));
       setSent((prev) => prev.filter((r) => r.receiverId !== uid && r.receiver?._id !== uid));
       loadSuggestions();
     } catch (e: any) {
-      toast.error("Couldn't cancel request.");
+      toast.error(t('common.error'));
     } finally {
       setActionUid(null);
     }
@@ -247,9 +239,8 @@ const handleCancel = async (target: FriendCardModel) => {
     setActionUid(uid);
     try {
       await axiosClient.post('/api/friends/accept', { sender: uid });
-      toast.success('Friend request accepted.');
+      toast.success(t('common.accept'));
       setRequests((prev) => prev.filter((r) => r.senderId !== uid && r.sender?._id !== uid));
-      // Find the request to add to friends.
       const req = requests.find((r) => r.senderId === uid || r.sender?._id === uid);
       const other = req?.sender;
       setFriends((prev) => [
@@ -265,7 +256,7 @@ const handleCancel = async (target: FriendCardModel) => {
         },
       ]);
     } catch (e: any) {
-      toast.error("Couldn't accept request.");
+      toast.error(t('common.error'));
     } finally {
       setActionUid(null);
     }
@@ -276,10 +267,10 @@ const handleCancel = async (target: FriendCardModel) => {
     setActionUid(uid);
     try {
       await axiosClient.post('/api/friends/reject', { sender: uid });
-      toast.success('Friend request rejected.');
+      toast.success(t('common.reject'));
       setRequests((prev) => prev.filter((r) => r.senderId !== uid && r.sender?._id !== uid));
     } catch (e: any) {
-      toast.error("Couldn't reject request.");
+      toast.error(t('common.error'));
     } finally {
       setActionUid(null);
     }
@@ -290,10 +281,10 @@ const handleCancel = async (target: FriendCardModel) => {
     setActionUid(uid);
     try {
       await axiosClient.delete('/api/friends/remove', { data: { friendId: uid } });
-      toast.success('Friend removed.');
+      toast.success(t('common.removeFriend'));
       setFriends((prev) => prev.filter((f) => f.friendId !== uid && f._id !== uid));
     } catch (e: any) {
-      toast.error("Couldn't remove friend.");
+      toast.error(t('common.error'));
     } finally {
       setActionUid(null);
     }
@@ -306,7 +297,6 @@ const handleCancel = async (target: FriendCardModel) => {
     const trimmed = nickname.trim();
     const nextNickname = trimmed.length ? trimmed : null;
 
-    // Optimistic
     setSelectedFriend((p) => (p ? { ...p, nickname: nextNickname } : p));
     setFriends((prev) =>
       prev.map((f) => (f.friendId === friendId ? { ...f, nickname: nextNickname } : f))
@@ -317,11 +307,10 @@ const handleCancel = async (target: FriendCardModel) => {
       await axiosClient.patch(`/api/friends/${encodeURIComponent(friendId)}/nickname`, {
         nickname: nextNickname,
       });
-      toast.success(nextNickname ? 'Nickname updated.' : 'Nickname removed.');
+      toast.success(nextNickname ? t('common.editNickname') : t('common.actionCompleted'));
       setIsNicknameModalOpen(false);
     } catch (e: any) {
-      toast.error("Couldn't update nickname.");
-      // rollback
+      toast.error(t('common.error'));
       setSelectedFriend((p) => (p ? { ...p, nickname: prevNickname } : p));
       setFriends((prev) =>
         prev.map((f) => (f.friendId === friendId ? { ...f, nickname: prevNickname } : f))
@@ -331,9 +320,6 @@ const handleCancel = async (target: FriendCardModel) => {
     }
   };
 
-  // ----------------------------------------------------------------------
-  // Memoized counts
-  // ----------------------------------------------------------------------
   const counts = useMemo(() => {
     const friendCount = friends.length;
     const requestCount = requests.length;
@@ -342,11 +328,11 @@ const handleCancel = async (target: FriendCardModel) => {
   }, [friends, requests, sent]);
 
   const tabs: { id: TabId; label: string; icon: React.ReactNode; count: number }[] = [
-    { id: 'friends', label: 'Friends', icon: <UserCheck size={16} />, count: counts.friendCount },
-    { id: 'requests', label: 'Requests', icon: <UserPlus size={16} />, count: counts.requestCount },
-    { id: 'sent', label: 'Sent', icon: <Users size={16} />, count: counts.sentCount },
-    { id: 'suggestions', label: 'Suggestions', icon: <UserIcon size={16} />, count: 0 },
-    { id: 'search', label: 'Search', icon: <Search size={16} />, count: 0 },
+    { id: 'friends', label: t('friends.friendsList'), icon: <UserCheck size={16} />, count: counts.friendCount },
+    { id: 'requests', label: t('friends.pendingRequests'), icon: <UserPlus size={16} />, count: counts.requestCount },
+    { id: 'sent', label: t('friends.recentRequests'), icon: <Users size={16} />, count: counts.sentCount },
+    { id: 'suggestions', label: t('friends.suggestions'), icon: <UserIcon size={16} />, count: 0 },
+    { id: 'search', label: t('friends.searchResults'), icon: <Search size={16} />, count: 0 },
   ];
 
   return (
@@ -355,15 +341,14 @@ const handleCancel = async (target: FriendCardModel) => {
         <div className="flex items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <Users className="text-blue-600" /> Friends & Connections
+              <Users className="text-blue-600" /> {t('friends.pageTitle')}
             </h1>
             <p className="text-gray-600 mt-1">
-              Manage your connections, requests, and suggestions.
+              {t('friends.pageDesc')}
             </p>
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="flex flex-wrap gap-2 mb-6 border-b border-gray-200 pb-2">
           {tabs.map((t) => (
             <button
@@ -388,12 +373,11 @@ const handleCancel = async (target: FriendCardModel) => {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm p-5">
-          {/* FRIENDS TAB */}
           {tab === 'friends' && (
             <div>
               <div className="flex items-center justify-between mb-4">
                 <div className="text-sm font-semibold text-gray-900">
-                  Your connections ({friends.length})
+                  {t('friends.connections', { values: { count: friends.length } })}
                 </div>
               </div>
 
@@ -412,9 +396,9 @@ const handleCancel = async (target: FriendCardModel) => {
               ) : friends.length === 0 ? (
                 <div className="py-10 text-center text-gray-500">
                   <UserX className="mx-auto mb-3 text-gray-300" size={40} />
-                  <div className="font-medium text-gray-700">No friends yet</div>
+                  <div className="font-medium text-gray-700">{t('friends.noResults')}</div>
                   <div className="text-sm mt-1">
-                    Ask people to connect or check the Search tab to find friends.
+                    {t('friends.searchHint')}
                   </div>
                 </div>
               ) : (
@@ -446,10 +430,9 @@ const handleCancel = async (target: FriendCardModel) => {
             </div>
           )}
 
-          {/* REQUESTS TAB */}
           {tab === 'requests' && (
             <div>
-              <div className="text-sm font-semibold text-gray-900 mb-4">Incoming requests</div>
+              <div className="text-sm font-semibold text-gray-900 mb-4">{t('friends.pendingRequests')}</div>
               {requestsLoading ? (
                 <div className="space-y-3">
                   {[1, 2, 3].map((i) => (
@@ -465,7 +448,7 @@ const handleCancel = async (target: FriendCardModel) => {
               ) : requests.length === 0 ? (
                 <div className="py-10 text-center text-gray-500">
                   <UserPlus className="mx-auto mb-3 text-gray-300" size={40} />
-                  No pending friend requests.
+                  {t('friends.noResults')}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -475,15 +458,15 @@ const handleCancel = async (target: FriendCardModel) => {
                       <div key={r._id} className="border rounded-lg p-3 flex items-center gap-3">
                         <img
                           src={sender?.photo || 'https://via.placeholder.com/48'}
-                          alt={sender?.name || 'User'}
+                          alt={sender?.name || t('friends.unknown')}
                           className="w-10 h-10 rounded-full object-cover"
                         />
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-semibold text-gray-900 truncate">
-                            {sender?.name || sender?.nickname || 'New user'}
+                            {sender?.name || sender?.nickname || t('friends.unknown')}
                           </div>
                           <div className="text-xs text-gray-500 truncate">
-                            {sender?.nickname ? `@${sender.nickname}` : ''} • sent a request
+                            {sender?.nickname ? `@${sender.nickname}` : ''} • {t('common.requested')}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -502,7 +485,7 @@ const handleCancel = async (target: FriendCardModel) => {
                             })}
                             className="px-3 py-1 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700 disabled:opacity-50"
                           >
-                            Accept
+                            {t('common.accept')}
                           </button>
                           <button
                             disabled={!!actionUid}
@@ -519,7 +502,7 @@ const handleCancel = async (target: FriendCardModel) => {
                             })}
                             className="px-3 py-1 rounded-lg bg-gray-100 text-gray-700 text-xs font-medium hover:bg-gray-200 disabled:opacity-50"
                           >
-                            Reject
+                            {t('common.reject')}
                           </button>
                         </div>
                       </div>
@@ -530,10 +513,9 @@ const handleCancel = async (target: FriendCardModel) => {
             </div>
           )}
 
-          {/* SENT TAB */}
           {tab === 'sent' && (
             <div>
-              <div className="text-sm font-semibold text-gray-900 mb-4">Sent requests</div>
+              <div className="text-sm font-semibold text-gray-900 mb-4">{t('friends.recentRequests')}</div>
               {sentLoading ? (
                 <div className="space-y-3">
                   {[1, 2, 3].map((i) => (
@@ -549,7 +531,7 @@ const handleCancel = async (target: FriendCardModel) => {
               ) : sent.length === 0 ? (
                 <div className="py-10 text-center text-gray-500">
                   <Users className="mx-auto mb-3 text-gray-300" size={40} />
-You haven&apos;t sent any friend requests yet.
+                  {t('friends.noResults')}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -559,14 +541,14 @@ You haven&apos;t sent any friend requests yet.
                       <div key={r._id} className="border rounded-lg p-3 flex items-center gap-3">
                         <img
                           src={recv?.photo || 'https://via.placeholder.com/48'}
-                          alt={recv?.name || 'User'}
+                          alt={recv?.name || t('friends.unknown')}
                           className="w-10 h-10 rounded-full object-cover"
                         />
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-semibold text-gray-900 truncate">
-                            {recv?.name || recv?.nickname || 'User'}
+                            {recv?.name || recv?.nickname || t('friends.unknown')}
                           </div>
-                          <div className="text-xs text-gray-500">Request pending</div>
+                          <div className="text-xs text-gray-500">{t('common.requested')}</div>
                         </div>
                         <button
                           disabled={!!actionUid}
@@ -583,7 +565,7 @@ You haven&apos;t sent any friend requests yet.
                           })}
                           className="px-3 py-1 rounded-lg bg-amber-50 text-amber-700 text-xs font-medium hover:bg-amber-100 disabled:opacity-50"
                         >
-                          Cancel
+                          {t('common.cancel')}
                         </button>
                       </div>
                     );
@@ -593,10 +575,9 @@ You haven&apos;t sent any friend requests yet.
             </div>
           )}
 
-          {/* SUGGESTIONS TAB */}
           {tab === 'suggestions' && (
             <div>
-              <div className="text-sm font-semibold text-gray-900 mb-4">People you may know</div>
+              <div className="text-sm font-semibold text-gray-900 mb-4">{t('common.suggestions')}</div>
               {suggestionsLoading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {[1, 2, 3, 4].map((i) => (
@@ -612,7 +593,7 @@ You haven&apos;t sent any friend requests yet.
               ) : suggestions.length === 0 ? (
                 <div className="py-10 text-center text-gray-500">
                   <UserIcon className="mx-auto mb-3 text-gray-300" size={40} />
-                  No suggestions right now.
+                  {t('common.suggestionsNone')}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -629,7 +610,6 @@ You haven&apos;t sent any friend requests yet.
             </div>
           )}
 
-          {/* SEARCH TAB */}
           {tab === 'search' && (
             <div>
               <FriendSearch
@@ -639,12 +619,12 @@ You haven&apos;t sent any friend requests yet.
               />
               {searchTab.q.trim().length === 0 ? (
                 <div className="py-10 text-center text-gray-500 text-sm">
-                  Search people by name or @nickname to connect.
+                  {t('friends.searchHint')}
                 </div>
               ) : searchTab.loading ? (
-                <div className="py-10 text-center text-gray-500">Searching...</div>
+                <div className="py-10 text-center text-gray-500">{t('friends.searching')}</div>
               ) : searchTab.results.length === 0 ? (
-                <div className="py-10 text-center text-gray-500">No results found.</div>
+                <div className="py-10 text-center text-gray-500">{t('friends.noResults')}</div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {searchTab.results.map((r) => (

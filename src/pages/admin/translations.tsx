@@ -1,13 +1,13 @@
 /**
  * Admin Translations Dashboard
- * 
+ *
  * Shows:
  * - Translation coverage per language
  * - Missing keys
  * - Duplicate keys
  * - Unused keys
  * - Export/Import JSON
- * 
+ *
  * Route: /admin/translations
  */
 
@@ -24,6 +24,7 @@ import {
   FileText,
   Percent,
 } from 'lucide-react';
+import { useT } from '@/i18n/runtime';
 
 // Types
 interface CoverageData {
@@ -38,6 +39,8 @@ interface CoverageData {
 type TabType = 'coverage' | 'missing' | 'duplicates' | 'unused';
 
 export default function AdminTranslationsPage() {
+  const { t } = useT();
+
   const [activeTab, setActiveTab] = useState<TabType>('coverage');
   const [coverageData, setCoverageData] = useState<CoverageData[]>([]);
   const [duplicates, setDuplicates] = useState<{ value: string; keys: string[] }[]>([]);
@@ -62,7 +65,6 @@ export default function AdminTranslationsPage() {
       }
     } catch (err) {
       console.error('Failed to load translation data:', err);
-      // Use mock data for demo
       setCoverageData([
         { lang: 'en', langLabel: 'English', totalKeys: 245, translatedKeys: 245, coveragePercent: 100, missingKeys: [] },
         { lang: 'hi', langLabel: 'हिन्दी', totalKeys: 245, translatedKeys: 182, coveragePercent: 74, missingKeys: ['home.slide4', 'chat.demoMode', 'dashboard.savedJobs'] },
@@ -87,7 +89,7 @@ export default function AdminTranslationsPage() {
   }, [coverageData, selectedLang]);
 
   const filteredMissing = useMemo(() => {
-    const allMissing = coverageData.flatMap(c => 
+    const allMissing = coverageData.flatMap(c =>
       c.missingKeys.map(k => ({ lang: c.lang, langLabel: c.langLabel, key: k }))
     );
     if (searchQuery) {
@@ -115,14 +117,10 @@ export default function AdminTranslationsPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <Languages className="text-blue-600" /> Translation Manager
+              <Languages className="text-blue-600" /> {t('admin.translations.title')}
             </h1>
             <p className="text-gray-600 mt-1">
-              Manage translations across {coverageData.length} languages. Coverage: {
-                coverageData.length > 0
-                  ? Math.round(coverageData.reduce((sum, c) => sum + c.coveragePercent, 0) / coverageData.length)
-                  : 0
-              }% average
+              {t('admin.translations.subtitle', { values: { count: String(coverageData.length) } })}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -130,7 +128,7 @@ export default function AdminTranslationsPage() {
               onClick={loadData}
               className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 text-sm flex items-center gap-2"
             >
-              <RefreshCw size={14} /> Refresh
+              <RefreshCw size={14} /> {t('common.refresh')}
             </button>
             <button
               onClick={() => {
@@ -144,7 +142,7 @@ export default function AdminTranslationsPage() {
               }}
               className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 text-sm flex items-center gap-2"
             >
-              <Download size={14} /> Export
+              <Download size={14} /> {t('common.download')}
             </button>
           </div>
         </div>
@@ -157,7 +155,7 @@ export default function AdminTranslationsPage() {
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search keys, values, or languages..."
+              placeholder={t('admin.translations.searchPlaceholder')}
               className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -166,7 +164,7 @@ export default function AdminTranslationsPage() {
             onChange={e => setSelectedLang(e.target.value)}
             className="px-3 py-2 border rounded-lg text-sm bg-white"
           >
-            <option value="all">All Languages</option>
+            <option value="all">{t('admin.translations.allLanguages')}</option>
             {coverageData.map(c => (
               <option key={c.lang} value={c.lang}>{c.langLabel}</option>
             ))}
@@ -176,10 +174,10 @@ export default function AdminTranslationsPage() {
         {/* Tabs */}
         <div className="flex gap-2 mb-6">
           {([
-            { id: 'coverage' as TabType, label: 'Coverage', icon: Percent },
-            { id: 'missing' as TabType, label: 'Missing Keys', icon: XCircle },
-            { id: 'duplicates' as TabType, label: 'Duplicates', icon: AlertTriangle },
-            { id: 'unused' as TabType, label: 'Unused Keys', icon: AlertTriangle },
+            { id: 'coverage' as TabType, label: t('admin.translations.tabCoverage'), icon: Percent },
+            { id: 'missing' as TabType, label: t('admin.translations.tabMissing'), icon: XCircle },
+            { id: 'duplicates' as TabType, label: t('admin.translations.tabDuplicates'), icon: AlertTriangle },
+            { id: 'unused' as TabType, label: t('admin.translations.tabUnused'), icon: AlertTriangle },
           ]).map(tab => (
             <button
               key={tab.id}
@@ -200,7 +198,7 @@ export default function AdminTranslationsPage() {
         {loading ? (
           <div className="bg-white rounded-xl shadow-sm p-8 text-center text-gray-500">
             <RefreshCw className="animate-spin mx-auto mb-2" size={24} />
-            Loading translation data...
+            {t('admin.translations.loading')}
           </div>
         ) : (
           <>
@@ -233,17 +231,17 @@ export default function AdminTranslationsPage() {
                       />
                     </div>
                     <div className="flex justify-between text-sm text-gray-600">
-                      <span>{c.translatedKeys} translated</span>
-                      <span>{c.totalKeys - c.translatedKeys} missing</span>
+                      <span>{t('admin.translations.translated', { values: { count: String(c.translatedKeys) } })}</span>
+                      <span>{t('admin.translations.missing', { values: { count: String(c.totalKeys - c.translatedKeys) } })}</span>
                     </div>
                     <div className="mt-3 text-xs text-gray-500">
                       {c.missingKeys.length > 0 ? (
                         <span className="text-red-600">
-                          {c.missingKeys.length} key(s) need translation
+                          {t('admin.translations.keysNeedTranslation', { values: { count: String(c.missingKeys.length) } })}
                         </span>
                       ) : (
                         <span className="text-green-600 flex items-center gap-1">
-                          <CheckCircle2 size={12} /> Complete
+                          <CheckCircle2 size={12} /> {t('admin.translations.complete')}
                         </span>
                       )}
                     </div>
@@ -256,10 +254,10 @@ export default function AdminTranslationsPage() {
             {activeTab === 'missing' && (
               <div className="bg-white rounded-xl shadow-sm p-5">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  Missing Keys ({filteredMissing.length})
+                  {t('admin.translations.missingKeys', { values: { count: String(filteredMissing.length) } })}
                 </h2>
                 {filteredMissing.length === 0 ? (
-                  <div className="text-gray-500 text-sm">No missing keys found.</div>
+                  <div className="text-gray-500 text-sm">{t('admin.translations.noMissingKeys')}</div>
                 ) : (
                   <div className="space-y-2">
                     {filteredMissing.slice(0, 100).map((m, i) => (
@@ -280,10 +278,10 @@ export default function AdminTranslationsPage() {
             {activeTab === 'duplicates' && (
               <div className="bg-white rounded-xl shadow-sm p-5">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  Duplicate Values ({filteredDuplicates.length})
+                  {t('admin.translations.duplicateValues', { values: { count: String(filteredDuplicates.length) } })}
                 </h2>
                 {filteredDuplicates.length === 0 ? (
-                  <div className="text-gray-500 text-sm">No duplicates found.</div>
+                  <div className="text-gray-500 text-sm">{t('admin.translations.noDuplicates')}</div>
                 ) : (
                   <div className="space-y-3">
                     {filteredDuplicates.map((d, i) => (
@@ -308,10 +306,10 @@ export default function AdminTranslationsPage() {
             {activeTab === 'unused' && (
               <div className="bg-white rounded-xl shadow-sm p-5">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  Unused Keys ({unusedKeys.length})
+                  {t('admin.translations.unusedKeys', { values: { count: String(unusedKeys.length) } })}
                 </h2>
                 {unusedKeys.length === 0 ? (
-                  <div className="text-gray-500 text-sm">No unused keys found.</div>
+                  <div className="text-gray-500 text-sm">{t('admin.translations.noUnusedKeys')}</div>
                 ) : (
                   <div className="space-y-2">
                     {unusedKeys.map((key, i) => (
@@ -330,4 +328,3 @@ export default function AdminTranslationsPage() {
     </div>
   );
 }
-

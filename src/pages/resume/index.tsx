@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useT } from '@/i18n/runtime';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import axiosClient from '@/lib/apiClient';
@@ -42,6 +43,7 @@ type ResumeItem = {
 };
 
 export default function ResumeHome() {
+  const { t } = useT();
   const router = useRouter();
   const [resumes, setResumes] = useState<ResumeItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,7 +57,7 @@ export default function ResumeHome() {
       const res = await axiosClient.get('/api/resume/my-resumes');
       setResumes(res?.data?.data || []);
     } catch (e: any) {
-      setError(e?.response?.data?.error?.message || e?.message || 'Failed to load resumes.');
+      setError(t('common.error'));
     } finally {
       setLoading(false);
     }
@@ -72,19 +74,19 @@ export default function ResumeHome() {
       toast.success(successMsg);
       await loadResumes();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message || e?.response?.data?.message || 'Action failed.');
+      toast.error(t('common.actionFailed'));
     } finally {
       setActionId(null);
     }
   }
 
   async function handleDelete(r: ResumeItem) {
-    if (!window.confirm('Delete this resume?')) return;
-    await runAction(r._id, () => axiosClient.delete(`/api/resume/${r._id}`), 'Resume deleted.');
+    if (!window.confirm(t('common.confirmDelete'))) return;
+    await runAction(r._id, () => axiosClient.delete(`/api/resume/${r._id}`), t('common.resumeDeleted'));
   }
 
   async function handleDuplicate(r: ResumeItem) {
-    await runAction(r._id, () => axiosClient.post(`/api/resume/${r._id}/duplicate`), 'Resume duplicated.');
+    await runAction(r._id, () => axiosClient.post(`/api/resume/${r._id}/duplicate`), t('common.resumeDuplicated'));
   }
 
   async function handleToggleVisibility(r: ResumeItem) {
@@ -92,7 +94,7 @@ export default function ResumeHome() {
     await runAction(
       r._id,
       () => axiosClient.patch(`/api/resume/${r._id}/visibility`, { visibility: next }),
-      next === 'public' ? 'Resume is now public.' : 'Resume is now private.'
+      next === 'public' ? t('common.resumeNowPublic') : t('common.resumeNowPrivate')
     );
   }
 
@@ -111,9 +113,9 @@ export default function ResumeHome() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success('Downloading resume...');
+      toast.success(t('common.downloadingResume'));
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message || 'Failed to download resume.');
+      toast.error(t('common.error'));
     } finally {
       setActionId(null);
     }
@@ -121,13 +123,13 @@ export default function ResumeHome() {
 
   async function handleShare(r: ResumeItem) {
     if (r.visibility !== 'public') {
-      toast.info('Set resume to public first to share.');
+      toast.info(t('common.setResumePublicFirst'));
       return;
     }
     const url = `${window.location.origin}/resume/preview/${r._id}`;
     try {
       await navigator.clipboard.writeText(url);
-      toast.success('Share link copied to clipboard.');
+      toast.success(t('common.shareLinkCopied'));
     } catch {
       toast.info(url);
     }
@@ -140,17 +142,17 @@ export default function ResumeHome() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b pb-5">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <FileText className="text-blue-600" /> My Resumes
+                <FileText className="text-blue-600" /> {t('resume.homeTitle')}
               </h1>
               <p className="text-gray-600 mt-1">
-                Create, manage, and share professional resumes.
+                {t('resume.homeSubtitle')}
               </p>
             </div>
             <Link
               href="/resume/create"
               className="inline-flex items-center gap-2 px-5 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition"
             >
-              <Plus size={18} /> Create Resume
+              <Plus size={18} /> {t('resume.createResume')}
             </Link>
           </div>
 
@@ -163,26 +165,26 @@ export default function ResumeHome() {
           {loading ? (
             <div className="py-16 flex flex-col items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-              <div className="mt-3 text-gray-600">Loading resumes...</div>
+              <div className="mt-3 text-gray-600">{t('common.loading')}</div>
             </div>
           ) : resumes.length === 0 ? (
             <div className="py-16 text-center">
               <FilePlus2 className="h-14 w-14 text-gray-300 mx-auto" />
-              <div className="mt-4 text-lg font-semibold text-gray-900">No resumes yet</div>
+              <div className="mt-4 text-lg font-semibold text-gray-900">{t('common.noResumes')}</div>
               <p className="text-gray-600 mt-1">
-                Create your first professional resume and get it generated as a PDF.
+                {t('common.createYourFirstResume')}
               </p>
               <Link
                 href="/resume/create"
                 className="inline-flex items-center gap-2 mt-6 px-5 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700"
               >
-                <Plus size={18} /> Create Your First Resume
+                <Plus size={18} /> {t('common.createFirstResume')}
               </Link>
             </div>
           ) : (
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
               {resumes.map((r) => {
-                const name = r.resumeData?.fullName || 'Untitled Resume';
+                const name = r.resumeData?.fullName || t('common.untitledResume');
                 const isPublic = r.visibility === 'public';
                 return (
                   <div key={r._id} className="border rounded-xl p-4 flex flex-col">
@@ -190,22 +192,22 @@ export default function ResumeHome() {
                       <div className="min-w-0">
                         <div className="font-semibold text-gray-900 truncate">{name}</div>
                         <div className="text-xs text-gray-500 mt-1">
-                          {r.status || 'Draft'} · {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : 'Recently'}
+                          {(r.status ? t(`status.${r.status}`) : t('common.draft')) || t('common.recently')} • {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : t('common.recently')}
                         </div>
                         <div className="mt-2 inline-flex items-center gap-1 text-xs font-medium">
                           {isPublic ? (
                             <span className="inline-flex items-center gap-1 text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
-                              <Globe size={12} /> Public
+                              <Globe size={12} /> {t('common.makePublic')}
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">
-                              <Lock size={12} /> Private
+                              <Lock size={12} /> {t('common.makePrivate')}
                             </span>
                           )}
                         </div>
                       </div>
                       {r.photoUrl && (
-                        <img src={r.photoUrl} alt="resume" className="w-12 h-12 rounded-lg object-cover border" />
+                        <img src={r.photoUrl} alt={t('resume.homeTitle')} className="w-12 h-12 rounded-lg object-cover border" />
                       )}
                     </div>
 
@@ -214,7 +216,7 @@ export default function ResumeHome() {
                         href={`/resume/preview/${r._id}`}
                         className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
                       >
-                        <Eye size={14} /> Preview
+                        <Eye size={14} /> {t('common.preview')}
                       </Link>
                       <button
                         type="button"
@@ -222,14 +224,14 @@ export default function ResumeHome() {
                         disabled={actionId === r._id}
                         className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 disabled:opacity-50"
                       >
-                        <Download size={14} /> Download
+                        <Download size={14} /> {t('common.download')}
                       </button>
                       <button
                         type="button"
                         onClick={() => router.push(`/resume/create`)}
                         className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
                       >
-                        <Pencil size={14} /> Edit
+                        <Pencil size={14} /> {t('common.edit')}
                       </button>
                       <button
                         type="button"
@@ -237,14 +239,14 @@ export default function ResumeHome() {
                         disabled={actionId === r._id}
                         className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50"
                       >
-                        <Copy size={14} /> Duplicate
+                        <Copy size={14} /> {t('common.duplicate')}
                       </button>
                       <button
                         type="button"
                         onClick={() => handleShare(r)}
                         className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
                       >
-                        <Share2 size={14} /> Share
+                        <Share2 size={14} /> {t('common.share')}
                       </button>
                       <button
                         type="button"
@@ -252,7 +254,7 @@ export default function ResumeHome() {
                         disabled={actionId === r._id}
                         className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 disabled:opacity-50"
                       >
-                        {isPublic ? <Lock size={14} /> : <Globe size={14} />} {isPublic ? 'Make Private' : 'Make Public'}
+                        {isPublic ? <Lock size={14} /> : <Globe size={14} />} {isPublic ? t('common.makePrivate') : t('common.makePublic')}
                       </button>
                       <button
                         type="button"
@@ -260,7 +262,7 @@ export default function ResumeHome() {
                         disabled={actionId === r._id}
                         className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-red-50 text-red-700 rounded-lg hover:bg-red-100 disabled:opacity-50"
                       >
-                        {actionId === r._id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} Delete
+                        {actionId === r._id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} {t('common.delete')}
                       </button>
                     </div>
                   </div>

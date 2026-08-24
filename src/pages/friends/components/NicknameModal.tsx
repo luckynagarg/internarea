@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useT } from '@/i18n/runtime';
 
 type FriendLike = {
   _id: string;
@@ -15,6 +16,7 @@ type Props = {
 };
 
 export default function NicknameModal({ open, friend, onClose, onSave, saving }: Props) {
+  const { t } = useT();
   const [value, setValue] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
 
@@ -37,12 +39,12 @@ export default function NicknameModal({ open, friend, onClose, onSave, saving }:
       />
 
       <div className="relative bg-white rounded-2xl shadow-xl w-[90%] max-w-md p-5">
-        <div className="text-lg font-semibold text-gray-900 mb-3">Nickname</div>
+        <div className="text-lg font-semibold text-gray-900 mb-3">{t('common.editNickname')}</div>
 
         <input
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="Enter a nickname"
+          placeholder={t('common.editNickname')}
           className="w-full border rounded-lg px-3 py-2 text-sm text-black"
           maxLength={50}
         />
@@ -56,7 +58,7 @@ export default function NicknameModal({ open, friend, onClose, onSave, saving }:
             onClick={() => onClose()}
             disabled={!!saving}
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="button"
@@ -66,22 +68,21 @@ export default function NicknameModal({ open, friend, onClose, onSave, saving }:
               try {
                 const next = value.trim();
                 if (next.length > 50) {
-                  setLocalError("Nickname must be 50 characters or less.");
+                  setLocalError(t('common.error'));
                   return;
                 }
                 await onSave(next);
                 onClose();
               } catch (e: any) {
-                setLocalError(e?.message || "Failed to save nickname");
+                setLocalError(e?.message || t('common.error'));
               }
             }}
             disabled={!!saving}
           >
-            Save
+            {t('common.save')}
           </button>
         </div>
       </div>
     </div>
   );
 }
-

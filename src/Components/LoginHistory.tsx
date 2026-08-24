@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axiosClient from "@/lib/apiClient";
+import { useT } from "@/i18n/runtime";
 
 type LoginHistoryItem = {
   loginTime: string;
@@ -39,6 +40,7 @@ export default function LoginHistory() {
   const [pageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [error, setError] = useState<string>("");
+  const { t } = useT();
 
   useEffect(() => {
     let mounted = true;
@@ -59,7 +61,7 @@ export default function LoginHistory() {
         setTotalPages(pagination?.totalPages || 1);
       } catch (e: any) {
         if (!mounted) return;
-        setError(e?.message || "Failed to load login history");
+        setError(t('errors.generic'));
         setItems([]);
       } finally {
         if (mounted) setLoading(false);
@@ -86,25 +88,25 @@ export default function LoginHistory() {
         </div>
       ) : items.length === 0 ? (
         <div className="py-10 text-center text-gray-500">
-          No login attempts found.
+          {t('loginHistory.noData')}
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-[900px] w-full text-sm">
             <thead>
               <tr className="text-left text-gray-600 border-b">
-                <th className="py-3 pr-3">Login Time</th>
-                <th className="py-3 pr-3">Browser</th>
-                <th className="py-3 pr-3">Browser Version</th>
-                <th className="py-3 pr-3">OS</th>
-                <th className="py-3 pr-3">Device</th>
-                <th className="py-3 pr-3">IP</th>
-                <th className="py-3 pr-3">Country</th>
-                <th className="py-3 pr-3">City</th>
-                <th className="py-3 pr-3">Login Method</th>
-                <th className="py-3 pr-3">OTP Verified</th>
-                <th className="py-3 pr-3">Status</th>
-                <th className="py-3 pr-3">Failure Reason</th>
+                <th className="py-3 pr-3">{t('loginHistory.table.loginTime')}</th>
+                <th className="py-3 pr-3">{t('loginHistory.table.browser')}</th>
+                <th className="py-3 pr-3">{t('loginHistory.table.browserVersion')}</th>
+                <th className="py-3 pr-3">{t('loginHistory.table.os')}</th>
+                <th className="py-3 pr-3">{t('loginHistory.table.device')}</th>
+                <th className="py-3 pr-3">{t('loginHistory.table.ip')}</th>
+                <th className="py-3 pr-3">{t('loginHistory.table.country')}</th>
+                <th className="py-3 pr-3">{t('loginHistory.table.city')}</th>
+                <th className="py-3 pr-3">{t('loginHistory.table.loginMethod')}</th>
+                <th className="py-3 pr-3">{t('loginHistory.table.otpVerified')}</th>
+                <th className="py-3 pr-3">{t('loginHistory.table.status')}</th>
+                <th className="py-3 pr-3">{t('loginHistory.table.failureReason')}</th>
               </tr>
             </thead>
             <tbody>
@@ -122,7 +124,7 @@ export default function LoginHistory() {
                   <td className="py-3 pr-3">{x.country}</td>
                   <td className="py-3 pr-3">{x.city}</td>
                   <td className="py-3 pr-3">{x.loginMethod}</td>
-                  <td className="py-3 pr-3">{x.otpVerified ? "Yes" : "No"}</td>
+                  <td className="py-3 pr-3">{x.otpVerified ? t('loginHistory.yes') : t('loginHistory.no')}</td>
                   <td className="py-3 pr-3">{x.status}</td>
                   <td className="py-3 pr-3">{x.failureReason}</td>
                 </tr>
@@ -139,11 +141,11 @@ export default function LoginHistory() {
           disabled={page <= 1 || loading}
           onClick={() => setPage((p) => Math.max(1, p - 1))}
         >
-          Prev
+          {t('loginHistory.pagination.prev')}
         </button>
 
         <div className="text-sm text-gray-600">
-          Page {page} of {totalPages}
+          {t('loginHistory.pagination.pageOf', { values: { page, total: totalPages } })}
         </div>
 
         <button
@@ -151,7 +153,7 @@ export default function LoginHistory() {
           disabled={page >= totalPages || loading}
           onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
         >
-          Next
+          {t('loginHistory.pagination.next')}
         </button>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useT } from '@/i18n/runtime';
 import { useRouter } from 'next/router';
 import axiosClient from '@/lib/apiClient';
 import { Loader2, AlertCircle, ArrowLeft, Download } from 'lucide-react';
@@ -18,6 +19,7 @@ type ResumeData = {
 };
 
 export default function ResumePreviewPage() {
+  const { t } = useT();
   const router = useRouter();
   const { id } = router.query;
   const resumeId = typeof id === 'string' ? id : null;
@@ -38,7 +40,7 @@ export default function ResumePreviewPage() {
         setResume(res?.data?.data);
       } catch (e: any) {
         if (!mounted) return;
-        setError(e?.response?.data?.error?.message || e?.response?.data?.message || 'Resume not found or not public.');
+        setError(t('common.error'));
       } finally {
         if (mounted) setLoading(false);
       }
@@ -48,7 +50,7 @@ export default function ResumePreviewPage() {
     };
   }, [resumeId]);
 
-async function handleDownload() {
+  async function handleDownload() {
     if (!resume?._id) return;
     try {
       const res = await axiosClient.get(`/api/resume/resumes/${resume._id}/download`, {
@@ -64,7 +66,7 @@ async function handleDownload() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (e: any) {
-      setError(e?.message || 'Failed to download resume.');
+      setError(t('common.error'));
     }
   }
 
@@ -75,7 +77,7 @@ async function handleDownload() {
       <div className="max-w-3xl mx-auto px-4">
         <div className="mb-4 flex items-center justify-between">
           <Link href="/resume" className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900">
-            <ArrowLeft size={18} /> Back
+            <ArrowLeft size={18} /> {t('common.back')}
           </Link>
           {resume?._id && (
             <button
@@ -83,7 +85,7 @@ async function handleDownload() {
               onClick={handleDownload}
               className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              <Download size={16} /> Download
+              <Download size={16} /> {t('common.download')}
             </button>
           )}
         </div>
@@ -91,7 +93,7 @@ async function handleDownload() {
         {loading && (
           <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
             <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto" />
-            <div className="mt-3 text-gray-600">Loading resume...</div>
+            <div className="mt-3 text-gray-600">{t('common.loading')}</div>
           </div>
         )}
 
@@ -108,7 +110,7 @@ async function handleDownload() {
             <div className="p-8">
               <div className="flex items-start justify-between gap-6">
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900">{d.fullName || 'Untitled Resume'}</h1>
+                  <h1 className="text-3xl font-bold text-gray-900">{d.fullName || t('common.untitledResume')}</h1>
                   <div className="mt-2 space-y-1 text-sm text-gray-600">
                     {d.personalInfo?.email && <div>{d.personalInfo.email}</div>}
                     {d.personalInfo?.phone && <div>{d.personalInfo.phone}</div>}
@@ -118,18 +120,18 @@ async function handleDownload() {
                   </div>
                 </div>
                 {resume.photoUrl && (
-                  <img src={resume.photoUrl} alt="resume" className="w-24 h-24 rounded-lg object-cover border" />
+                  <img src={resume.photoUrl} alt={t('common.view')} className="w-24 h-24 rounded-lg object-cover border" />
                 )}
               </div>
 
               <div className="mt-8">
-                <h2 className="text-sm font-semibold text-blue-700 uppercase tracking-wide">Qualifications</h2>
-                <div className="mt-2 text-gray-800 whitespace-pre-wrap">{d.qualifications || 'Not provided.'}</div>
+                <h2 className="text-sm font-semibold text-blue-700 uppercase tracking-wide">{t('resume.qualifications')}</h2>
+                <div className="mt-2 text-gray-800 whitespace-pre-wrap">{d.qualifications || t('common.notProvided')}</div>
               </div>
 
               <div className="mt-8">
-                <h2 className="text-sm font-semibold text-blue-700 uppercase tracking-wide">Experience</h2>
-                <div className="mt-2 text-gray-800 whitespace-pre-wrap">{d.experience || 'Not provided.'}</div>
+                <h2 className="text-sm font-semibold text-blue-700 uppercase tracking-wide">{t('resume.experience')}</h2>
+                <div className="mt-2 text-gray-800 whitespace-pre-wrap">{d.experience || t('common.notProvided')}</div>
               </div>
             </div>
           </div>

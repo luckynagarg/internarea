@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import axiosClient from '@/lib/apiClient';
 import { API_URL } from '@/config/api';
+import { useT } from '@/i18n/runtime';
 
 type PaymentRecord = {
   razorpayOrderId: string;
@@ -42,6 +43,7 @@ type QuotaResponse = {
 export default function PaymentSuccessPage() {
   const router = useRouter();
   const { order_id, payment_id, plan } = router.query;
+  const { t } = useT();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +54,7 @@ export default function PaymentSuccessPage() {
     if (!router.isReady) return;
     if (!order_id) {
       setLoading(false);
-      setError('Missing order details. Please check your email for confirmation.');
+      setError(t('errors.generic'));
       return;
     }
 
@@ -70,8 +72,8 @@ export default function PaymentSuccessPage() {
 
       if (!payRes && !quotaRes) {
         const msg = results[0].status === 'rejected'
-          ? results[0].reason?.response?.data?.error?.message || results[0].reason?.message || 'Could not verify payment.'
-          : 'Could not load subscription details.';
+          ? results[0].reason?.response?.data?.error?.message || results[0].reason?.message || t('errors.generic')
+          : t('errors.generic');
         setError(msg);
         setLoading(false);
         return;
@@ -92,7 +94,7 @@ export default function PaymentSuccessPage() {
   const isFailed = payment?.status === 'failed';
   const isPending = payment?.status === 'created';
   const isCancelled = payment?.status === 'cancelled';
-  const statusLabel = isVerified ? 'Verified' : isFailed ? 'Failed' : isPending ? 'Pending' : isCancelled ? 'Cancelled' : payment?.status || 'Unknown';
+  const statusLabel = isVerified ? t('status.verified') : isFailed ? t('status.failed') : isPending ? t('status.pending') : isCancelled ? t('status.cancelled') : payment?.status || t('common.nA');
 
   if (!loading && !error && !payment) {
     return (
@@ -100,14 +102,14 @@ export default function PaymentSuccessPage() {
         <div className="max-w-2xl w-full mx-4">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center">
             <AlertTriangle className="h-10 w-10 text-amber-600 mx-auto" />
-            <h2 className="text-lg font-semibold text-gray-900 mt-4">Payment Confirmation Pending</h2>
-            <p className="text-gray-600 mt-2 text-sm">We could not retrieve payment details. Please check your email for confirmation or contact support.</p>
+            <h2 className="text-lg font-semibold text-gray-900 mt-4">{t('subscription.paymentConfirmationPending')}</h2>
+            <p className="text-gray-600 mt-2 text-sm">{t('payment.pendingDesc')}</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
               <Link href="/subscription" className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
-                Go to Subscription
+                {t('subscription.goToSubscription')}
               </Link>
               <Link href="/dashboard" className="px-5 py-2.5 border rounded-lg hover:bg-gray-50 text-sm font-medium">
-                Go to Dashboard
+                {t('common.backToDashboard')}
               </Link>
             </div>
           </div>
@@ -122,40 +124,40 @@ export default function PaymentSuccessPage() {
         {loading ? (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center">
             <Loader2 className="h-10 w-10 animate-spin text-blue-600 mx-auto" />
-            <h2 className="text-lg font-semibold text-gray-900 mt-4">Verifying Payment...</h2>
-            <p className="text-gray-600 mt-2 text-sm">Please wait while we confirm your payment and activate your plan.</p>
+            <h2 className="text-lg font-semibold text-gray-900 mt-4">{t('payment.verifyingPayment')}</h2>
+            <p className="text-gray-600 mt-2 text-sm">{t('payment.verifyingDesc')}</p>
           </div>
         ) : isFailed ? (
           <div className="bg-white rounded-2xl shadow-sm border border-red-100 p-10 text-center">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-50">
               <AlertTriangle className="h-6 w-6 text-red-600" aria-hidden="true" />
             </div>
-            <h2 className="text-lg font-semibold text-gray-900 mt-4">Payment Failed</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mt-4">{t('payment.failed')}</h2>
             <p className="text-gray-600 mt-2 text-sm">
-              {payment?.failureReason || 'We could not verify your payment. No amount has been charged.'}
+              {payment?.failureReason || t('payment.failedDesc')}
             </p>
             <div className="mt-4 bg-gray-50 rounded-lg p-4 text-left text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-500">Order ID</span>
+                <span className="text-gray-500">{t('payment.orderId')}</span>
                 <span className="font-mono text-gray-900">{payment?.razorpayOrderId}</span>
               </div>
               {payment?.razorpayPaymentId && (
                 <div className="flex justify-between mt-2">
-                  <span className="text-gray-500">Payment ID</span>
+                  <span className="text-gray-500">{t('payment.paymentId')}</span>
                   <span className="font-mono text-gray-900">{payment.razorpayPaymentId}</span>
                 </div>
               )}
               <div className="flex justify-between mt-2">
-                <span className="text-gray-500">Plan</span>
+                <span className="text-gray-500">{t('subscription.plan')}</span>
                 <span className="font-semibold text-gray-900">{plan ? String(plan).toUpperCase() : payment?.planKey?.toUpperCase() || '—'}</span>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
               <Link href="/subscription" className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
-                <RefreshCcw size={16} /> Retry Payment
+                <RefreshCcw size={16} /> {t('payment.retryPayment')}
               </Link>
               <Link href="/dashboard" className="px-5 py-2.5 border rounded-lg hover:bg-gray-50 text-sm font-medium">
-                Go to Dashboard
+                {t('common.backToDashboard')}
               </Link>
             </div>
           </div>
@@ -164,24 +166,24 @@ export default function PaymentSuccessPage() {
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
               <XCircle className="h-6 w-6 text-gray-600" aria-hidden="true" />
             </div>
-            <h2 className="text-lg font-semibold text-gray-900 mt-4">Payment Cancelled</h2>
-            <p className="text-gray-600 mt-2 text-sm">This payment was cancelled. No amount was charged.</p>
+            <h2 className="text-lg font-semibold text-gray-900 mt-4">{t('payment.cancelled')}</h2>
+            <p className="text-gray-600 mt-2 text-sm">{t('payment.cancelledDesc')}</p>
             <div className="mt-4 bg-gray-50 rounded-lg p-4 text-left text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-500">Order ID</span>
+                <span className="text-gray-500">{t('payment.orderId')}</span>
                 <span className="font-mono text-gray-900">{payment?.razorpayOrderId}</span>
               </div>
               <div className="flex justify-between mt-2">
-                <span className="text-gray-500">Plan</span>
+                <span className="text-gray-500">{t('subscription.plan')}</span>
                 <span className="font-semibold text-gray-900">{plan ? String(plan).toUpperCase() : payment?.planKey?.toUpperCase() || '—'}</span>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
               <Link href="/subscription" className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
-                <RefreshCcw size={16} /> Retry Payment
+                <RefreshCcw size={16} /> {t('payment.retryPayment')}
               </Link>
               <Link href="/dashboard" className="px-5 py-2.5 border rounded-lg hover:bg-gray-50 text-sm font-medium">
-                Go to Dashboard
+                {t('common.backToDashboard')}
               </Link>
             </div>
           </div>
@@ -190,17 +192,17 @@ export default function PaymentSuccessPage() {
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-50">
               <Loader2 className="h-6 w-6 text-amber-600 animate-spin" aria-hidden="true" />
             </div>
-            <h2 className="text-lg font-semibold text-gray-900 mt-4">Payment Pending</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mt-4">{t('payment.pending')}</h2>
             <p className="text-gray-600 mt-2 text-sm">
-              Your payment is being processed. We will update your plan once verification is complete.
+              {t('payment.pendingDesc')}
             </p>
             <div className="mt-4 bg-gray-50 rounded-lg p-4 text-left text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-500">Order ID</span>
+                <span className="text-gray-500">{t('payment.orderId')}</span>
                 <span className="font-mono text-gray-900">{payment?.razorpayOrderId}</span>
               </div>
               <div className="flex justify-between mt-2">
-                <span className="text-gray-500">Plan</span>
+                <span className="text-gray-500">{t('subscription.plan')}</span>
                 <span className="font-semibold text-gray-900">{plan ? String(plan).toUpperCase() : payment?.planKey?.toUpperCase() || '—'}</span>
               </div>
             </div>
@@ -210,10 +212,10 @@ export default function PaymentSuccessPage() {
                 onClick={() => router.reload()}
                 className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
               >
-                Refresh Status
+                {t('payment.refreshStatus')}
               </button>
               <Link href="/subscription" className="px-5 py-2.5 border rounded-lg hover:bg-gray-50 text-sm font-medium">
-                Back to Subscription
+                {t('payment.backToSubscription')}
               </Link>
             </div>
           </div>
@@ -222,30 +224,30 @@ export default function PaymentSuccessPage() {
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-50">
               <CheckCircle className="h-6 w-6 text-green-600" aria-hidden="true" />
             </div>
-            <h2 className="text-lg font-semibold text-gray-900 mt-4">Payment Successful</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mt-4">{t('payment.success')}</h2>
             <p className="text-gray-600 mt-2 text-sm">
-              Your {plan ? String(plan) : payment?.planKey || ''} subscription has been activated.
+              {t('payment.successDesc', { values: { plan: plan ? String(plan) : payment?.planKey || '' } })}
             </p>
 
             <div className="mt-6 bg-gray-50 rounded-lg p-5 text-left text-sm space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-gray-500 flex items-center gap-2">
-                  <CreditCard size={14} /> Payment ID
+                  <CreditCard size={14} /> {t('payment.paymentId')}
                 </span>
                 <span className="font-mono text-gray-900">{payment?.razorpayPaymentId || '—'}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-500 flex items-center gap-2">
-                  <FileText size={14} /> Order ID
+                  <FileText size={14} /> {t('payment.orderId')}
                 </span>
                 <span className="font-mono text-gray-900">{payment?.razorpayOrderId || '—'}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-500">Amount Paid</span>
+                <span className="text-gray-500">{t('payment.amountPaid')}</span>
                 <span className="font-semibold text-gray-900">₹{payment?.amount ?? '—'}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-500">Status</span>
+                <span className="text-gray-500">{t('payment.status')}</span>
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
                   {statusLabel}
                 </span>
@@ -254,13 +256,13 @@ export default function PaymentSuccessPage() {
                 <>
                   <div className="flex items-center justify-between">
                     <span className="text-gray-500 flex items-center gap-2">
-                      <CalendarDays size={14} /> Start Date
+                      <CalendarDays size={14} /> {t('subscription.startDate')}
                     </span>
                     <span className="text-gray-900">{new Date(quota.subscriptionStart).toDateString()}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-gray-500 flex items-center gap-2">
-                      <CalendarDays size={14} /> Renewal Date
+                      <CalendarDays size={14} /> {t('subscription.renewalDate')}
                     </span>
                     <span className="text-gray-900">{new Date(quota.subscriptionExpiry).toDateString()}</span>
                   </div>
@@ -268,7 +270,7 @@ export default function PaymentSuccessPage() {
               )}
               {payment?.invoiceNumber && (
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-500">Invoice</span>
+                  <span className="text-gray-500">{t('payment.invoice')}</span>
                   <a
                     href={API_URL(`/api/subscription/invoices/${encodeURIComponent(payment.invoiceNumber)}/download`)}
                     target="_blank"
@@ -283,10 +285,10 @@ export default function PaymentSuccessPage() {
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
               <Link href="/subscription" className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
-                Manage Subscription <ArrowRight size={16} />
+                {t('payment.manageSubscription')} <ArrowRight size={16} />
               </Link>
               <Link href="/dashboard" className="px-5 py-2.5 border rounded-lg hover:bg-gray-50 text-sm font-medium">
-                Go to Dashboard
+                {t('common.backToDashboard')}
               </Link>
             </div>
           </div>

@@ -16,6 +16,7 @@ import { getFrenchOtpStatus } from "@/Feature/frenchOtp";
 
 function GlobalSearchBox() {
   const router = useRouter();
+  const { t } = useT();
   const [term, setTerm] = React.useState("");
   const { loading, error, suggestions } = useGlobalSearchSuggestions(term);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -39,7 +40,7 @@ function GlobalSearchBox() {
         ref={inputRef}
         type="text"
         value={term}
-        placeholder="Search opportunities..."
+        placeholder={t('navbar.searchPlaceholder')}
         className="ml-2 bg-transparent focus:outline-none text-sm w-56 text-foreground placeholder:text-muted-foreground"
         onChange={(e) => {
           setTerm(e.target.value);
@@ -57,10 +58,10 @@ function GlobalSearchBox() {
       {showDropdown ? (
         <div className="absolute left-0 top-10 z-50 w-72 bg-popover text-popover-foreground border border-border rounded-lg shadow-lg overflow-hidden">
           <div className="px-3 py-2 text-xs text-muted-foreground">
-            {loading ? "Searching\u2026" : "Suggestions"}
+            {loading ? t('common.searching') : t('common.suggestions')}
           </div>
           {suggestions.length === 0 && !loading ? (
-            <div className="px-3 py-3 text-sm text-muted-foreground">No results</div>
+            <div className="px-3 py-3 text-sm text-muted-foreground">{t('common.noResults')}</div>
           ) : null}
           <ul>
             {suggestions.map((s) => (
@@ -86,7 +87,7 @@ function GlobalSearchBox() {
 }
 
 const Navbar = () => {
-const user = useSelector(selectuser);
+  const user = useSelector(selectuser);
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const { t, lang, setLang } = useT();
@@ -132,12 +133,12 @@ const user = useSelector(selectuser);
     };
   }, [user?.uid]);
 
-// Intercept language selection. French requires OTP verification first.
+  // Intercept language selection. French requires OTP verification first.
   const handleSelectLang = async (l: SupportedLang) => {
     if (l === "fr") {
       setLangOpen(false);
       if (!user) {
-        toast.error("Please login to switch to French.");
+        toast.error(t('common.loginRequired'));
         return;
       }
       // Validate against the backend first: if the user already verified
@@ -187,7 +188,7 @@ const user = useSelector(selectuser);
               type="button"
               className="md:hidden p-2 rounded-md text-gray-700 hover:bg-gray-100"
               onClick={() => setMobileOpen((v) => !v)}
-              aria-label="Toggle menu"
+              aria-label={t('navbar.toggleMenu')}
             >
               {mobileOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -257,7 +258,7 @@ className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-cent
                         type="button"
                         className="relative p-2 rounded-full hover:bg-gray-100"
                         onClick={() => setNotifOpen((v) => !v)}
-                        aria-label="Open notifications"
+                        aria-label={t('navbar.openNotifications')}
                       >
                         <Bell size={18} className="text-gray-700" />
                         {unreadCount > 0 && (
@@ -268,39 +269,39 @@ className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-cent
                       </button>
 {notifOpen ? (
 <NotificationDropdown
-                          open={notifOpen}
-                          onClose={() => setNotifOpen(false)}
-                          onUnreadChange={setUnreadCount}
-                        />
-                      ) : null}
-                    </div>
-                    <div className="relative flex items-center space-x-2">
-                      <Link href={"/profile"}>
-                        <img src={user.photo} alt="" className="w-8 h-8 rounded-full cursor-pointer" />
-                      </Link>
-                      <div className="flex flex-col">
-                        <Link href="/dashboard" className="text-xs text-gray-600 hover:text-blue-600">Dashboard</Link>
-                        <button className="text-xs text-red-500 hover:text-red-700 text-left" onClick={handlelogout}>
-                          {t('navbar.logout')}
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <Link
-                      href="/login"
-                      className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                    >
-                      Login
-                    </Link>
-                    <a href="/adminlogin" className="text-gray-600 hover:text-gray-800 text-sm">
-                      {t('navbar.admin')}
-                    </a>
-                  </>
-                )}
-              </div>
-            </div>
+                           open={notifOpen}
+                           onClose={() => setNotifOpen(false)}
+                           onUnreadChange={setUnreadCount}
+                         />
+                       ) : null}
+                     </div>
+                     <div className="relative flex items-center space-x-2">
+                       <Link href={"/profile"}>
+                         <img src={user.photo} alt="" className="w-8 h-8 rounded-full cursor-pointer" />
+                       </Link>
+                       <div className="flex flex-col">
+                         <Link href="/dashboard" className="text-xs text-gray-600 hover:text-blue-600">{t('dashboard.title')}</Link>
+                         <button className="text-xs text-red-500 hover:text-red-700 text-left" onClick={handlelogout}>
+                           {t('navbar.logout')}
+                         </button>
+                       </div>
+                     </div>
+                   </>
+                 ) : (
+                   <>
+                     <Link
+                       href="/login"
+                       className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                     >
+                       {t('navbar.login')}
+                     </Link>
+                     <a href="/adminlogin" className="text-gray-600 hover:text-gray-800 text-sm">
+                       {t('navbar.admin')}
+                     </a>
+                   </>
+                 )}
+               </div>
+             </div>
 </div>
 </div>
       </nav>
@@ -322,18 +323,18 @@ className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-cent
               {t('navbar.friends')}
             </Link>
             <Link href="/search" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
-              Search
+              {t('navbar.search')}
             </Link>
             {user ? (
               <>
                 <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
-                  Dashboard
+                  {t('dashboard.title')}
                 </Link>
                 <Link href="/profile" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
-                  Profile
+                  {t('navbar.profile')}
                 </Link>
                 <Link href="/notifications" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
-                  Notifications
+                  {t('navbar.notifications')}
                 </Link>
                 <button
                   type="button"
@@ -346,7 +347,7 @@ className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-cent
             ) : (
               <>
                 <Link href="/login" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-blue-600 hover:bg-gray-100">
-                  Login
+                  {t('navbar.login')}
                 </Link>
                 <Link href="/adminlogin" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
                   {t('navbar.admin')}
@@ -370,4 +371,3 @@ className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-cent
 };
 
 export default Navbar;
-

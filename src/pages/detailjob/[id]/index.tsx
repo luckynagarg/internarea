@@ -13,6 +13,7 @@ import axiosClient from "@/lib/apiClient";
 import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
 import { selectuser } from "@/Feature/Userslice";
+import { useT } from "@/i18n/runtime";
 const filteredJobs = [
     {
       _id: "101",
@@ -115,6 +116,7 @@ const filteredJobs = [
   ];
 const index = () => {
   const user=useSelector(selectuser)
+  const { t } = useT();
   const router = useRouter();
   const { id } = router.query;
   const [jobdata, setjob] = useState<any>([]);
@@ -160,15 +162,15 @@ useEffect(() => {
   }
   const handlesubmitapplication = async () => {
     if (!coverLetter.trim()) {
-      toast.error("please write a cover letter");
+      toast.error(t('job.coverLetterRequired'));
       return;
     }
     if (!availability) {
-      toast.error("please select your availability");
+      toast.error(t('job.availabilityRequired'));
       return;
     }
     if (quota && quota.remainingApplications <= 0) {
-      toast.error("You have reached your monthly application limit. Upgrade your plan to apply more.");
+      toast.error(t('subscription.upgradeInfo'));
       return;
     }
     try {
@@ -182,13 +184,13 @@ useEffect(() => {
       };
 await axiosClient.post("/api/application", applicationdata);
 
-      toast.success("Application submit successfully");
+      toast.success(t('job.applicationSubmitted'));
       router.push("/job");
     } catch (error: any) {
       const status = error?.response?.status;
-      const msg = error?.response?.data?.error?.message || error?.response?.data?.message || "Failed to submit application";
+      const msg = error?.response?.data?.error?.message || error?.response?.data?.message || t('errors.generic');
       if (status === 403) {
-        toast.error("You have reached your monthly application limit. Upgrade your plan to apply more.");
+        toast.error(t('subscription.upgradeInfo'));
       } else {
         toast.error(msg);
       }
@@ -202,7 +204,7 @@ await axiosClient.post("/api/application", applicationdata);
         <div className="p-6 border-b">
           <div className="flex items-center space-x-2 text-blue-600 mb-4">
             <ArrowUpRight className="h-5 w-5" />
-            <span className="font-medium">Actively Hiring</span>
+            <span className="font-medium">{t('job.activelyHiring')}</span>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             {jobdata.title}
@@ -215,7 +217,7 @@ await axiosClient.post("/api/application", applicationdata);
             </div>
             <div className="flex items-center space-x-2 text-gray-600">
               <DollarSign className="h-5 w-5" />
-              <span>CTC {jobdata.CTC}</span>
+              <span>{t('job.ctc')} {jobdata.CTC}</span>
             </div>
             <div className="flex items-center space-x-2 text-gray-600">
               <Book className="h-5 w-5" />
@@ -225,37 +227,37 @@ await axiosClient.post("/api/application", applicationdata);
           <div className="mt-4 flex items-center space-x-2">
             <Clock className="h-4 w-4 text-green-500" />
             <span className="text-green-500 text-sm">
-              Posted on {jobdata.createAt}
+              {t('job.postedOn', { values: { date: jobdata.createAt } })}
             </span>
           </div>
         </div>
         {/* Company Section */}
         <div className="p-6 border-b">
           <h2 className="text-xl font-bold text-gray-900 mb-4">
-            About {jobdata.company}
+            {t('job.about', { values: { company: jobdata.company } })}
           </h2>
 <div className="flex items-center space-x-2 mb-4">
-            <span className="text-gray-500">Company profile available on the platform</span>
+            <span className="text-gray-500">{t('job.companyProfile')}</span>
           </div>
           <p className="text-gray-600">{jobdata.aboutCompany}</p>
         </div>
         {/* Internship Details Section */}
         <div className="p-6 border-b">
           <h2 className="text-xl font-bold text-gray-900 mb-4">
-            About the Internship
+            {t('postInternship.aboutInternship')}
           </h2>
           <p className="text-gray-600 mb-6">{jobdata.aboutJob}</p>
 
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Who can apply
+            {t('postJob.whoCanApply')}
           </h3>
           <p className="text-gray-600 mb-6">{jobdata.whoCanApply}</p>
 
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Perks</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('postJob.perks')}</h3>
           <p className="text-gray-600 mb-6">{jobdata.perks}</p>
 
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Additional Information
+            {t('postJob.additionalInfo')}
           </h3>
           <p className="text-gray-600 mb-6">{jobdata.AdditionalInfo}</p>
         </div>
@@ -265,7 +267,7 @@ await axiosClient.post("/api/application", applicationdata);
             onClick={() => setIsModalOpen(true)}
             className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition duration-150"
           >
-            Apply Now
+            {t('job.applyNow')}
           </button>
         </div>
       </div>
@@ -277,7 +279,7 @@ await axiosClient.post("/api/application", applicationdata);
             <div className="p-6 border-b">
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-gray-900">
-                  Apply to {jobdata.company}
+                  {t('job.applyTo', { values: { company: jobdata.company } })}
                 </h2>
                 <button
                   onClick={() => setIsModalOpen(false)}
@@ -291,48 +293,48 @@ await axiosClient.post("/api/application", applicationdata);
               {/* Resume Section */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Your Resume
+                  {t('job.yourResume')}
                 </h3>
                 <p className="text-gray-600">
-                  Your current resume will be submitted with the application
+                  {t('job.resumeSubmitHint')}
                 </p>
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Cover Letter
+                  {t('job.coverLetter')}
                 </h3>
                 <p className="text-gray-600 mb-2">
-                  Why should you be selected for this internship?
+                  {t('job.coverLetterPrompt')}
                 </p>
                 <textarea
                   value={coverLetter}
                   onChange={(e) => setCoverLetter(e.target.value)}
                   className="w-full h-32 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 text-black"
-                  placeholder="Write your cover letter here..."
+                  placeholder={t('job.coverLetterPlaceholder')}
                 ></textarea>
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Your Availability
+                  {t('job.yourAvailability')}
                 </h3>
                 <div className="space-y-3">
                   {[
-                    "Yes, I am available to join immediately",
-                    "No, I am currently on notice period",
-                    "No, I will have to serve notice period",
-                    "Other",
+                    { value: "Yes, I am available to join immediately", label: t('job.availabilityOption1') },
+                    { value: "No, I am currently on notice period", label: t('job.availabilityOption2') },
+                    { value: "No, I will have to serve notice period", label: t('job.availabilityOption3') },
+                    { value: "Other", label: t('job.availabilityOption4') },
                   ].map((option) => (
-                    <label key={option} className="flex items-center space-x-2">
+                    <label key={option.value} className="flex items-center space-x-2">
                       <input
                         type="radio"
                         name=""
                         id=""
-                        value={option}
-                        checked={availability === option}
+                        value={option.value}
+                        checked={availability === option.value}
                         onChange={(e) => setAvailability(e.target.value)}
                         className="h-4 w-4 text-blue-600"
                       />
-                      <span className="text-gray-700">{option}</span>
+                      <span className="text-gray-700">{option.label}</span>
                     </label>
                   ))}
                 </div>
@@ -343,14 +345,14 @@ await axiosClient.post("/api/application", applicationdata);
                     className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
                     onClick={handlesubmitapplication}
                   >
-                    Submit Application
+                    {t('job.submitApplication')}
                   </button>
                 ) : (
 <Link
                     href={`/signup`}
                     className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
                   >
-                    Sign up to apply
+                    {t('job.signupToApply')}
                   </Link>
                 )}
               </div>

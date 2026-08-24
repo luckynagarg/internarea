@@ -12,7 +12,10 @@ import {
 import { useRouter } from "next/navigation";
 import axiosClient from "@/lib/apiClient";
 import { toast } from "react-toastify";
+import { useT } from "@/i18n/runtime";
+
 const index = () => {
+  const { t } = useT();
   const [formData, setFormData] = useState({
     title: "",
     company: "",
@@ -41,17 +44,17 @@ const index = () => {
     e.preventDefault();
     const hasemptyfields = Object.values(formData).some((val) => !val.trim());
     if (hasemptyfields) {
-      toast.error("Please fill in all detials");
+      toast.error(t('common.error'));
       return;
     }
     try {
-setisloading(true);
+      setisloading(true);
       const res = await axiosClient.post("/api/internship", formData);
-      toast.success("internship posted successfully");
+      toast.success(t('common.success'));
       router.push("/adminpanel");
     } catch (error) {
       console.log(error);
-      toast.error("error posting job");
+      toast.error(t('common.error'));
     } finally {
       setisloading(false);
     }
@@ -62,10 +65,10 @@ setisloading(true);
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-gray-900">
-              Post New Internship
+              {t('postInternship.pageTitle')}
             </h1>
             <p className="mt-2 text-sm text-gray-600">
-              Create a new internship opportunity for students
+              {t('postInternship.pageDesc')}
             </p>
           </div>
 
@@ -77,7 +80,7 @@ setisloading(true);
                   <label className="block text-sm font-medium text-gray-700">
                     <div className="flex items-center mb-1">
                       <Briefcase className="h-4 w-4 mr-1" />
-                      Title*
+                      {t('postInternship.title')}*
                     </div>
                   </label>
                   <input
@@ -86,7 +89,7 @@ setisloading(true);
                     value={formData.title}
                     onChange={handleChange}
                     className="text-black  mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                    placeholder="e.g. Frontend Developer Intern"
+                    placeholder={t('postInternship.placeholderTitle')}
                   />
                 </div>
 
@@ -94,7 +97,7 @@ setisloading(true);
                   <label className="block text-sm font-medium text-gray-700">
                     <div className="flex items-center mb-1">
                       <Building2 className="h-4 w-4 mr-1" />
-                      Company Name*
+                      {t('postInternship.companyName')}*
                     </div>
                   </label>
                   <input
@@ -103,7 +106,7 @@ setisloading(true);
                     value={formData.company}
                     onChange={handleChange}
                     className="text-black mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                    placeholder="e.g. Tech Solutions Inc"
+                    placeholder={t('postInternship.placeholderCompany')}
                   />
                 </div>
               </div>
@@ -113,7 +116,7 @@ setisloading(true);
                   <label className="block text-sm font-medium text-gray-700">
                     <div className="flex items-center mb-1">
                       <MapPin className="h-4 w-4 mr-1" />
-                      Location*
+                      {t('postInternship.location')}*
                     </div>
                   </label>
                   <input
@@ -122,7 +125,7 @@ setisloading(true);
                     value={formData.location}
                     onChange={handleChange}
                     className="text-black mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                    placeholder="e.g. Mumbai, India"
+                    placeholder={t('postInternship.placeholderLocation')}
                   />
                 </div>
 
@@ -130,7 +133,7 @@ setisloading(true);
                   <label className="block text-sm font-medium text-gray-700">
                     <div className="flex items-center mb-1">
                       <Tags className="h-4 w-4 mr-1" />
-                      Category*
+                      {t('postInternship.category')}*
                     </div>
                   </label>
                   <input
@@ -139,7 +142,7 @@ setisloading(true);
                     value={formData.category}
                     onChange={handleChange}
                     className=" text-black mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                    placeholder="e.g. Software Development"
+                    placeholder={t('postInternship.placeholderCategory')}
                   />
                 </div>
               </div>
@@ -151,7 +154,7 @@ setisloading(true);
                 <label className="block text-sm font-medium text-gray-700">
                   <div className="flex items-center mb-1">
                     <Info className="h-4 w-4 mr-1" />
-                    About Company*
+                    {t('postInternship.aboutCompany')}*
                   </div>
                 </label>
                 <textarea
@@ -160,7 +163,7 @@ setisloading(true);
                   onChange={handleChange}
                   rows={4}
                   className="text-black mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                  placeholder="Describe your company..."
+                  placeholder={t('postInternship.placeholderAboutCompany')}
                 />
               </div>
 
@@ -168,7 +171,7 @@ setisloading(true);
                 <label className="block text-sm font-medium text-gray-700">
                   <div className="flex items-center mb-1">
                     <Briefcase className="h-4 w-4 mr-1" />
-                    About Internship*
+                    {t('postInternship.aboutInternship')}*
                   </div>
                 </label>
                 <textarea
@@ -177,7 +180,7 @@ setisloading(true);
                   onChange={handleChange}
                   rows={4}
                   className="text-black mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                  placeholder="Describe the internship role..."
+                  placeholder={t('postInternship.placeholderAboutInternship')}
                 />
               </div>
             </div>
@@ -188,7 +191,7 @@ setisloading(true);
                 <label className="block text-sm font-medium text-gray-700">
                   <div className="flex items-center mb-1">
                     <Users className="h-4 w-4 mr-1" />
-                    Who Can Apply*
+                    {t('postInternship.whoCanApply')}*
                   </div>
                 </label>
                 <textarea
@@ -197,7 +200,7 @@ setisloading(true);
                   onChange={handleChange}
                   rows={3}
                   className="text-black mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                  placeholder="Eligibility criteria..."
+                  placeholder={t('postInternship.placeholderEligibility')}
                 />
               </div>
 
@@ -205,7 +208,7 @@ setisloading(true);
                 <label className="block text-sm font-medium text-gray-700">
                   <div className="flex items-center mb-1">
                     <Info className="h-4 w-4 mr-1" />
-                    Perks*
+                    {t('postInternship.perks')}*
                   </div>
                 </label>
                 <textarea
@@ -214,7 +217,7 @@ setisloading(true);
                   onChange={handleChange}
                   rows={3}
                   className="text-black mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                  placeholder="List the perks..."
+                  placeholder={t('postInternship.placeholderPerks')}
                 />
               </div>
             </div>
@@ -225,7 +228,7 @@ setisloading(true);
                 <label className="block text-sm font-medium text-gray-700">
                   <div className="flex items-center mb-1">
                     <Users className="h-4 w-4 mr-1" />
-                    Number of Openings*
+                    {t('postInternship.numberOfOpenings')}*
                   </div>
                 </label>
                 <input
@@ -235,7 +238,7 @@ setisloading(true);
                   onChange={handleChange}
                   min="1"
                   className="text-black mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                  placeholder="e.g. 5"
+                  placeholder={t('postInternship.placeholderOpenings')}
                 />
               </div>
 
@@ -243,7 +246,7 @@ setisloading(true);
                 <label className="block text-sm font-medium text-gray-700">
                   <div className="flex items-center mb-1">
                     <DollarSign className="h-4 w-4 mr-1" />
-                    Stipend*
+                    {t('postInternship.stipend')}*
                   </div>
                 </label>
                 <input
@@ -252,7 +255,7 @@ setisloading(true);
                   value={formData.stipend}
                   onChange={handleChange}
                   className="text-black mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                  placeholder="e.g. ₹15,000/month"
+                  placeholder={t('postInternship.placeholderStipend')}
                 />
               </div>
 
@@ -260,7 +263,7 @@ setisloading(true);
                 <label className="block text-sm font-medium text-gray-700">
                   <div className="flex items-center mb-1">
                     <Calendar className="h-4 w-4 mr-1" />
-                    Start Date*
+                    {t('postInternship.startDate')}*
                   </div>
                 </label>
                 <input
@@ -276,7 +279,7 @@ setisloading(true);
                 <label className="block text-sm font-medium text-gray-700">
                   <div className="flex items-center mb-1">
                     <Info className="h-4 w-4 mr-1" />
-                    Additional Information*
+                    {t('postInternship.additionalInfo')}*
                   </div>
                 </label>
                 <textarea
@@ -285,7 +288,7 @@ setisloading(true);
                   onChange={handleChange}
                   rows={3}
                   className="text-black mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                  placeholder="Any additional details..."
+                  placeholder={t('postInternship.placeholderAdditionalInfo')}
                 />
               </div>
             </div>
@@ -299,10 +302,10 @@ setisloading(true);
                  {isloading ? (
                   <div className="flex items-center">
                     <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></div>
-                    Posting Internship...
+                    {t('postInternship.posting')}
                   </div>
                 ) : (
-                  "Post Internship"
+                  t('postInternship.postInternship')
                 )}
               </button>
             </div>

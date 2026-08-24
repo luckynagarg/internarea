@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useT } from '@/i18n/runtime';
 import axiosClient from "@/lib/apiClient";
 import { Search, X } from "lucide-react";
 
@@ -31,6 +32,7 @@ export default function FriendSearch({
   onResults,
   onLoading,
 }: Props) {
+  const { t } = useT();
   const [query, setQuery] = useState(initialQuery);
   const [loading, setLoading] = useState(false);
 
@@ -63,8 +65,6 @@ export default function FriendSearch({
 
       setLoading(true);
       try {
-        // Use axiosClient so the backend base URL + Firebase auth token are
-        // applied automatically regardless of the frontend origin.
         const res = await axiosClient.get<{
           data: FriendSearchResult[];
         }>("/api/users/search", {
@@ -105,14 +105,14 @@ export default function FriendSearch({
       <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search people by name or @nickname..."
+        placeholder={t('friends.searchHint')}
         className="w-full border rounded-lg px-3 py-2 text-sm text-black"
       />
 
       {query.length > 0 ? (
         <button
           type="button"
-          aria-label="Clear"
+          aria-label={t('common.close')}
           className="p-1 text-gray-500 hover:text-gray-700"
           onClick={() => setQuery("")}
         >

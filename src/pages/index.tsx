@@ -1,9 +1,13 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination, Autoplay } from "swiper/modules";
+
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
+
 import {
   ArrowUpRight,
   Banknote,
@@ -11,146 +15,179 @@ import {
   ChevronRight,
   MapPin,
 } from "lucide-react";
+
 import Link from "next/link";
 import axiosClient from "@/lib/apiClient";
+import { useT } from "@/i18n";
 
 export default function SvgSlider() {
-  const categories = [
-    "Big Brands",
-    "Work From Home",
-    "Part-time",
-    "MBA",
-    "Engineering",
-    "Media",
-    "Design",
-    "Data Science",
-  ];
-  // const internships = [
-  //   {
-  //     _id: "1",
-  //     title: "Software Engineering Intern",
-  //     company: "Google",
-  //     location: "Remote",
-  //     stipend: "$1,500/month",
-  //     duration: "3 months",
-  //     category: "Engineering",
-  //   },
-  //   {
-  //     _id: "2",
-  //     title: "Marketing Intern",
-  //     company: "Meta",
-  //     location: "New York",
-  //     stipend: "$1,200/month",
-  //     duration: "6 months",
-  //     category: "Media",
-  //   },
-  //   {
-  //     _id: "3",
-  //     title: "Graphic Design Intern",
-  //     company: "Adobe",
-  //     location: "San Francisco",
-  //     stipend: "$1,000/month",
-  //     duration: "4 months",
-  //     category: "Design",
-  //   },
-  // ];
+  const { t } = useT();
 
-  // const jobs = [
-  //   {
-  //     _id: "101",
-  //     title: "Frontend Developer",
-  //     company: "Amazon",
-  //     location: "Seattle",
-  //     CTC: "$100K/year",
-  //     Experience: "2+ years",
-  //     category: "Engineering",
-  //   },
-  //   {
-  //     _id: "102",
-  //     title: "Data Analyst",
-  //     company: "Microsoft",
-  //     location: "Remote",
-  //     CTC: "$90K/year",
-  //     Experience: "1+ years",
-  //     category: "Data Science",
-  //   },
-  //   {
-  //     _id: "103",
-  //     title: "UX Designer",
-  //     company: "Apple",
-  //     location: "California",
-  //     CTC: "$110K/year",
-  //     Experience: "3+ years",
-  //     category: "Design",
-  //   },
-  // ];
+  /*
+   * IMPORTANT:
+   * Keep the actual category values in English because the backend
+   * may store categories in English.
+   *
+   * Only the displayed label is translated.
+   */
+  const categories = [
+    {
+      value: "Big Brands",
+      label: t("home.categories.bigBrands"),
+    },
+    {
+      value: "Work From Home",
+      label: t("home.categories.workFromHome"),
+    },
+    {
+      value: "Part-time",
+      label: t("home.categories.partTime"),
+    },
+    {
+      value: "MBA",
+      label: t("home.categories.mba"),
+    },
+    {
+      value: "Engineering",
+      label: t("home.categories.engineering"),
+    },
+    {
+      value: "Media",
+      label: t("home.categories.media"),
+    },
+    {
+      value: "Design",
+      label: t("home.categories.design"),
+    },
+    {
+      value: "Data Science",
+      label: t("home.categories.dataScience"),
+    },
+  ];
+
+  /*
+   * Slider text comes directly from the translation dictionary.
+   */
   const slides = [
     {
       pattern: "pattern-1",
-      title: "Start Your Career Journey",
+      title: t("home.slide1"),
       bgColor: "bg-indigo-600",
     },
     {
       pattern: "pattern-2",
-      title: "Learn From The Best",
+      title: t("home.slide2"),
       bgColor: "bg-blue-600",
     },
     {
       pattern: "pattern-3",
-      title: "Grow Your Skills",
+      title: t("home.slide3"),
       bgColor: "bg-purple-600",
     },
     {
       pattern: "pattern-4",
-      title: "Connect With Top Companies",
+      title: t("home.slide4"),
       bgColor: "bg-teal-600",
     },
   ];
 
+  /*
+   * Statistics.
+   * Numbers stay the same; only labels are translated.
+   */
   const stats = [
-    { number: "300K+", label: "companies hiring" },
-    { number: "10K+", label: "new openings everyday" },
-    { number: "21Mn+", label: "active students" },
-    { number: "600K+", label: "learners" },
+    {
+      number: "300K+",
+      label: t("home.statCompanies"),
+    },
+    {
+      number: "10K+",
+      label: t("home.newOpenings"),
+    },
+    {
+      number: "21Mn+",
+      label: t("home.activeStudents"),
+    },
+    {
+      number: "600K+",
+      label: t("home.learners"),
+    },
   ];
-  const [internships, setinternship] = useState<any>([]);
-  const [jobs, setjob] = useState<any>([]);
+
+  const [internships, setInternships] = useState<any[]>([]);
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState("");
+
   useEffect(() => {
-const fetchdata = async () => {
+    const fetchData = async () => {
       try {
-        const [internshipres, jobres] = await Promise.all([
-          axiosClient.get("/api/internship", { skipAuth: true } as any),
-          axiosClient.get("/api/job", { skipAuth: true } as any),
+        const [internshipRes, jobRes] = await Promise.all([
+          axiosClient.get("/api/internship", {
+            skipAuth: true,
+          } as any),
+
+          axiosClient.get("/api/job", {
+            skipAuth: true,
+          } as any),
         ]);
 
-        const internshipData = internshipres?.data?.data ?? internshipres?.data ?? [];
-        const jobData = jobres?.data?.data ?? jobres?.data ?? [];
+        const internshipData =
+          internshipRes?.data?.data ?? internshipRes?.data ?? [];
 
-        setinternship(Array.isArray(internshipData) ? internshipData : []);
-        setjob(Array.isArray(jobData) ? jobData : []);
+        const jobData =
+          jobRes?.data?.data ?? jobRes?.data ?? [];
+
+        setInternships(
+          Array.isArray(internshipData) ? internshipData : []
+        );
+
+        setJobs(
+          Array.isArray(jobData) ? jobData : []
+        );
       } catch (error) {
         console.log(error);
       }
     };
-    fetchdata();
+
+    fetchData();
   }, []);
-  const [selectedCategory, setSelectedCategory] = useState("");
+
+  /*
+   * IMPORTANT:
+   * Filtering still uses the backend's original category value.
+   * The displayed category is translated separately.
+   */
   const filteredInternships = internships.filter(
-    (item: any) => !selectedCategory || item.category === selectedCategory
+    (item: any) =>
+      !selectedCategory || item.category === selectedCategory
   );
+
   const filteredJobs = jobs.filter(
-    (item: any) => !selectedCategory || item.category === selectedCategory
+    (item: any) =>
+      !selectedCategory || item.category === selectedCategory
   );
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* hero section */}
+
+      {/* =========================================================
+          HERO SECTION
+      ========================================================= */}
       <div className="text-center mb-12">
+
         <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          Make your dream career a reality
+          {t("home.heroTitle")}
         </h1>
-        <p className="text-xl text-gray-600">Trending on InternArea 🔥</p>
+
+        <p className="text-xl text-gray-600">
+          {t("home.heroTrending")}
+        </p>
+
       </div>
-      {/* Swiper section */}
+
+      {/* =========================================================
+          SWIPER / HERO SLIDER
+      ========================================================= */}
       <div className="mb-16">
         <Swiper
           modules={[Navigation, Pagination, Autoplay]}
@@ -163,13 +200,17 @@ const fetchdata = async () => {
         >
           {slides.map((slide, index) => (
             <SwiperSlide key={index}>
-              <div className={`relative h-[400px] ${slide.bgColor}`}>
+              <div
+                className={`relative h-[400px] ${slide.bgColor}`}
+              >
+
                 {/* SVG Pattern Background */}
                 <div className="absolute inset-0 opacity-20">
                   <svg
                     className="w-full h-full"
                     xmlns="http://www.w3.org/2000/svg"
                   >
+
                     {slide.pattern === "pattern-1" && (
                       <pattern
                         id="pattern-1"
@@ -179,9 +220,15 @@ const fetchdata = async () => {
                         height="20"
                         patternUnits="userSpaceOnUse"
                       >
-                        <circle cx="10" cy="10" r="3" fill="white" />
+                        <circle
+                          cx="10"
+                          cy="10"
+                          r="3"
+                          fill="white"
+                        />
                       </pattern>
                     )}
+
                     {slide.pattern === "pattern-2" && (
                       <pattern
                         id="pattern-2"
@@ -200,6 +247,7 @@ const fetchdata = async () => {
                         />
                       </pattern>
                     )}
+
                     {slide.pattern === "pattern-3" && (
                       <pattern
                         id="pattern-3"
@@ -209,9 +257,13 @@ const fetchdata = async () => {
                         height="40"
                         patternUnits="userSpaceOnUse"
                       >
-                        <path d="M0 20 L20 0 L40 20 L20 40 Z" fill="white" />
+                        <path
+                          d="M0 20 L20 0 L40 20 L20 40 Z"
+                          fill="white"
+                        />
                       </pattern>
                     )}
+
                     {slide.pattern === "pattern-4" && (
                       <pattern
                         id="pattern-4"
@@ -221,9 +273,13 @@ const fetchdata = async () => {
                         height="60"
                         patternUnits="userSpaceOnUse"
                       >
-                        <path d="M30 5 L55 30 L30 55 L5 30 Z" fill="white" />
+                        <path
+                          d="M30 5 L55 30 L30 55 L5 30 Z"
+                          fill="white"
+                        />
                       </pattern>
                     )}
+
                     <rect
                       x="0"
                       y="0"
@@ -231,147 +287,265 @@ const fetchdata = async () => {
                       height="100%"
                       fill={`url(#${slide.pattern})`}
                     />
+
                   </svg>
                 </div>
 
-                {/* Content */}
+                {/* Slide Content */}
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <h2 className="text-4xl font-bold text-white">
+                  <h2 className="text-4xl font-bold text-white text-center px-6">
                     {slide.title}
                   </h2>
                 </div>
+
               </div>
             </SwiperSlide>
           ))}
         </Swiper>
       </div>
-      {/* Category section */}
+
+      {/* =========================================================
+          INTERNSHIP / CATEGORY SECTION
+      ========================================================= */}
       <div className="mb-12">
+
         <h2 className="text-2xl font-bold text-gray-900 mb-6">
-          Latest internships on Intern Area
+          {t("home.latestInternships")}
         </h2>
+
         <div className="flex flex-wrap gap-4">
-          <span className="text-gray-700 font-medium">POPULAR CATEGORIES:</span>
+
+          <span className="text-gray-700 font-medium">
+            {t("home.popularCategories")}
+          </span>
+
           {categories.map((category) => (
             <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
+              key={category.value}
+              onClick={() =>
+                setSelectedCategory(
+                  selectedCategory === category.value
+                    ? ""
+                    : category.value
+                )
+              }
               className={`px-4 py-2 rounded-full transition-colors ${
-                selectedCategory === category
+                selectedCategory === category.value
                   ? "bg-blue-600 text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
-              {category}
+              {category.label}
             </button>
           ))}
+
         </div>
       </div>
-      {/* INternship grid   */}
+
+      {/* =========================================================
+          INTERNSHIP GRID
+      ========================================================= */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
-        {filteredInternships.map((internship: any, index: any) => (
-          <div
-            key={index}
-            className="bg-white rounded-lg shadow-md p-6 transition-transform hover:transform hover:scale-105"
-          >
-            <div className="flex items-center gap-2 text-blue-600 mb-4">
-              <ArrowUpRight size={20} />
-              <span className="font-medium">Actively Hiring</span>
-            </div>
-            <h3 className="text-lg font-semibold mb-2 text-gray-800">
-              {internship.title}
-            </h3>
-            <p className="text-gray-500 mb-4">{internship.company}</p>
-            <div className="space-y-3 text-gray-600">
-              <div className="flex items-center gap-2">
-                <MapPin size={18} />
-                <span>{internship.location}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Banknote size={18} />
-                <span>{internship.stipend}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Calendar size={18} />
-                <span>{internship.duration}</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between mt-6">
-              <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm">
-                Internship
-              </span>
-              <Link
-                href={`/detailiternship/${internship._id}`}
-                className="text-blue-600 hover:text-blue-700 flex items-center gap-1"
-              >
-                View details
-                <ChevronRight size={16} />
-              </Link>
-            </div>
-          </div>
-        ))}
-      </div>
-      {/* Jobs grid   */}
-      <div className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Latest Jobs</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
-          {filteredJobs.map((job: any, index: any) => (
+
+        {filteredInternships.map(
+          (internship: any, index: number) => (
             <div
-              key={index}
+              key={internship._id ?? index}
               className="bg-white rounded-lg shadow-md p-6 transition-transform hover:transform hover:scale-105"
             >
+
+              {/* Hiring Status */}
               <div className="flex items-center gap-2 text-blue-600 mb-4">
                 <ArrowUpRight size={20} />
-                <span className="font-medium">Actively Hiring</span>
+
+                <span className="font-medium">
+                  {t("home.activelyHiring")}
+                </span>
               </div>
+
+              {/* Internship Title */}
               <h3 className="text-lg font-semibold mb-2 text-gray-800">
-                {job.title}
+                {internship.title}
               </h3>
-              <p className="text-gray-500 mb-4">{job.company}</p>
+
+              {/* Company */}
+              <p className="text-gray-500 mb-4">
+                {internship.company}
+              </p>
+
+              {/* Internship Details */}
               <div className="space-y-3 text-gray-600">
+
                 <div className="flex items-center gap-2">
                   <MapPin size={18} />
-                  <span>{job.location}</span>
+
+                  <span>
+                    {internship.location}
+                  </span>
                 </div>
+
                 <div className="flex items-center gap-2">
                   <Banknote size={18} />
-                  <span>{job.CTC}</span>
+
+                  <span>
+                    {internship.stipend}
+                  </span>
                 </div>
+
                 <div className="flex items-center gap-2">
                   <Calendar size={18} />
-                  <span>{job.Experience}</span>
+
+                  <span>
+                    {internship.duration}
+                  </span>
                 </div>
+
               </div>
+
+              {/* Bottom Actions */}
               <div className="flex items-center justify-between mt-6">
+
                 <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm">
-                  Jobs
+                  {t("home.internship")}
                 </span>
+
                 <Link
-href={`/detailjob/${job._id}`}
+                  href={`/detailiternship/${internship._id}`}
                   className="text-blue-600 hover:text-blue-700 flex items-center gap-1"
                 >
-                  View details
+                  {t("home.viewDetails")}
+
                   <ChevronRight size={16} />
                 </Link>
+
               </div>
+
             </div>
-          ))}
-          {/*  */}
+          )
+        )}
+
+      </div>
+
+      {/* =========================================================
+          JOBS SECTION
+      ========================================================= */}
+      <div className="mb-12">
+
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">
+          {t("home.latestJobs")}
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+
+          {filteredJobs.map(
+            (job: any, index: number) => (
+              <div
+                key={job._id ?? index}
+                className="bg-white rounded-lg shadow-md p-6 transition-transform hover:transform hover:scale-105"
+              >
+
+                {/* Hiring Status */}
+                <div className="flex items-center gap-2 text-blue-600 mb-4">
+
+                  <ArrowUpRight size={20} />
+
+                  <span className="font-medium">
+                    {t("home.activelyHiring")}
+                  </span>
+
+                </div>
+
+                {/* Job Title */}
+                <h3 className="text-lg font-semibold mb-2 text-gray-800">
+                  {job.title}
+                </h3>
+
+                {/* Company */}
+                <p className="text-gray-500 mb-4">
+                  {job.company}
+                </p>
+
+                {/* Job Details */}
+                <div className="space-y-3 text-gray-600">
+
+                  <div className="flex items-center gap-2">
+                    <MapPin size={18} />
+
+                    <span>
+                      {job.location}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Banknote size={18} />
+
+                    <span>
+                      {job.CTC}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Calendar size={18} />
+
+                    <span>
+                      {job.Experience}
+                    </span>
+                  </div>
+
+                </div>
+
+                {/* Bottom Actions */}
+                <div className="flex items-center justify-between mt-6">
+
+                  <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm">
+                    {t("home.jobs")}
+                  </span>
+
+                  <Link
+                    href={`/detailjob/${job._id}`}
+                    className="text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                  >
+                    {t("home.viewDetails")}
+
+                    <ChevronRight size={16} />
+                  </Link>
+
+                </div>
+
+              </div>
+            )
+          )}
+
         </div>
       </div>
-      {/* Stat Section  */}
+
+      {/* =========================================================
+          STATISTICS SECTION
+      ========================================================= */}
       <div className="bg-white rounded-xl shadow-lg p-8 mb-16">
+
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+
           {stats.map((stat, index) => (
-            <div key={index} className="text-center">
+            <div
+              key={index}
+              className="text-center"
+            >
+
               <div className="text-4xl font-bold text-blue-600 mb-2">
                 {stat.number}
               </div>
-              <div className="text-gray-600">{stat.label}</div>
+
+              <div className="text-gray-600">
+                {stat.label}
+              </div>
+
             </div>
           ))}
+
         </div>
       </div>
+
     </div>
   );
 }

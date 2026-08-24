@@ -1,73 +1,77 @@
 import React from 'react'
-import { 
-  Briefcase, 
-  Mail, 
+import {
+  Briefcase,
+  Mail,
   Send,
   Users,
   BarChart,
   Settings
 } from 'lucide-react';
 import Link from 'next/link';
+import { useT } from '@/i18n/runtime';
+
 const index = () => {
-    const stats = [
-        { label: 'Total Applications', value: '2,345', change: '+12%', changeType: 'positive' },
-        { label: 'Active Jobs', value: '45', change: '+3%', changeType: 'positive' },
-        { label: 'Active Internships', value: '89', change: '+24%', changeType: 'positive' },
-        { label: 'Conversion Rate', value: '5.25%', change: '-1.3%', changeType: 'negative' },
-      ];
-    
-      const menuItems = [
-        {
-          title: 'View Applications',
-          description: 'View and manage all applications from candidates',
-          icon: Mail,
-          link: '/applications',
-          color: 'bg-blue-600',
-        },
-        {
-          title: 'Post Job',
-          description: 'Create and publish new job opportunities',
-          icon: Briefcase,
-          link: '/postJob',
-          color: 'bg-green-600',
-        },
-        {
-          title: 'Post Internship',
-          description: 'Create and manage internship positions',
-          icon: Send,
-          link: '/postInternship',
-          color: 'bg-purple-600',
-        },
-        {
-          title: 'Manage Users',
-          description: 'View and manage user accounts',
-          icon: Users,
-          link: '/users',
-          color: 'bg-orange-600',
-        },
-        {
-          title: 'Analytics',
-          description: 'View detailed reports and statistics',
-          icon: BarChart,
-          link: '/analytics',
-          color: 'bg-red-600',
-        },
-        {
-          title: 'Settings',
-          description: 'Configure system preferences',
-          icon: Settings,
-          link: '/settings',
-          color: 'bg-gray-600',
-        },
-      ];
+  const { t } = useT();
+
+  const stats = [
+    { label: 'Total Applications', value: '2,345', change: '+12%', changeType: 'positive' },
+    { label: 'Active Jobs', value: '45', change: '+3%', changeType: 'positive' },
+    { label: 'Active Internships', value: '89', change: '+24%', changeType: 'positive' },
+    { label: 'Conversion Rate', value: '5.25%', change: '-1.3%', changeType: 'negative' },
+  ];
+
+  const menuItems = [
+    {
+      title: 'View Applications',
+      description: 'View and manage all applications from candidates',
+      icon: Mail,
+      link: '/applications',
+      color: 'bg-blue-600',
+    },
+    {
+      title: 'Post Job',
+      description: 'Create and publish new job opportunities',
+      icon: Briefcase,
+      link: '/postJob',
+      color: 'bg-green-600',
+    },
+    {
+      title: 'Post Internship',
+      description: 'Create and manage internship positions',
+      icon: Send,
+      link: '/postInternship',
+      color: 'bg-purple-600',
+    },
+    {
+      title: 'Manage Users',
+      description: 'View and manage user accounts',
+      icon: Users,
+      link: '/users',
+      color: 'bg-orange-600',
+    },
+    {
+      title: 'Analytics',
+      description: 'View detailed reports and statistics',
+      icon: BarChart,
+      link: '/analytics',
+      color: 'bg-red-600',
+    },
+    {
+      title: 'Settings',
+      description: 'Configure system preferences',
+      icon: Settings,
+      link: '/settings',
+      color: 'bg-gray-600',
+    },
+  ];
   return (
     <div className="min-h-screen bg-gray-50 py-8">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t('admin.dashboardTitle')}</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Manage your jobs, internships, and applications
+          {t('admin.dashboardSubtitle')}
         </p>
       </div>
 
