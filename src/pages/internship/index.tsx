@@ -1,3 +1,4 @@
+"use client";
 import axiosClient from "@/lib/apiClient";
 import {
   ArrowUpRight,
