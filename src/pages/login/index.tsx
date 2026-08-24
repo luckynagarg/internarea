@@ -32,13 +32,12 @@ export default function LoginPage() {
   // After a successful Firebase sign-in, run the server-side login gate
   // (Chrome OTP + mobile time restriction). If OTP is required, block access.
   const runLoginGate = useCallback(
-    async (method: "google" | "password" | "phone", firebaseUser?: any) => {
+    async (method: "google" | "password" | "phone") => {
       if (process.env.NODE_ENV !== 'production') {
         console.debug('[Auth Debug] runLoginGate start', {
           method,
-          firebaseUid: firebaseUser?.uid ?? null,
-          email: firebaseUser?.email ?? null,
-          authCurrentUserUid: (await import('@/lib/firebase')).auth.currentUser?.uid ?? null,
+          firebaseUid: auth.currentUser?.uid ?? null,
+          email: auth.currentUser?.email ?? null,
         });
       }
       let result;
@@ -80,6 +79,38 @@ export default function LoginPage() {
     [router, t]
   );
 
+  async function ensureAuthUser(timeout = 2000): Promise<any> {
+    if (auth.currentUser) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.debug('[Auth Debug] ensureAuthUser: already have user', { uid: auth.currentUser.uid });
+      }
+      return auth.currentUser;
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug('[Auth Debug] ensureAuthUser: waiting for onAuthStateChanged...');
+    }
+
+    return new Promise((resolve) => {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        if (user) {
+          if (process.env.NODE_ENV !== 'production') {
+            console.debug('[Auth Debug] ensureAuthUser: user confirmed', { uid: user.uid });
+          }
+          unsubscribe();
+          resolve(user);
+        }
+      });
+      setTimeout(() => {
+        unsubscribe();
+        if (process.env.NODE_ENV !== 'production') {
+          console.debug('[Auth Debug] ensureAuthUser: timeout, currentUser =', auth.currentUser?.uid ?? null);
+        }
+        resolve(auth.currentUser);
+      }, timeout);
+    });
+  }
+
   // Pre-fill email from localStorage if "Remember Me" was checked
   useEffect(() => {
     const savedEmail = localStorage.getItem("internarea_remembered_email");
@@ -95,6 +126,7 @@ export default function LoginPage() {
     setLoginError(null);
     try {
       await signInWithPopup(auth, googleProvider);
+      await ensureAuthUser();
       await runLoginGate("google");
     } catch (e: any) {
       if (e?.code === "auth/cancelled-popup-request") return;
@@ -104,7 +136,7 @@ export default function LoginPage() {
     } finally {
       setIsGoogleLoading(false);
     }
-  }, [isGoogleLoading, router, runLoginGate, t]);
+  }, [isGoogleLoading, runLoginGate, t]);
 
   const handleEmailLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,6 +161,7 @@ export default function LoginPage() {
         localStorage.removeItem("internarea_remembered_email");
       }
 
+      await ensureAuthUser();
       await runLoginGate("password");
     } catch (e: any) {
       const msg = e?.message ?? t('auth.firebaseErrors.emailLoginFailed');
