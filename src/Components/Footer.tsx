@@ -71,7 +71,7 @@ export default function Footer() {
           <FooterSection title={t('footer.jobsByStreams')} items={footerLinks.jobsByStreams} links />
         </div>
 
-        <hr className="my-10 border-gray-600" />
+        <hr className="my-10 border-gray-600" /> 
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-16 gap-y-10">
           <FooterSection title={t('footer.aboutUs')} items={bottomLinks.aboutUs} links />
