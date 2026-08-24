@@ -3,8 +3,10 @@ import { useSelector } from 'react-redux';
 import { selectuser } from '@/Feature/Userslice';
 import axiosClient from '@/lib/apiClient';
 import { useRouter } from 'next/router';
+import { useT } from '@/i18n/runtime';
+import { toast } from 'react-toastify';
 
-import { Bell, CheckCircle2, Heart, MessageSquare, FileText, Inbox } from 'lucide-react';
+import { Bell, CheckCircle2, Heart, MessageSquare, FileText, Inbox, Check, X } from 'lucide-react';
 
 interface NotificationItem {
   _id: string;
@@ -24,11 +26,13 @@ interface NotificationItem {
 export default function NotificationsPage() {
   const user = useSelector(selectuser) as any;
   const router = useRouter();
+  const { t } = useT();
 
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'unread'>('unread');
   const [error, setError] = useState<string | null>(null);
+  const [actionId, setActionId] = useState<string | null>(null);
 
   async function load() {
     if (!user?.uid) {
@@ -71,6 +75,26 @@ export default function NotificationsPage() {
       if (n.link) router.push(n.link);
     } catch {
       // ignore read-state update errors
+    }
+  }
+
+  async function handleFriendRequestAction(notification: NotificationItem, action: 'accept' | 'reject') {
+    if (!notification.entityId) return;
+    const requestId = notification.entityId;
+    const senderUid = (notification as any).fromUser;
+    setActionId(requestId);
+    try {
+      if (action === 'accept') {
+        await axiosClient.post('/api/friends/accept', { requestId, sender: senderUid });
+      } else {
+        await axiosClient.post('/api/friends/reject', { requestId, sender: senderUid });
+      }
+      setItems((prev) => prev.filter((x) => x._id !== notification._id));
+      toast.success(action === 'accept' ? t('common.accept') : t('common.reject'));
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || e?.message || t('common.error'));
+    } finally {
+      setActionId(null);
     }
   }
 
@@ -139,6 +163,32 @@ export default function NotificationsPage() {
                     </div>
                   </div>
                   <div className="text-gray-600 text-sm mt-1">{n.body || n.message || ''}</div>
+                  {(n as any).entityType === 'friend_request' && (n as any).fromUser && (
+                    <div className="flex items-center gap-2 mt-3">
+                      <button
+                        type="button"
+                        disabled={actionId === n._id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleFriendRequestAction(n, 'accept');
+                        }}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-green-50 text-green-700 hover:bg-green-100 disabled:opacity-50"
+                      >
+                        <Check size={14} /> {t('common.accept')}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={actionId === n._id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleFriendRequestAction(n, 'reject');
+                        }}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+                      >
+                        <X size={14} /> {t('common.reject')}
+                      </button>
+                    </div>
+                  )}
                   {n.link ? <div className="text-xs text-blue-600 mt-2">View →</div> : null}
                 </div>
               </button>

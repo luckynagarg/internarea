@@ -14,6 +14,8 @@ import {
 import { useSelector } from "react-redux";
 import { selectuser } from "@/Feature/Userslice";
 import { useT } from '@/i18n/runtime';
+import FriendCard, { FriendCardModel } from "@/pages/friends/components/FriendCard";
+import { toast } from "react-toastify";
 
 export default function DashboardPage() {
   const user = useSelector(selectuser) as any;
@@ -39,6 +41,8 @@ export default function DashboardPage() {
   const [recentNotifications, setRecentNotifications] = useState<any[]>([]);
   const [onlineFriends, setOnlineFriends] = useState<any[]>([]);
   const [suggestedConnections, setSuggestedConnections] = useState<any[]>([]);
+  const [pendingSent, setPendingSent] = useState<Set<string>>(new Set());
+  const [actionUid, setActionUid] = useState<string | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
   const [internships, setInternships] = useState<any[]>([]);
@@ -121,6 +125,51 @@ export default function DashboardPage() {
     () => recentNotifications.filter((x) => !x.read).length,
     [recentNotifications]
   );
+
+  const handleConnect = async (target: any) => {
+    const uid = target.uid || target._id;
+    if (!uid || pendingSent.has(uid)) return;
+    setActionUid(uid);
+    setPendingSent((prev) => new Set(prev).add(uid));
+    try {
+      await axiosClient.post('/api/friends/request', { receiver: uid });
+      toast.success(t('common.addFriend'));
+      setSuggestedConnections((prev) =>
+        prev.map((u) => (u.uid === uid || u._id === uid ? { ...u, relationship: 'request_sent' } : u))
+      );
+    } catch (e: any) {
+      setPendingSent((prev) => {
+        const next = new Set(prev);
+        next.delete(uid);
+        return next;
+      });
+      toast.error(e?.response?.data?.message || e?.message || t('common.error'));
+    } finally {
+      setActionUid(null);
+    }
+  };
+
+  const handleCancelRequest = async (target: any) => {
+    const uid = target.uid || target._id;
+    if (!uid) return;
+    setActionUid(uid);
+    try {
+      await axiosClient.post('/api/friends/cancel', { receiver: uid });
+      toast.success(t('common.cancelRequest'));
+      setPendingSent((prev) => {
+        const next = new Set(prev);
+        next.delete(uid);
+        return next;
+      });
+      setSuggestedConnections((prev) =>
+        prev.map((u) => (u.uid === uid || u._id === uid ? { ...u, relationship: 'none' } : u))
+      );
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || e?.message || t('common.error'));
+    } finally {
+      setActionUid(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -377,20 +426,33 @@ export default function DashboardPage() {
               <section className="bg-white rounded-xl shadow-sm p-5">
                 <h2 className="text-lg font-semibold text-gray-900 mb-3">{t('dashboard.suggestedConnections')}</h2>
                 <div className="space-y-3">
-                  {(suggestedConnections ?? []).slice(0, 6).map((u) => (
-                    <div key={u.uid ?? u._id} className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <img src={u.photo} alt={u.name} className="w-9 h-9 rounded-full object-cover" />
-                        <div className="min-w-0">
-                          <div className="text-sm font-semibold text-gray-900 truncate">{u.name}</div>
-                          <div className="text-xs text-gray-500 truncate">{u.headline ?? ""}</div>
-                        </div>
-                      </div>
-                      <Link href="/friends" className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200">
-                        {t('common.connect')}
-                      </Link>
-                    </div>
-                  ))}
+                  {(suggestedConnections ?? []).slice(0, 6).map((u) => {
+                    const rel = u.relationship || (pendingSent.has(u.uid || u._id) ? 'request_sent' : 'none');
+                    const card: FriendCardModel = {
+                      _id: String(u._id || u.uid),
+                      uid: String(u.uid || u._id),
+                      name: u.name ?? null,
+                      username: u.username ?? null,
+                      nickname: u.nickname ?? null,
+                      photo: u.photo ?? null,
+                      headline: u.headline ?? null,
+                      bio: u.bio ?? null,
+                      location: u.location ?? null,
+                      mutualFriends: u.mutualFriends ?? 0,
+                      friendCount: u.friendCount ?? 0,
+                      isFriend: rel === 'friends',
+                      relationship: rel as any,
+                    };
+                    return (
+                      <FriendCard
+                        key={card.uid}
+                        friend={card}
+                        onAdd={handleConnect}
+                        onCancel={handleCancelRequest}
+                        actionLoading={actionUid === card.uid}
+                      />
+                    );
+                  })}
                   {(suggestedConnections ?? []).length === 0 && (
                     <div className="text-sm text-gray-500">{t('dashboard.noSuggestions')}</div>
                   )}

@@ -72,18 +72,22 @@ export default function FriendsPage() {
   // Friends (accepted)
   const [friends, setFriends] = useState<FriendListItem[]>([]);
   const [friendsLoading, setFriendsLoading] = useState(true);
+  const [friendsError, setFriendsError] = useState<string | null>(null);
 
   // Incoming requests
   const [requests, setRequests] = useState<IncomingRequest[]>([]);
   const [requestsLoading, setRequestsLoading] = useState(true);
+  const [requestsError, setRequestsError] = useState<string | null>(null);
 
   // Sent requests
   const [sent, setSent] = useState<SentRequest[]>([]);
   const [sentLoading, setSentLoading] = useState(true);
+  const [sentError, setSentError] = useState<string | null>(null);
 
   // Suggestions
   const [suggestions, setSuggestions] = useState<FriendSearchResult[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(true);
+  const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
 
   // Search tab
   const [searchTab, setSearchTab] = useState<SearchTabResult>({ q: '', results: [], loading: false });
@@ -98,6 +102,7 @@ export default function FriendsPage() {
 
   const loadFriends = async () => {
     setFriendsLoading(true);
+    setFriendsError(null);
     try {
       const res = await axiosClient.get('/api/friends/list');
       const arr = res?.data?.data ?? [];
@@ -112,7 +117,7 @@ export default function FriendsPage() {
       }));
       setFriends(list);
     } catch (e: any) {
-      toast.error(t('common.error'));
+      setFriendsError(e?.response?.data?.message || e?.message || t('common.error'));
     } finally {
       setFriendsLoading(false);
     }
@@ -120,6 +125,7 @@ export default function FriendsPage() {
 
   const loadRequests = async () => {
     setRequestsLoading(true);
+    setRequestsError(null);
     try {
       const res = await axiosClient.get('/api/friends/pending');
       const arr = res?.data?.data ?? [];
@@ -133,7 +139,7 @@ export default function FriendsPage() {
       }));
       setRequests(mapped.filter((r: any) => r.status === 'pending'));
     } catch (e: any) {
-      toast.error(t('common.error'));
+      setRequestsError(e?.response?.data?.message || e?.message || t('common.error'));
     } finally {
       setRequestsLoading(false);
     }
@@ -141,6 +147,7 @@ export default function FriendsPage() {
 
   const loadSent = async () => {
     setSentLoading(true);
+    setSentError(null);
     try {
       const res = await axiosClient.get('/api/friends/sent');
       const arr = res?.data?.data ?? [];
@@ -154,7 +161,7 @@ export default function FriendsPage() {
       }));
       setSent(mapped.filter((r: any) => r.status === 'pending'));
     } catch (e: any) {
-      toast.error(t('common.error'));
+      setSentError(e?.response?.data?.message || e?.message || t('common.error'));
     } finally {
       setSentLoading(false);
     }
@@ -162,11 +169,13 @@ export default function FriendsPage() {
 
   const loadSuggestions = async () => {
     setSuggestionsLoading(true);
+    setSuggestionsError(null);
     try {
       const res = await axiosClient.get('/api/users/suggestions', { params: { limit: 12 } });
       const arr = res?.data?.data ?? [];
       setSuggestions(arr.map((u: any) => ({ ...u, isFriend: u.relationship === 'friends' })));
     } catch (e: any) {
+      setSuggestionsError(e?.response?.data?.message || e?.message || t('common.error'));
       setSuggestions([]);
     } finally {
       setSuggestionsLoading(false);
@@ -393,6 +402,13 @@ export default function FriendsPage() {
                     </div>
                   ))}
                 </div>
+              ) : friendsError ? (
+                <div className="py-10 text-center text-red-600">
+                  <div className="font-medium">{friendsError}</div>
+                  <button type="button" onClick={loadFriends} className="mt-2 text-sm text-blue-600 hover:text-blue-700 underline">
+                    {t('common.tryAgain')}
+                  </button>
+                </div>
               ) : friends.length === 0 ? (
                 <div className="py-10 text-center text-gray-500">
                   <UserX className="mx-auto mb-3 text-gray-300" size={40} />
@@ -444,6 +460,13 @@ export default function FriendsPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              ) : requestsError ? (
+                <div className="py-10 text-center text-red-600">
+                  <div className="font-medium">{requestsError}</div>
+                  <button type="button" onClick={loadRequests} className="mt-2 text-sm text-blue-600 hover:text-blue-700 underline">
+                    {t('common.tryAgain')}
+                  </button>
                 </div>
               ) : requests.length === 0 ? (
                 <div className="py-10 text-center text-gray-500">
@@ -528,6 +551,13 @@ export default function FriendsPage() {
                     </div>
                   ))}
                 </div>
+              ) : sentError ? (
+                <div className="py-10 text-center text-red-600">
+                  <div className="font-medium">{sentError}</div>
+                  <button type="button" onClick={loadSent} className="mt-2 text-sm text-blue-600 hover:text-blue-700 underline">
+                    {t('common.tryAgain')}
+                  </button>
+                </div>
               ) : sent.length === 0 ? (
                 <div className="py-10 text-center text-gray-500">
                   <Users className="mx-auto mb-3 text-gray-300" size={40} />
@@ -589,6 +619,13 @@ export default function FriendsPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              ) : suggestionsError ? (
+                <div className="py-10 text-center text-red-600">
+                  <div className="font-medium">{suggestionsError}</div>
+                  <button type="button" onClick={loadSuggestions} className="mt-2 text-sm text-blue-600 hover:text-blue-700 underline">
+                    {t('common.tryAgain')}
+                  </button>
                 </div>
               ) : suggestions.length === 0 ? (
                 <div className="py-10 text-center text-gray-500">

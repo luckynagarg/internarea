@@ -531,7 +531,7 @@ const dict = {
     fullNameMin: 'Al menos 2 caracteres',
     passwordMin: 'Al menos 6 caracteres',
     rememberMe: 'Recuérdame',
-    forgotPassword: '¿Olvidaste tu contraseña?',
+    forgotPasswordLink: '¿Olvidaste tu contraseña?',
     backToLogin: 'Volver a iniciar sesión',
     backToHome: 'Volver al inicio',
     emailRequired: 'El correo es obligatorio.',
@@ -823,12 +823,6 @@ const dict = {
     refreshStatus: 'Refresh Status',
     retryPayment: 'Retry Payment',
     backToSubscription: 'Back to Subscription',
-  },
-  profile: {
-    activeApplications: 'Active Applications',
-    acceptedApplications: 'Accepted Applications',
-    viewApplications: 'View Applications',
-    yourResumes: 'Your Resumes',
   },
 } as const;
 

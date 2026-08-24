@@ -162,10 +162,18 @@ export default function FriendCard({
         <div className="text-sm font-semibold text-gray-900 truncate">
           {safeName}
         </div>
-        {safeFriend.name && safeFriend.nickname && safeFriend.nickname !== safeFriend.name ? (
-          <div className="text-xs text-gray-500 truncate">{safeFriend.name}</div>
-        ) : (
-          <div className="text-xs text-gray-500 truncate">{safeFriend.headline || ""}</div>
+        {safeFriend.username ? (
+          <div className="text-xs text-gray-500 truncate">@{safeFriend.username}</div>
+        ) : null}
+        {safeFriend.headline ? (
+          <div className="text-xs text-gray-500 truncate">{safeFriend.headline}</div>
+        ) : safeFriend.bio ? (
+          <div className="text-xs text-gray-500 truncate">{safeFriend.bio}</div>
+        ) : null}
+        {(safeFriend.location || safeFriend.college || safeFriend.company) && (
+          <div className="text-xs text-gray-400 truncate">
+            {[safeFriend.location, safeFriend.college || safeFriend.company].filter(Boolean).join(' • ')}
+          </div>
         )}
         {(safeFriend.mutualFriends ?? 0) > 0 && (
           <div className="text-xs text-gray-400 truncate">{safeFriend.mutualFriends ?? 0} {t('friends.connections', { values: { count: safeFriend.mutualFriends ?? 0 } })}</div>
