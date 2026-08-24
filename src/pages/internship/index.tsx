@@ -47,7 +47,7 @@ const index = () => {
 //     location: "Los Angeles",
 //   },
 // ];
-const index = () => {
+
   const [filteredInternships, setfilteredInternships] = useState<any>([]);
   const [isFiltervisible, setisFiltervisible] = useState(false);
   const [filter, setfilters] = useState({
@@ -359,7 +359,7 @@ const fetchdata=async()=>{
                 </div>
               </div>
             </div>
-           
+            
           </div>
         </div>
       )}

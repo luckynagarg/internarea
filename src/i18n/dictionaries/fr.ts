@@ -531,7 +531,6 @@ const dict = {
     fullNameMin: 'Au moins 2 caractères',
     passwordMin: 'Au moins 6 caractères',
     rememberMe: 'Se souvenir de moi',
-    forgotPassword: 'Mot de passe oublié ?',
     backToLogin: 'Retour à la connexion',
     backToHome: 'Retour à l’accueil',
     emailRequired: 'L’e-mail est obligatoire.',
@@ -619,7 +618,6 @@ const dict = {
       resendOtpIn: 'Renvoyer l’OTP dans {count}s',
       loading: 'Chargement...',
       resendOtpFailed: 'Impossible de renvoyer l’OTP.',
-      invalidOtp: 'OTP invalide.',
     },
     frenchOtp: {
       title: 'Vérifier l’OTP pour changer de langue',
@@ -823,12 +821,6 @@ const dict = {
     refreshStatus: 'Refresh Status',
     retryPayment: 'Retry Payment',
     backToSubscription: 'Back to Subscription',
-  },
-  profile: {
-    activeApplications: 'Active Applications',
-    acceptedApplications: 'Accepted Applications',
-    viewApplications: 'View Applications',
-    yourResumes: 'Your Resumes',
   },
 } as const;
 

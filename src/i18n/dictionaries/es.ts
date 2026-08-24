@@ -588,6 +588,7 @@ const dict = {
       signInFirst: 'Por favor inicia sesión primero para reenviar la verificación.',
       sentSuccess: 'Correo de verificación enviado! Revisa tu bandeja (y carpeta de spam).',
     },
+    forgotPasswordLabel: '¿Olvidaste tu contraseña?',
     forgotPassword: {
       title: 'Olvidé mi contraseña',
       desc: 'Ingresa tu correo registrado o número de teléfono. Te enviaremos una nueva contraseña temporal. Esta opción se puede usar solo una vez por día.',

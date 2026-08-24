@@ -534,7 +534,6 @@ const dict = {
     fullNameMin: 'कम से कम 2 वर्ण',
     passwordMin: 'कम से कम 6 वर्ण',
     rememberMe: 'मुझे याद रखें',
-    forgotPassword: 'पासवर्ड भूल गए?',
     backToLogin: 'लॉगिन पर वापस जाएं',
     backToHome: 'होम पर वापस जाएं',
     emailRequired: 'ईमेल आवश्यक है।',
@@ -622,7 +621,6 @@ const dict = {
       resendOtpIn: '{count} सेकंड में OTP फिर से भेजें',
       loading: 'लोड हो रहा है...',
       resendOtpFailed: 'OTP फिर से भेजने में विफल।',
-      invalidOtp: 'अमान्य OTP।',
     },
     frenchOtp: {
       title: 'भाषा बदलने के लिए OTP सत्यापित करें',
@@ -826,12 +824,6 @@ const dict = {
     refreshStatus: 'Refresh Status',
     retryPayment: 'Retry Payment',
     backToSubscription: 'Back to Subscription',
-  },
-  profile: {
-    activeApplications: 'Active Applications',
-    acceptedApplications: 'Accepted Applications',
-    viewApplications: 'View Applications',
-    yourResumes: 'Your Resumes',
   },
 } as const;
 

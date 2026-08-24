@@ -1011,12 +1011,6 @@ const dict = {
     retryPayment: 'Retry Payment',
     backToSubscription: 'Back to Subscription',
   },
-  profile: {
-    activeApplications: 'Active Applications',
-    acceptedApplications: 'Accepted Applications',
-    viewApplications: 'View Applications',
-    yourResumes: 'Your Resumes',
-  },
 };
 
 export default dict;

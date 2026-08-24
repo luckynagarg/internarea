@@ -531,7 +531,6 @@ const dict = {
     fullNameMin: '至少 2 个字符',
     passwordMin: '至少 6 个字符',
     rememberMe: '记住我',
-    forgotPassword: '忘记密码？',
     backToLogin: '返回登录',
     backToHome: '返回首页',
     emailRequired: '电子邮箱为必填项。',
@@ -617,7 +616,6 @@ const dict = {
       verifiedSuccess: '手机号码验证成功！',
       resendOtp: '重新发送 OTP',
       resendOtpIn: '{count}秒后重新发送 OTP',
-      loading: '加载中...',
       resendOtpFailed: '无法重新发送 OTP。',
       invalidOtp: 'OTP 无效。',
     },
@@ -823,12 +821,6 @@ const dict = {
     refreshStatus: 'Refresh Status',
     retryPayment: 'Retry Payment',
     backToSubscription: 'Back to Subscription',
-  },
-  profile: {
-    activeApplications: 'Active Applications',
-    acceptedApplications: 'Accepted Applications',
-    viewApplications: 'View Applications',
-    yourResumes: 'Your Resumes',
   },
 } as const;
 

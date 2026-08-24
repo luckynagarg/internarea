@@ -14,7 +14,7 @@ export default function PaymentCancelPage() {
         <XCircle className="h-12 w-12 text-red-600 mx-auto" />
         <h2 className="text-xl font-semibold text-gray-900 mt-4">{t('payment.cancelled')}</h2>
         <p className="text-gray-600 mt-2">
-          {t('payment.cancelledDesc', { values: { plan: plan || '' } })}
+          {t('payment.cancelledDesc', { values: { plan: String(plan ?? '') } })}
         </p>
         {order_id && (
           <div className="mt-4 bg-gray-50 rounded-lg p-3 text-sm">
