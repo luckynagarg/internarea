@@ -51,7 +51,6 @@ const Index = () => {
     stipend: 50,
   });
 
-  // Fetch internships
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -75,7 +74,6 @@ const Index = () => {
     fetchData();
   }, []);
 
-  // Apply filters
   useEffect(() => {
     const filtered = internshipData.filter((internship) => {
       const category = String(internship.category ?? "").toLowerCase();
@@ -104,7 +102,6 @@ const Index = () => {
     setFilteredInternships(filtered);
   }, [filter, internshipData]);
 
-  // Filter input handler
   const handleFilterChange = (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -116,7 +113,6 @@ const Index = () => {
     }));
   };
 
-  // Clear filters
   const clearFilters = () => {
     setFilter({
       category: "",
@@ -273,7 +269,7 @@ const Index = () => {
               {filteredInternships.length === 0 ? (
                 <div className="rounded-lg bg-white p-8 text-center shadow-sm">
                   <p className="text-gray-500">
-                    No internships found.
+                    {t("internship.noInternshipsFound")}
                   </p>
                 </div>
               ) : (
@@ -394,7 +390,7 @@ const Index = () => {
                 type="button"
                 onClick={() => setIsFilterVisible(false)}
                 className="text-gray-400 hover:text-gray-600"
-                aria-label="Close filters"
+                aria-label={t("common.close")}
               >
                 <X className="h-6 w-6" />
               </button>
@@ -502,7 +498,7 @@ const Index = () => {
                   onClick={() => setIsFilterVisible(false)}
                   className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                 >
-                  Apply
+                  {t("common.apply")}
                 </button>
               </div>
             </div>

@@ -518,6 +518,7 @@ const dict = {
     ctcLabel: 'CTC:',
     viewDetailsLink: 'विवरण देखें',
     noCompanies: 'कोई कंपनी नहीं मिली।',
+    apply: 'आवेदन करें',
   },
   auth: {
     welcomeBack: 'स्वागत है',

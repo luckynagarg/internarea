@@ -515,6 +515,7 @@ const dict = {
     ctcLabel: 'CTC：',
     viewDetailsLink: '查看详情',
     noCompanies: '未找到公司。',
+    apply: '申请',
   },
   auth: {
     welcomeBack: '欢迎回来',

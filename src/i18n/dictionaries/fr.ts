@@ -515,6 +515,7 @@ const dict = {
     ctcLabel: 'CTC :',
     viewDetailsLink: 'Voir les détails',
     noCompanies: 'Aucune entreprise trouvée.',
+    apply: 'Appliquer',
   },
   auth: {
     welcomeBack: 'Bon retour',
