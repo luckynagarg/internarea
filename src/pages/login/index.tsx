@@ -5,6 +5,7 @@ import { signInWithPopup, signInWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { auth, googleProvider } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import Link from "next/link";
 import {
   startLoginGate,
