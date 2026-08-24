@@ -170,7 +170,7 @@ export default function LoginPage() {
     } finally {
       setIsEmailLoading(false);
     }
-  }, [email, password, rememberMe, router, runLoginGate, t]);
+  }, [email, password, rememberMe, runLoginGate, t]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
