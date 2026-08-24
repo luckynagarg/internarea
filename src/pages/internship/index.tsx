@@ -1,98 +1,82 @@
 import axiosClient from "@/lib/apiClient";
 import {
   ArrowUpRight,
-  Calendar,
   Clock,
   DollarSign,
   Filter,
   Pin,
   PlayCircle,
-  Pointer,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { useT } from "@/i18n/runtime";
 
-const index = () => {
+const Index = () => {
   const { t } = useT();
-//   {
-//     _id: "1",
-//     title: "Frontend Developer Intern",
-//     company: "TechCorp",
-//     StartDate: "April 2025",
-//     Duration: "3 Months",
-//     stipend: "$500/month",
-//     category: "Web Development",
-//     location: "New York",
-//   },
-//   {
-//     _id: "2",
-//     title: "Data Science Intern",
-//     company: "DataTech",
-//     StartDate: "May 2025",
-//     Duration: "6 Months",
-//     stipend: "$800/month",
-//     category: "Data Science",
-//     location: "San Francisco",
-//   },
-//   {
-//     _id: "3",
-//     title: "Marketing Intern",
-//     company: "MarketPro",
-//     StartDate: "June 2025",
-//     Duration: "4 Months",
-//     stipend: "$400/month",
-//     category: "Marketing",
-//     location: "Los Angeles",
-//   },
-// ];
 
-  const [filteredInternships, setfilteredInternships] = useState<any>([]);
-  const [isFiltervisible, setisFiltervisible] = useState(false);
-  const [filter, setfilters] = useState({
+  const [filteredInternships, setFilteredInternships] = useState<any[]>([]);
+  const [isFilterVisible, setIsFilterVisible] = useState(false);
+
+  const [filter, setFilter] = useState({
     category: "",
     location: "",
     workFromHome: false,
     partTime: false,
     stipend: 50,
   });
-  const [internshipData,setinternship]=useState<any>([])
-  useEffect(()=>{
-const fetchdata=async()=>{
-      try {
-        const res=await axiosClient.get("/api/internship", { skipAuth: true } as any)
-        const list = res?.data?.data ?? res?.data ?? [];
-        setinternship(list)
 
-        setfilteredInternships(list)
-      } catch (error) {
-        console.log(error)
-      }
-    }
-    fetchdata()
-  },[])
+  const [internshipData, setInternshipData] = useState<any[]>([]);
+
   useEffect(() => {
-    const filtered = internshipData.filter((internship:any) => {
-      const matchesCategory = internship.category
-        .toLowerCase()
-        .includes(filter.category.toLowerCase());
-      const matchesLocation = internship.location
-        .toLowerCase()
-        .includes(filter.location.toLowerCase());
+    const fetchData = async () => {
+      try {
+        const res = await axiosClient.get("/api/internship", {
+          skipAuth: true,
+        } as any);
+
+        const list = res?.data?.data ?? res?.data ?? [];
+
+        setInternshipData(Array.isArray(list) ? list : []);
+        setFilteredInternships(Array.isArray(list) ? list : []);
+      } catch (error) {
+        console.log(error);
+        setInternshipData([]);
+        setFilteredInternships([]);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    const filtered = internshipData.filter((internship: any) => {
+      const category = String(internship?.category ?? "").toLowerCase();
+      const location = String(internship?.location ?? "").toLowerCase();
+
+      const selectedCategory = filter.category.toLowerCase();
+      const selectedLocation = filter.location.toLowerCase();
+
+      const matchesCategory = category.includes(selectedCategory);
+      const matchesLocation = location.includes(selectedLocation);
+
       return matchesCategory && matchesLocation;
     });
-    setfilteredInternships(filtered);
+
+    setFilteredInternships(filtered);
   }, [filter, internshipData]);
-  const handlefilterchange = (e: any) => {
+
+  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    setfilters((prev) => ({
+
+    setFilter((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
   };
+
   const clearFilters = () => {
-    setfilters({
+    setFilter({
       category: "",
       location: "",
       workFromHome: false,
@@ -103,49 +87,58 @@ const fetchdata=async()=>{
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex flex-col md:flex-row gap-8">
-          {/* Filter  */}
-          <div className="hidden md:block w-64 bg-white rounded-lg shadow-sm p-6 h-fit">
-            <div className="flex items-center justify-between mb-6">
+      <div className="mx-auto max-w-7xl px-4 py-8">
+        <div className="flex flex-col gap-8 md:flex-row">
+          {/* Desktop Filters */}
+          <div className="hidden h-fit w-64 rounded-lg bg-white p-6 shadow-sm md:block">
+            <div className="mb-6 flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Filter className="h-5 w-5 text-blue-600" />
-                <span className="font-medium text-black">{t('internship.filters')}</span>
+
+                <span className="font-medium text-black">
+                  {t("internship.filters")}
+                </span>
               </div>
+
               <button
+                type="button"
                 onClick={clearFilters}
                 className="text-sm text-blue-600 hover:text-blue-700"
               >
-                {t('internship.clearAll')}
+                {t("internship.clearAll")}
               </button>
             </div>
+
             <div className="space-y-6">
-              {/* Profile/Category Filter */}
+              {/* Category Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('internship.category')}
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  {t("internship.category")}
                 </label>
+
                 <input
                   type="text"
                   name="category"
                   value={filter.category}
-                  onChange={handlefilterchange}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-700"
-                  placeholder={t('internship.placeholderCategory')}
+                  onChange={handleFilterChange}
+                  className="w-full rounded-lg border px-3 py-2 text-gray-700 focus:ring-2 focus:ring-blue-500"
+                  placeholder={t("internship.placeholderCategory")}
                 />
               </div>
+
               {/* Location Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('internship.location')}
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  {t("internship.location")}
                 </label>
+
                 <input
                   type="text"
                   name="location"
                   value={filter.location}
-                  onChange={handlefilterchange}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-700"
-                  placeholder={t('internship.placeholderLocation')}
+                  onChange={handleFilterChange}
+                  className="w-full rounded-lg border px-3 py-2 text-gray-700 focus:ring-2 focus:ring-blue-500"
+                  placeholder={t("internship.placeholderLocation")}
                 />
               </div>
 
@@ -156,37 +149,46 @@ const fetchdata=async()=>{
                     type="checkbox"
                     name="workFromHome"
                     checked={filter.workFromHome}
-                    onChange={handlefilterchange}
-                    className="h-4 w-4 text-blue-600 rounded "
+                    onChange={handleFilterChange}
+                    className="h-4 w-4 rounded text-blue-600"
                   />
-                  <span className="text-gray-700">{t('internship.workFromHome')}</span>
+
+                  <span className="text-gray-700">
+                    {t("internship.workFromHome")}
+                  </span>
                 </label>
+
                 <label className="flex items-center space-x-2">
                   <input
                     type="checkbox"
                     name="partTime"
                     checked={filter.partTime}
-                    onChange={handlefilterchange}
-                    className="h-4 w-4 text-blue-600 rounded"
+                    onChange={handleFilterChange}
+                    className="h-4 w-4 rounded text-blue-600"
                   />
-                  <span className="text-gray-700">{t('internship.partTime')}</span>
+
+                  <span className="text-gray-700">
+                    {t("internship.partTime")}
+                  </span>
                 </label>
               </div>
 
               {/* Stipend Range */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('internship.monthlyStipend')}
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  {t("internship.monthlyStipend")}
                 </label>
+
                 <input
                   type="range"
                   name="stipend"
                   min="0"
                   max="100"
                   value={filter.stipend}
-                  onChange={handlefilterchange}
+                  onChange={handleFilterChange}
                   className="w-full"
                 />
+
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>₹0</span>
                   <span>₹50K</span>
@@ -195,74 +197,125 @@ const fetchdata=async()=>{
               </div>
             </div>
           </div>
+
+          {/* Internship Content */}
           <div className="flex-1">
-            <div className="md:hidden mb-4">
+            {/* Mobile Filter Button */}
+            <div className="mb-4 md:hidden">
               <button
-                onClick={() => setisFiltervisible(!isFiltervisible)}
-                className="w-full flex items-center justify-center space-x-2 bg-white p-3 rounded-lg shadow-sm text-black"
+                type="button"
+                onClick={() =>
+                  setIsFilterVisible((previous) => !previous)
+                }
+                className="flex w-full items-center justify-center space-x-2 rounded-lg bg-white p-3 text-black shadow-sm"
               >
                 <Filter className="h-5 w-5" />
-                <span>{t('internship.showFilters')}</span>
+
+                <span>{t("internship.showFilters")}</span>
               </button>
             </div>
-            <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
+
+            {/* Result Count */}
+            <div className="mb-4 rounded-lg bg-white p-4 shadow-sm">
               <p className="text-center font-medium text-black">
-                {t('internship.internshipsFound', { values: { count: filteredInternships.length } })}
+                {t("internship.internshipsFound", {
+                  values: {
+                    count: filteredInternships.length,
+                  },
+                })}
               </p>
             </div>
+
+            {/* Internship Cards */}
             <div className="space-y-4">
               {filteredInternships.map((internship: any) => (
                 <div
-                  key={internship._id}
-                  className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
+                  key={internship?._id}
+                  className="rounded-lg bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
                 >
-                  <div className="flex items-center space-x-2 text-blue-600 mb-4">
+                  <div className="mb-4 flex items-center space-x-2 text-blue-600">
                     <ArrowUpRight className="h-5 w-5" />
-                    <span className="font-medium">{t('internship.activelyHiring')}</span>
-                  </div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-2">
-                    {internship.title}
-                  </h2>
-                  <p className="text-gray-600 mb-4">{internship.company}</p>
 
-                  <div className="grid grid-cols-3 gap-4 mb-6">
+                    <span className="font-medium">
+                      {t("internship.activelyHiring")}
+                    </span>
+                  </div>
+
+                  <h2 className="mb-2 text-xl font-bold text-gray-900">
+                    {internship?.title}
+                  </h2>
+
+                  <p className="mb-4 text-gray-600">
+                    {internship?.company}
+                  </p>
+
+                  <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    {/* Start Date */}
                     <div className="flex items-center space-x-2 text-gray-600">
                       <PlayCircle className="h-5 w-5" />
+
                       <div>
-                        <p className="text-sm font-medium">{t('internship.startDate')}</p>
-                        <p className="text-sm">{internship.startDate}</p>
+                        <p className="text-sm font-medium">
+                          {t("internship.startDate")}
+                        </p>
+
+                        <p className="text-sm">
+                          {internship?.startDate}
+                        </p>
                       </div>
                     </div>
+
+                    {/* Location */}
                     <div className="flex items-center space-x-2 text-gray-600">
                       <Pin className="h-5 w-5" />
+
                       <div>
-                        <p className="text-sm font-medium">{t('internship.location')}</p>
-                        <p className="text-sm">{internship.location}</p>
+                        <p className="text-sm font-medium">
+                          {t("internship.location")}
+                        </p>
+
+                        <p className="text-sm">
+                          {internship?.location}
+                        </p>
                       </div>
                     </div>
+
+                    {/* Stipend */}
                     <div className="flex items-center space-x-2 text-gray-600">
                       <DollarSign className="h-5 w-5" />
+
                       <div>
-                        <p className="text-sm font-medium">{t('internship.stipend')}</p>
-                        <p className="text-sm">{internship.stipend}</p>
+                        <p className="text-sm font-medium">
+                          {t("internship.stipend")}
+                        </p>
+
+                        <p className="text-sm">
+                          {internship?.stipend}
+                        </p>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between">
+
+                  <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                     <div className="flex items-center space-x-2">
-                      <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm">
-                        {t('home.internship')}
+                      <span className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-600">
+                        {t("home.internship")}
                       </span>
+
                       <div className="flex items-center space-x-1 text-green-600">
                         <Clock className="h-4 w-4" />
-                        <span className="text-sm">{t('internship.postedRecently')}</span>
+
+                        <span className="text-sm">
+                          {t("internship.postedRecently")}
+                        </span>
                       </div>
                     </div>
+
                     <Link
-                      href={`/detailiternship/${internship._id}`}
-                      className="text-blue-600 hover:text-blue-700 font-medium"
+                      href={`/detailiternship/${internship?._id}`}
+                      className="font-medium text-blue-600 hover:text-blue-700"
                     >
-                      {t('home.viewDetails')}
+                      {t("home.viewDetails")}
                     </Link>
                   </div>
                 </div>
@@ -271,46 +324,55 @@ const fetchdata=async()=>{
           </div>
         </div>
       </div>
+
       {/* Mobile Filters Modal */}
-      {isFiltervisible && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 md:hidden">
-          <div className="bg-white h-full w-full max-w-sm ml-auto p-6 overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-bold">{t('internship.filters')}</h2>
+      {isFilterVisible && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 md:hidden">
+          <div className="ml-auto h-full w-full max-w-sm overflow-y-auto bg-white p-6">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-lg font-bold">
+                {t("internship.filters")}
+              </h2>
+
               <button
-                onClick={() => setisFiltervisible(false)}
+                type="button"
+                onClick={() => setIsFilterVisible(false)}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="h-6 w-6" />
               </button>
             </div>
+
             <div className="space-y-6">
-              {/* Profile/Category Filter */}
+              {/* Category Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('internship.category')}
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  {t("internship.category")}
                 </label>
+
                 <input
                   type="text"
                   name="category"
                   value={filter.category}
-                  onChange={handlefilterchange}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-700"
-                  placeholder={t('internship.placeholderCategory')}
+                  onChange={handleFilterChange}
+                  className="w-full rounded-lg border px-3 py-2 text-gray-700 focus:ring-2 focus:ring-blue-500"
+                  placeholder={t("internship.placeholderCategory")}
                 />
               </div>
+
               {/* Location Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('internship.location')}
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  {t("internship.location")}
                 </label>
+
                 <input
                   type="text"
                   name="location"
                   value={filter.location}
-                  onChange={handlefilterchange}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-700"
-                  placeholder={t('internship.placeholderLocation')}
+                  onChange={handleFilterChange}
+                  className="w-full rounded-lg border px-3 py-2 text-gray-700 focus:ring-2 focus:ring-blue-500"
+                  placeholder={t("internship.placeholderLocation")}
                 />
               </div>
 
@@ -321,37 +383,46 @@ const fetchdata=async()=>{
                     type="checkbox"
                     name="workFromHome"
                     checked={filter.workFromHome}
-                    onChange={handlefilterchange}
-                    className="h-4 w-4 text-blue-600 rounded "
+                    onChange={handleFilterChange}
+                    className="h-4 w-4 rounded text-blue-600"
                   />
-                  <span className="text-gray-700">{t('internship.workFromHome')}</span>
+
+                  <span className="text-gray-700">
+                    {t("internship.workFromHome")}
+                  </span>
                 </label>
+
                 <label className="flex items-center space-x-2">
                   <input
                     type="checkbox"
                     name="partTime"
                     checked={filter.partTime}
-                    onChange={handlefilterchange}
-                    className="h-4 w-4 text-blue-600 rounded"
+                    onChange={handleFilterChange}
+                    className="h-4 w-4 rounded text-blue-600"
                   />
-                  <span className="text-gray-700">{t('internship.partTime')}</span>
+
+                  <span className="text-gray-700">
+                    {t("internship.partTime")}
+                  </span>
                 </label>
               </div>
 
               {/* Stipend Range */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('internship.monthlyStipend')}
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  {t("internship.monthlyStipend")}
                 </label>
+
                 <input
                   type="range"
                   name="stipend"
                   min="0"
                   max="100"
                   value={filter.stipend}
-                  onChange={handlefilterchange}
+                  onChange={handleFilterChange}
                   className="w-full"
                 />
+
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>₹0</span>
                   <span>₹50K</span>
@@ -359,7 +430,6 @@ const fetchdata=async()=>{
                 </div>
               </div>
             </div>
-            
           </div>
         </div>
       )}
@@ -367,4 +437,4 @@ const fetchdata=async()=>{
   );
 };
 
-export default index;
+export default Index;
