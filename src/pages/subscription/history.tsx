@@ -4,6 +4,7 @@ import axiosClient from "@/lib/apiClient";
 import { useSelector } from "react-redux";
 import { selectuser } from "@/Feature/Userslice";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { useT } from '@/i18n/runtime';
 
 type PaymentTransaction = {
   _id: string;
@@ -23,6 +24,7 @@ type PaymentTransaction = {
 
 export default function SubscriptionHistoryPage() {
   const user = useSelector(selectuser);
+  const { t } = useT();
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<PaymentTransaction[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +43,7 @@ export default function SubscriptionHistoryPage() {
         if (mounted) setItems(Array.isArray(data) ? data : []);
       } catch (e: any) {
         if (!mounted) return;
-        const msg = e?.response?.data?.error?.message || "Failed to load payment history.";
+        const msg = e?.response?.data?.error?.message || t('subscription.historyLoadError');
         setError(msg);
       } finally {
         if (mounted) setLoading(false);
@@ -65,18 +67,18 @@ export default function SubscriptionHistoryPage() {
             href="/subscription"
             className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-blue-700"
           >
-            <ArrowLeft size={16} /> Back to Subscription
+            <ArrowLeft size={16} /> {t('subscription.goToSubscription')}
           </Link>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm p-6">
-          <h1 className="text-2xl font-bold text-gray-900">Payment History</h1>
-          <p className="text-gray-600 mt-1">All subscription payment transactions for your account.</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('subscription.paymentHistory')}</h1>
+          <p className="text-gray-600 mt-1">{t('subscription.historyDesc')}</p>
 
           {loading && (
             <div className="flex items-center justify-center py-10">
               <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-              <span className="ml-3 text-gray-700">Loading...</span>
+              <span className="ml-3 text-gray-700">{t('common.loading')}</span>
             </div>
           )}
 
@@ -89,15 +91,15 @@ export default function SubscriptionHistoryPage() {
           {!loading && !error && (
             <div className="mt-4 space-y-3">
               {items.length === 0 && (
-                <div className="text-sm text-gray-500">No payment history yet.</div>
+                <div className="text-sm text-gray-500">{t('subscription.noPayments')}</div>
               )}
               {items.map((p) => (
                 <div key={p._id} className="border border-gray-100 rounded-lg p-4">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                     <div>
                       <div className="text-sm font-semibold text-gray-900">{p.planKey.toUpperCase()}</div>
-                      <div className="text-xs text-gray-500 mt-1">Order: {p.razorpayOrderId}</div>
-                      <div className="text-xs text-gray-500">Payment: {p.razorpayPaymentId || "—"}</div>
+                      <div className="text-xs text-gray-500 mt-1">{t('subscription.orderLabel')}: {p.razorpayOrderId}</div>
+                      <div className="text-xs text-gray-500">{t('subscription.paymentLabel')}: {p.razorpayPaymentId || "—"}</div>
                       {p.failureReason && (
                         <div className="text-xs text-red-600 mt-1">{p.failureReason}</div>
                       )}
@@ -113,11 +115,11 @@ export default function SubscriptionHistoryPage() {
                               : "bg-gray-100 text-gray-800"
                         }`}
                       >
-                        {p.status}
+                        {t(`status.${p.status}`)}
                       </div>
                       {p.invoiceNumber && (
                         <div className="text-xs text-blue-600 mt-1">
-                          Invoice: {p.invoiceNumber}
+                          {t('subscription.invoice')}: {p.invoiceNumber}
                         </div>
                       )}
                       <div className="text-xs text-gray-500 mt-1">

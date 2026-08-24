@@ -567,7 +567,7 @@ export default function SubscriptionPage() {
             )}
             {qrData.upiId && (
               <div className="mt-3 text-center text-sm text-gray-500">
-                UPI ID: <span className="font-mono font-semibold text-gray-900">{qrData.upiId}</span>
+                {t('subscription.upiIdLabel')}: <span className="font-mono font-semibold text-gray-900">{qrData.upiId}</span>
               </div>
             )}
             <div className="mt-4 text-xs text-gray-500 text-center">

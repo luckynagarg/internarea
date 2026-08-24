@@ -13,9 +13,11 @@ import {
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { selectuser } from "@/Feature/Userslice";
+import { useT } from '@/i18n/runtime';
 
 export default function DashboardPage() {
   const user = useSelector(selectuser) as any;
+  const { t } = useT();
 
   const [notificationOpen, setNotificationOpen] = useState(false);
   const bellButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -130,8 +132,8 @@ export default function DashboardPage() {
                 <img src="/logo.png" alt="" className="h-10 w-auto" />
               </Link>
               <div className="hidden md:block">
-                <div className="text-sm text-gray-600">Welcome{user?.name ? `, ${user.name}` : ""}</div>
-                <div className="text-lg font-semibold text-gray-900">Dashboard</div>
+                <div className="text-sm text-gray-600">{t('dashboard.welcome', { values: { user: user?.name ? `, ${user.name}` : '' } })}</div>
+                <div className="text-lg font-semibold text-gray-900">{t('dashboard.title')}</div>
               </div>
             </div>
 
@@ -178,26 +180,26 @@ export default function DashboardPage() {
             <div className="bg-white rounded-xl shadow-sm p-4 sticky top-20">
               <nav className="space-y-2">
                 <Link href="/" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
-                  <span className="font-medium">Home</span>
+                  <span className="font-medium">{t('dashboard.nav.home')}</span>
                 </Link>
                 <Link href="/friends" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
                   <Users className="w-4 h-4" />
-                  <span className="font-medium">Friends</span>
+                  <span className="font-medium">{t('dashboard.nav.friends')}</span>
                 </Link>
                 <Link href="/job" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
                   <BriefcaseBusiness className="w-4 h-4" />
-                  <span className="font-medium">Jobs</span>
+                  <span className="font-medium">{t('dashboard.nav.jobs')}</span>
                 </Link>
                 <Link href="/internship" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
                   <Building2 className="w-4 h-4" />
-                  <span className="font-medium">Internships</span>
+                  <span className="font-medium">{t('dashboard.nav.internships')}</span>
                 </Link>
                 <Link href="/public" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
                   <Bookmark className="w-4 h-4" />
-                  <span className="font-medium">Public Space</span>
+                  <span className="font-medium">{t('dashboard.nav.publicSpace')}</span>
                 </Link>
                 <Link href="/profile" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
-                  <span className="font-medium">Profile</span>
+                  <span className="font-medium">{t('dashboard.nav.profile')}</span>
                 </Link>
               </nav>
             </div>
@@ -207,40 +209,40 @@ export default function DashboardPage() {
             {subscription && (
               <section className="bg-white rounded-xl shadow-sm p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-lg font-semibold text-gray-900">Your Plan</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">{t('dashboard.yourPlan')}</h2>
                   <Link href="/subscription" className="text-sm text-blue-700 hover:text-blue-800 font-medium inline-flex items-center gap-1">
-                    Manage <ArrowRight size={14} />
+                    {t('dashboard.manage')} <ArrowRight size={14} />
                   </Link>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   <div className="flex-1">
-                    <div className="text-sm text-gray-500">Current plan</div>
+                    <div className="text-sm text-gray-500">{t('dashboard.currentPlan')}</div>
                     <div className="text-xl font-bold text-gray-900">{subscription.planName}</div>
                     <div className="mt-1 flex items-center gap-2 text-sm text-gray-600">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                         subscription.subscriptionStatus === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                       }`}>
-                        {subscription.subscriptionStatus}
+                        {t(`status.${subscription.subscriptionStatus}`)}
                       </span>
-                      <span>• {subscription.monthlyLimit === Number.POSITIVE_INFINITY ? 'Unlimited' : `${subscription.monthlyLimit} / month`}</span>
+                      <span>• {subscription.monthlyLimit === Number.POSITIVE_INFINITY ? t('dashboard.unlimited') : `${subscription.monthlyLimit} / ${t('subscription.monthlyLimit')}`}</span>
                     </div>
                   </div>
                   <div className="sm:text-right">
-                    <div className="text-sm text-gray-500">Days remaining</div>
+                    <div className="text-sm text-gray-500">{t('dashboard.daysRemaining')}</div>
                     <div className="text-2xl font-bold text-gray-900">
                       {subscription.subscriptionExpiry
                         ? Math.max(0, Math.ceil((new Date(subscription.subscriptionExpiry).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
                         : 0}
                     </div>
                     <div className="text-sm text-gray-600">
-                      {subscription.subscriptionExpiry ? `until ${new Date(subscription.subscriptionExpiry).toDateString()}` : '—'}
+                      {subscription.subscriptionExpiry ? `${t('dashboard.until')} ${new Date(subscription.subscriptionExpiry).toDateString()}` : '—'}
                     </div>
                   </div>
                 </div>
                 <div className="mt-4">
                   <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-                    <span>Applications used: <span className="font-semibold text-gray-900">{subscription.applicationsUsed ?? 0}</span></span>
-                    <span>Remaining: <span className="font-semibold text-gray-900">{subscription.remainingApplications ?? 0}</span></span>
+                    <span>{t('dashboard.applicationsUsed')}: <span className="font-semibold text-gray-900">{subscription.applicationsUsed ?? 0}</span></span>
+                    <span>{t('dashboard.remaining')}: <span className="font-semibold text-gray-900">{subscription.remainingApplications ?? 0}</span></span>
                   </div>
                   <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div
@@ -255,12 +257,12 @@ export default function DashboardPage() {
             )}
 
             <section className="bg-white rounded-xl shadow-sm p-5">
-              <h2 className="text-lg font-semibold text-gray-900 mb-3">Public Posts</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-3">{t('dashboard.publicPosts')}</h2>
               <div className="space-y-3">
                 {(posts ?? []).slice(0, 4).map((p: any) => (
                   <div key={p._id ?? p.id} className="border rounded-lg p-4">
                     <div className="font-semibold text-gray-900">
-                      {p.author?.name ?? "Post"}
+                      {p.author?.name ?? t('dashboard.postFallback')}
                     </div>
                     <div className="text-sm text-gray-600 mt-1">
                       {p.caption ?? p.body ?? p.message ?? ""}
@@ -268,39 +270,39 @@ export default function DashboardPage() {
                   </div>
                 ))}
                 {(!posts || posts.length === 0) && (
-                  <div className="text-sm text-gray-500">No posts found.</div>
+                  <div className="text-sm text-gray-500">{t('dashboard.noPosts')}</div>
                 )}
               </div>
             </section>
 
             <section className="bg-white rounded-xl shadow-sm p-5">
-              <h2 className="text-lg font-semibold text-gray-900 mb-3">Recommended Jobs</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-3">{t('dashboard.recommendedJobs')}</h2>
               <div className="grid sm:grid-cols-2 gap-3">
                 {(jobs ?? []).slice(0, 6).map((j: any) => (
                   <Link key={j._id} href={`/detailjob/${j._id}`} className="border rounded-lg p-4 hover:bg-gray-50">
-                    <div className="font-semibold text-gray-900">{j.title ?? "Job"}</div>
+                    <div className="font-semibold text-gray-900">{j.title ?? t('dashboard.jobFallback')}</div>
                     <div className="text-sm text-gray-600">{j.company ?? ""}</div>
                     <div className="text-xs text-gray-500 mt-2">{j.location ?? ""}</div>
                   </Link>
                 ))}
                 {(!jobs || jobs.length === 0) && (
-                  <div className="sm:col-span-2 text-sm text-gray-500">No jobs available.</div>
+                  <div className="sm:col-span-2 text-sm text-gray-500">{t('dashboard.noJobs')}</div>
                 )}
               </div>
             </section>
 
             <section className="bg-white rounded-xl shadow-sm p-5">
-              <h2 className="text-lg font-semibold text-gray-900 mb-3">Recommended Internships</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-3">{t('dashboard.recommendedInternships')}</h2>
               <div className="grid sm:grid-cols-2 gap-3">
                 {(internships ?? []).slice(0, 6).map((it: any) => (
                   <Link key={it._id} href={`/detailiternship/${it._id}`} className="border rounded-lg p-4 hover:bg-gray-50">
-                    <div className="font-semibold text-gray-900">{it.title ?? "Internship"}</div>
+                    <div className="font-semibold text-gray-900">{it.title ?? t('dashboard.internshipFallback')}</div>
                     <div className="text-sm text-gray-600">{it.company ?? ""}</div>
                     <div className="text-xs text-gray-500 mt-2">{it.location ?? ""}</div>
                   </Link>
                 ))}
                 {(!internships || internships.length === 0) && (
-                  <div className="sm:col-span-2 text-sm text-gray-500">No internships available.</div>
+                  <div className="sm:col-span-2 text-sm text-gray-500">{t('dashboard.noInternships')}</div>
                 )}
               </div>
             </section>
@@ -309,7 +311,7 @@ export default function DashboardPage() {
           <aside className="lg:col-span-3 space-y-6 hidden lg:block">
             <div className="space-y-4">
               <section className="bg-white rounded-xl shadow-sm p-5">
-                <h2 className="text-lg font-semibold text-gray-900 mb-3">Friend Requests</h2>
+                <h2 className="text-lg font-semibold text-gray-900 mb-3">{t('dashboard.friendRequests')}</h2>
                 <div className="space-y-3">
                   {(friendRequests ?? []).slice(0, 5).map((r: any) => (
                     <div key={r._id ?? r.requestId} className="flex items-center justify-between gap-3">
@@ -321,45 +323,45 @@ export default function DashboardPage() {
                         />
                         <div className="min-w-0">
                           <div className="text-sm font-semibold text-gray-900 truncate">
-                            {r.sender?.name ?? "User"}
+                            {r.sender?.name ?? t('dashboard.userFallback')}
                           </div>
-                          <div className="text-xs text-gray-500">PENDING</div>
+                          <div className="text-xs text-gray-500">{t('dashboard.pending')}</div>
                         </div>
                       </div>
                       <Link href="/friends" className="text-xs px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700">
-                        View
+                        {t('dashboard.view')}
                       </Link>
                     </div>
                   ))}
                   {(friendRequests ?? []).length === 0 && (
-                    <div className="text-sm text-gray-500">No pending requests.</div>
+                    <div className="text-sm text-gray-500">{t('dashboard.noPendingRequests')}</div>
                   )}
                 </div>
                 <div className="mt-3">
-                  <Link href="/friends" className="text-sm text-blue-600 hover:text-blue-700">Go to friends</Link>
+                  <Link href="/friends" className="text-sm text-blue-600 hover:text-blue-700">{t('dashboard.viewFriends')}</Link>
                 </div>
               </section>
 
               <section className="bg-white rounded-xl shadow-sm p-5">
-                <h2 className="text-lg font-semibold text-gray-900 mb-3">Recent Notifications</h2>
+                <h2 className="text-lg font-semibold text-gray-900 mb-3">{t('dashboard.recentNotifications')}</h2>
                 <div className="space-y-3">
                   {(recentNotifications ?? []).slice(0, 6).map((n) => (
                     <div key={n._id} className={`border rounded-lg p-3 ${n.read ? "bg-white" : "bg-amber-50"}`}>
-                      <div className="text-sm font-semibold text-gray-900">{n.title || "Notification"}</div>
+                      <div className="text-sm font-semibold text-gray-900">{n.title || t('notifications.notificationFallback')}</div>
                       <div className="text-xs text-gray-500 mt-1">{n.body ?? n.message ?? ""}</div>
                     </div>
                   ))}
                   {(recentNotifications ?? []).length === 0 && (
-                    <div className="text-sm text-gray-500">No notifications yet.</div>
+                    <div className="text-sm text-gray-500">{t('dashboard.noNotifications')}</div>
                   )}
                 </div>
                 <div className="mt-3">
-                  <Link href="/notifications" className="text-sm text-blue-600 hover:text-blue-700">See all</Link>
+                  <Link href="/notifications" className="text-sm text-blue-600 hover:text-blue-700">{t('dashboard.seeAll')}</Link>
                 </div>
               </section>
 
               <section className="bg-white rounded-xl shadow-sm p-5">
-                <h2 className="text-lg font-semibold text-gray-900 mb-3">Friends</h2>
+                <h2 className="text-lg font-semibold text-gray-900 mb-3">{t('dashboard.friends')}</h2>
                 <div className="flex flex-wrap gap-3">
                   {(onlineFriends ?? []).slice(0, 8).map((u) => (
                     <Link key={u.uid ?? u._id} href="/friends" className="flex items-center gap-2">
@@ -367,13 +369,13 @@ export default function DashboardPage() {
                     </Link>
                   ))}
                   {(onlineFriends ?? []).length === 0 && (
-                    <div className="text-sm text-gray-500">No friends yet.</div>
+                    <div className="text-sm text-gray-500">{t('dashboard.noFriends')}</div>
                   )}
                 </div>
               </section>
 
               <section className="bg-white rounded-xl shadow-sm p-5">
-                <h2 className="text-lg font-semibold text-gray-900 mb-3">Suggested Connections</h2>
+                <h2 className="text-lg font-semibold text-gray-900 mb-3">{t('dashboard.suggestedConnections')}</h2>
                 <div className="space-y-3">
                   {(suggestedConnections ?? []).slice(0, 6).map((u) => (
                     <div key={u.uid ?? u._id} className="flex items-center justify-between gap-3">
@@ -385,12 +387,12 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       <Link href="/friends" className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200">
-                        Connect
+                        {t('common.connect')}
                       </Link>
                     </div>
                   ))}
                   {(suggestedConnections ?? []).length === 0 && (
-                    <div className="text-sm text-gray-500">No suggestions yet.</div>
+                    <div className="text-sm text-gray-500">{t('dashboard.noSuggestions')}</div>
                   )}
                 </div>
               </section>

@@ -6,6 +6,7 @@ import { useSelector } from "react-redux";
 import axiosClient from "@/lib/apiClient";
 import { API_URL } from "@/config/api";
 import LoginHistory from "@/Components/LoginHistory";
+import { useT } from '@/i18n/runtime';
 
 interface User {
   name: string;
@@ -15,6 +16,7 @@ interface User {
 
 const index = () => {
   const user = useSelector(selectuser);
+  const { t } = useT();
   const [resumes, setResumes] = useState<any[]>([]);
   const [activeApplications, setActiveApplications] = useState(0);
   const [acceptedApplications, setAcceptedApplications] = useState(0);
@@ -53,7 +55,7 @@ const index = () => {
 
   function ResumesList() {
     if (!resumes.length) {
-      return <div className="text-gray-500 text-sm">No resumes created yet.</div>;
+      return <div className="text-gray-500 text-sm">{t('common.noResumes')}</div>;
     }
 
     return (
@@ -61,7 +63,7 @@ const index = () => {
         {resumes.map((r) => (
           <div key={r._id} className="flex items-center justify-between gap-3 p-3 border rounded-lg">
             <div>
-              <div className="font-medium text-gray-900">Resume</div>
+              <div className="font-medium text-gray-900">{t('resume.homeTitle')}</div>
               <div className="text-xs text-gray-500">{new Date(r.createdAt).toLocaleString()}</div>
             </div>
             {r.resumePdfPath ? (
@@ -69,10 +71,10 @@ const index = () => {
                 href={API_URL(`/api/resume/resumes/${r._id}/download`)}
                 className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
               >
-                Download
+                {t('common.download')}
               </a>
             ) : (
-              <div className="text-xs text-gray-500">Generating...</div>
+              <div className="text-xs text-gray-500">{t('common.generating')}</div>
             )}
           </div>
         ))}
@@ -115,13 +117,13 @@ const index = () => {
             <div className="space-y-6">
               {/* Quick Stats */}
               <div className="grid grid-cols-2 gap-4">
-<div className="bg-blue-50 rounded-lg p-4 text-center">
+                <div className="bg-blue-50 rounded-lg p-4 text-center">
                   <span className="text-blue-600 font-semibold text-2xl">{activeApplications}</span>
-                  <p className="text-blue-600 text-sm mt-1">Active Applications</p>
+                  <p className="text-blue-600 text-sm mt-1">{t('profile.activeApplications')}</p>
                 </div>
                 <div className="bg-green-50 rounded-lg p-4 text-center">
                   <span className="text-green-600 font-semibold text-2xl">{acceptedApplications}</span>
-                  <p className="text-green-600 text-sm mt-1">Accepted Applications</p>
+                  <p className="text-green-600 text-sm mt-1">{t('profile.acceptedApplications')}</p>
                 </div>
               </div>
 
@@ -131,7 +133,7 @@ const index = () => {
                   href="/userapplication"
                   className="inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200"
                 >
-                  View Applications
+                  {t('profile.viewApplications')}
                   <ExternalLink className="ml-2 h-4 w-4" />
                 </Link>
 
@@ -139,7 +141,7 @@ const index = () => {
                   href="/resume/create"
                   className="inline-flex items-center justify-center px-6 py-3 bg-white text-blue-700 font-medium rounded-lg hover:bg-blue-50 border border-blue-200 transition-colors duration-200"
                 >
-                  Create Resume (₹50)
+                  {t('resume.createTitle')} (₹50)
                   <ExternalLink className="ml-2 h-4 w-4" />
                 </Link>
 
@@ -147,15 +149,15 @@ const index = () => {
                   href="/subscription"
                   className="inline-flex items-center justify-center px-6 py-3 bg-white text-blue-700 font-medium rounded-lg hover:bg-blue-50 border border-blue-200 transition-colors duration-200"
                 >
-                  Subscription & Billing
+                  {t('subscription.title')}
                   <ExternalLink className="ml-2 h-4 w-4" />
                 </Link>
               </div>
 
               {/* Login History */}
               <div className="mt-10">
-                <div className="text-gray-900 font-semibold mb-3">Login History</div>
-                <div className="text-sm text-gray-500 mb-4">Recent login attempts for your account.</div>
+                <div className="text-gray-900 font-semibold mb-3">{t('loginHistory.title')}</div>
+                <div className="text-sm text-gray-500 mb-4">{t('loginHistory.desc')}</div>
                 <div className="bg-white rounded-xl border p-4">
                   <LoginHistory />
                 </div>
@@ -163,7 +165,7 @@ const index = () => {
 
               {/* Resumes */}
               <div className="mt-8">
-                <div className="text-gray-900 font-semibold mb-3">Your Resumes</div>
+                <div className="text-gray-900 font-semibold mb-3">{t('profile.yourResumes')}</div>
                 <ResumesList />
               </div>
             </div>
