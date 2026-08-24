@@ -1,7 +1,8 @@
-import Footer from "@/Components/Fotter";
+import Footer from "@/Components/Footer";
 import Navbar from "@/Components/Navbar";
 import "@/styles/global.css";
 import type { AppProps } from "next/app";
+import { useRouter } from "next/router";
 import { Provider, useDispatch } from "react-redux";
 import { useEffect } from "react";
 import { store } from "../store/store";
@@ -40,16 +41,29 @@ function AuthListener() {
   return null;
 }
 
+// Routes where the global Navbar/Footer should be hidden (auth pages)
+const AUTH_ROUTES = [
+  "/login",
+  "/signup",
+  "/adminlogin",
+  "/forgot-password",
+  "/admin-forgot-password",
+  "/verify-email",
+];
+
 export default function App({ Component, pageProps }: AppProps) {
+  const router = useRouter();
+  const isAuthRoute = AUTH_ROUTES.includes(router.pathname);
+
   return (
     <Provider store={store}>
       <I18nProvider>
         <AuthListener />
         <div className="bg-white">
           <ToastContainer />
-          <Navbar />
+          {!isAuthRoute && <Navbar />}
           <Component {...pageProps} />
-          <Footer />
+          {!isAuthRoute && <Footer />}
         </div>
       </I18nProvider>
     </Provider>
