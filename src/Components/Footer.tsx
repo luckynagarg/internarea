@@ -64,7 +64,7 @@ export default function Footer() {
   return (
     <footer className="bg-gray-800 text-white py-12">
       <div className="container mx-auto px-6">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-16 gap-y-10">
           <FooterSection title={t('footer.internshipByPlaces')} items={footerLinks.internshipByPlaces} />
           <FooterSection title={t('footer.internshipByStream')} items={footerLinks.internshipByStream} links />
           <FooterSection title={t('footer.jobPlaces')} items={footerLinks.jobPlaces} links />
@@ -73,7 +73,7 @@ export default function Footer() {
 
         <hr className="my-10 border-gray-600" />
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-16 gap-y-10">
           <FooterSection title={t('footer.aboutUs')} items={bottomLinks.aboutUs} links />
           <FooterSection title={t('footer.teamDiary')} items={bottomLinks.teamDiary} links />
           <FooterSection title={t('footer.termsAndConditions')} items={bottomLinks.termsAndConditions} links />
