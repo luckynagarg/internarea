@@ -37,7 +37,8 @@ export default function ForgotPasswordPage() {
     return null;
   }, [identifier]);
 
-  const requestReset = async () => {
+  const requestReset = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     setLoading(true);
     setMessage("");
     setErrorMessage("");
@@ -59,11 +60,14 @@ export default function ForgotPasswordPage() {
         t('auth.forgotPassword.desc');
 
       if (res?.data?.success === false) {
+        // Server rejected (e.g. "You can use this option only once per day.")
         setErrorMessage(msg);
         toast.error(msg);
       } else {
         setMessage(msg);
         toast.success(t('auth.forgotPassword.resetSent'));
+        // A new temporary password was emailed — send the user back to login.
+        setTimeout(() => router.push("/login"), 4000);
       }
     } catch (e: any) {
       const msg =
@@ -83,7 +87,10 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-10">
       <div className="max-w-xl mx-auto px-4">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow p-6 md:p-8">
+        <form
+          onSubmit={requestReset}
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow p-6 md:p-8"
+        >
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             {t('auth.forgotPassword.title')}
           </h1>
@@ -157,9 +164,8 @@ export default function ForgotPasswordPage() {
           ) : null}
 
           <button
-            type="button"
+            type="submit"
             disabled={!canRequest}
-            onClick={requestReset}
             className="mt-6 w-full bg-blue-600 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {loading ? (
@@ -181,7 +187,7 @@ export default function ForgotPasswordPage() {
               {t('auth.forgotPassword.backToLogin')}
             </button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );

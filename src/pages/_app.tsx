@@ -77,6 +77,7 @@ const AUTH_ROUTES = [
   "/forgot-password",
   "/admin-forgot-password",
   "/verify-email",
+  "/verify-login-otp",
 ];
 
 export default function App({ Component, pageProps }: AppProps) {

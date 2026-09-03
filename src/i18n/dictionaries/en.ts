@@ -649,6 +649,14 @@ const dict = {
       signInFirst: 'Please sign in first to resend verification.',
       sentSuccess: 'Verification email sent! Check your inbox (and spam folder).',
     },
+    loginEmailOtp: {
+      title: 'Verify your email',
+      subtitle: 'We sent a 6-digit code to your Gmail address',
+      securityNote: 'Email verification keeps your account secure.',
+      otpLabel: 'Enter the code from your email',
+    },
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
     forgotPassword: {
       title: 'Forgot Password',
       desc: 'Enter your registered email address or phone number. We will send a new temporary password to your registered email. This option can be used only once per day.',

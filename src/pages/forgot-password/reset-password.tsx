@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
-import axios from 'axios';
+import axiosClient from '@/lib/axiosClient';
 import { useT } from '@/i18n/runtime';
 
 function generateLetterOnlyPassword(length = 12) {
@@ -84,7 +84,7 @@ export default function ResetPasswordPage() {
 
     setLoading(true);
     try {
-      await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL || ''}/api/password-recovery/reset-password`, {
+      await axiosClient.post(`/api/password-recovery/reset-password`, {
         method,
         identifier,
         otp: '000000',

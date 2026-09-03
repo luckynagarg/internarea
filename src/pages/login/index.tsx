@@ -2,16 +2,15 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { signInWithPopup, signInWithEmailAndPassword } from "firebase/auth";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/router";
 import { toast } from "react-toastify";
 import { auth, googleProvider } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import Link from "next/link";
 import {
   startLoginGate,
-  verifyLoginOtp,
-  resendLoginOtp,
 } from "@/Feature/loginSecurity";
+import { Eye, EyeOff } from "lucide-react";
 import { useT } from "@/i18n/runtime";
 
 export default function LoginPage() {
@@ -23,11 +22,7 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
-
-  // Chrome OTP gate state
-  const [otpRequired, setOtpRequired] = useState(false);
-  const [otp, setOtp] = useState("");
-  const [isOtpLoading, setIsOtpLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // After a successful Firebase sign-in, run the server-side login gate
   // (Chrome OTP + mobile time restriction). If OTP is required, block access.
@@ -64,10 +59,11 @@ export default function LoginPage() {
       }
       if (result.otpRequired) {
         if (process.env.NODE_ENV !== 'production') {
-          console.debug('[Auth Debug] runLoginGate OTP required', { method });
+          console.debug('[Auth Debug] runLoginGate OTP required → /verify-login-otp', { method });
         }
-        setOtpRequired(true);
-        setOtp("");
+        // Redirect to the dedicated Gmail/email OTP verification page
+        // (email OTP, not phone verification).
+        router.push("/verify-login-otp");
         return;
       }
       if (process.env.NODE_ENV !== 'production') {
@@ -189,66 +185,6 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Chrome email OTP verification gate */}
-          {otpRequired && (
-            <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                {t('auth.otp.title')}
-              </h2>
-              <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
-                {t('auth.emailVerification.sent')}
-              </p>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
-                placeholder={t('auth.otp.otpPlaceholder')}
-                maxLength={6}
-                className="w-full px-3 py-2 mb-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm"
-              />
-              <button
-                type="button"
-                disabled={isOtpLoading || otp.length < 4}
-                onClick={async () => {
-                  setIsOtpLoading(true);
-                  try {
-                    const res = await verifyLoginOtp(otp);
-                    if (res.accessGranted) {
-                      setOtpRequired(false);
-                      toast.success(t('auth.otp.verifiedSuccess'));
-                      router.push("/");
-                    } else {
-                      toast.error(res.message || t('auth.otp.invalidOtp'));
-                    }
-                  } catch (e: any) {
-                    toast.error(e?.response?.data?.message ?? e?.message ?? t('auth.otp.invalidOtp'));
-                  } finally {
-                    setIsOtpLoading(false);
-                  }
-                }}
-                className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg text-sm"
-              >
-                {isOtpLoading ? t('auth.otp.loading') : t('auth.otp.verifyOtp')}
-              </button>
-              <button
-                type="button"
-                disabled={isOtpLoading}
-                onClick={async () => {
-                  try {
-                    await resendLoginOtp();
-                    toast.success(t('auth.otp.resendOtp'));
-                  } catch (e: any) {
-                    toast.error(e?.response?.data?.message ?? t('auth.otp.resendOtpFailed'));
-                  }
-                }}
-                className="w-full text-center text-xs text-blue-600 hover:underline mt-3"
-              >
-                {t('auth.otp.resendOtp')}
-              </button>
-            </div>
-          )}
-
           {/* Google Sign-In */}
           <button
             type="button"
@@ -310,15 +246,25 @@ export default function LoginPage() {
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 {t('auth.password')}
               </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={t('auth.passwordPlaceholder')}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm"
-                required
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={t('auth.passwordPlaceholder')}
+                  className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm"
+                  required
+                />
+                <button
+                  type="button"
+                  aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
+                  onClick={() => setShowPassword((s) => !s)}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
 
             {/* Remember Me */}

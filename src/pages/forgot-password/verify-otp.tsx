@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import axios from 'axios';
+import axiosClient from '@/lib/axiosClient';
 import { useT } from '@/i18n/runtime';
 
 export default function VerifyOtpPage() {
@@ -33,7 +33,7 @@ export default function VerifyOtpPage() {
     setLoading(true);
     setMessage('');
     try {
-      await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL || ''}/api/password-recovery/verify-otp`, {
+      await axiosClient.post(`/api/password-recovery/verify-otp`, {
         method,
         identifier,
         otp,
@@ -57,7 +57,7 @@ export default function VerifyOtpPage() {
     setLoading(true);
     setMessage('');
     try {
-      await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL || ''}/api/password-recovery/resend-otp`, {
+      await axiosClient.post(`/api/password-recovery/resend-otp`, {
         method,
         identifier,
       });
