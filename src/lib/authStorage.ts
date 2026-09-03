@@ -7,6 +7,9 @@
  */
 export const REMEMBERED_EMAIL_KEY = "internarea_remembered_email";
 
+/** Server-signed admin session token (username/password admin login). */
+export const ADMIN_SESSION_TOKEN_KEY = "internarea_admin_session_token";
+
 /** localStorage/sessionStorage keys that are auth/session related. */
 const AUTH_KEY_PREFIXES = ["internarea_"];
 

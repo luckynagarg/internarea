@@ -15,7 +15,7 @@ import {
 } from "@/Components/ui/input-otp";
 import { Input } from "@/Components/ui/input";
 import { Button } from "@/Components/ui/button";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/router";
 import { useT } from "@/i18n/runtime";
 
 const RECATCHA_CONTAINER_ID = "recaptcha-container";

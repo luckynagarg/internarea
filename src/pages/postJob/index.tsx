@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 import axiosClient from "@/lib/apiClient";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/router";
 import { useT } from "@/i18n/runtime";
 
 const index = () => {

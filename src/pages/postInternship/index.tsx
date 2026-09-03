@@ -9,7 +9,7 @@ import {
   DollarSign,
   Calendar,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/router";
 import axiosClient from "@/lib/apiClient";
 import { toast } from "react-toastify";
 import { useT } from "@/i18n/runtime";

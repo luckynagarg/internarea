@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import { useRouter } from 'next/router';
 import { API_URL } from '@/config/api';
 import { getAuthHeaders } from '@/lib/authHeaders';
 import { useT } from '@/i18n/runtime';
@@ -25,6 +26,7 @@ type Row = {
 
 export default function AdminLoginHistoryPage() {
   const { t } = useT();
+  const router = useRouter();
 
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
@@ -65,6 +67,12 @@ export default function AdminLoginHistoryPage() {
         if (!mounted) return;
         setError(e?.message || t('errors.generic'));
         setRows([]);
+
+        // Redirect to admin login on auth failures.
+        const status = e?.response?.status;
+        if (status === 401 || status === 403) {
+          router.push("/adminlogin");
+        }
       } finally {
         if (mounted) setLoading(false);
       }

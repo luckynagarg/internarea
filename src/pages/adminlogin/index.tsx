@@ -1,10 +1,11 @@
 import axios from "axios";
 import { User, Lock } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/router";
 import React, { useState } from "react";
 import Link from "next/link";
 import { toast } from "react-toastify";
 import { useT } from '@/i18n/runtime';
+import { ADMIN_SESSION_TOKEN_KEY } from "@/lib/authStorage";
 
 const index = () => {
   const { t } = useT();
@@ -25,7 +26,7 @@ const index = () => {
   const handlesubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formadata.username || !formadata.password) {
-      toast.error("Please fill in all detials");
+      toast.error("Please fill in all details");
       return;
     }
     try {
@@ -36,19 +37,30 @@ const index = () => {
         formadata
       );
 
-      toast.success("logged in successfuly");
+      if (!res?.data?.success) {
+        toast.error(res?.data?.message || "Login failed");
+        return;
+      }
+
+      // Store the admin session token for subsequent API calls.
+      const token = res?.data?.data?.token;
+      if (token && typeof window !== "undefined") {
+        window.localStorage.setItem(ADMIN_SESSION_TOKEN_KEY, token);
+      }
+
+      toast.success("Logged in successfully");
       router.push("/adminpanel");
     } catch (error: any) {
-  console.log(error);
-  console.log(error.response?.data);
-
-  toast.error(
-    error.response?.data?.message ||
-    error.response?.data?.error ||
-    error.message ||
-    "Login failed"
-  );
-}
+      console.error("[adminlogin] error:", error?.message);
+      toast.error(
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Login failed"
+      );
+    } finally {
+      setisloading(false);
+    }
   };
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">

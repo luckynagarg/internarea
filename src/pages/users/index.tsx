@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
+import { useRouter } from "next/router";
 import { API_URL } from "@/config/api";
 import { getAuthHeaders } from "@/lib/authHeaders";
 import { toast } from "react-toastify";
@@ -25,6 +26,7 @@ type AdminUser = {
 };
 
 export default function AdminUsersPage() {
+  const router = useRouter();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +56,11 @@ export default function AdminUsersPage() {
           : "Could not load users.";
       setError(msg);
       setUsers([]);
+
+      // Redirect to admin login on auth failures.
+      if (status === 401 || status === 403) {
+        router.push("/adminlogin");
+      }
     } finally {
       setLoading(false);
     }
@@ -98,6 +105,11 @@ export default function AdminUsersPage() {
           : "Failed to delete the user.");
       // Keep the user in the table; show the actual error.
       toast.error(msg);
+
+      // Redirect to admin login on auth failures.
+      if (status === 401 || status === 403) {
+        router.push("/adminlogin");
+      }
     } finally {
       setDeletingUid(null);
     }
