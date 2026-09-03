@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import axiosClient from "@/lib/apiClient";
 import Link from "next/link";
 import { auth } from "@/lib/firebase";
-import { Bell, Search, Globe, Menu, X, Shield } from "lucide-react";
+import { Bell, Search, Globe, Menu, X, Shield, MessageSquare } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useSelector } from "react-redux";
 import { selectuser } from "@/Feature/Userslice";
@@ -290,6 +290,7 @@ className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-cent
                        </Link>
                        <div className="flex flex-col">
                          <Link href="/dashboard" className="text-xs text-gray-600 hover:text-blue-600">{t('dashboard.title')}</Link>
+                         <Link href="/messages" className="text-xs text-gray-600 hover:text-blue-600">{t('navbar.messages')}</Link>
                          <button className="text-xs text-red-500 hover:text-red-700 text-left" onClick={handlelogout}>
                            {t('navbar.logout')}
                          </button>
@@ -338,6 +339,9 @@ className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-cent
               <>
                 <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
                   {t('dashboard.title')}
+                </Link>
+                <Link href="/messages" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
+                  {t('navbar.messages')}
                 </Link>
                 <Link href="/profile" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
                   {t('navbar.profile')}
