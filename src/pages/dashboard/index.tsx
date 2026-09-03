@@ -344,7 +344,7 @@ export default function DashboardPage() {
               <h2 className="text-lg font-semibold text-gray-900 mb-3">{t('dashboard.recommendedInternships')}</h2>
               <div className="grid sm:grid-cols-2 gap-3">
                 {(internships ?? []).slice(0, 6).map((it: any) => (
-                  <Link key={it._id} href={`/detailiternship/${it._id}`} className="border rounded-lg p-4 hover:bg-gray-50">
+                  <Link key={it._id} href={`/detailinternship/${it._id}`} className="border rounded-lg p-4 hover:bg-gray-50">
                     <div className="font-semibold text-gray-900">{it.title ?? t('dashboard.internshipFallback')}</div>
                     <div className="text-sm text-gray-600">{it.company ?? ""}</div>
                     <div className="text-xs text-gray-500 mt-2">{it.location ?? ""}</div>

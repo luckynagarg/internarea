@@ -410,7 +410,7 @@ export default function SvgSlider() {
                 </span>
 
                 <Link
-                  href={`/detailiternship/${internship._id}`}
+                  href={`/detailinternship/${internship._id}`}
                   className="text-blue-600 hover:text-blue-700 flex items-center gap-1"
                 >
                   {t("home.viewDetails")}

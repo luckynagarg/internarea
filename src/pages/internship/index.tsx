@@ -363,7 +363,7 @@ const Index = () => {
                       </div>
 
                       <Link
-                        href={`/detailiternship/${internship._id}`}
+                        href={`/detailinternship/${internship._id}`}
                         className="font-medium text-blue-600 hover:text-blue-700"
                       >
                         {t("home.viewDetails")}
