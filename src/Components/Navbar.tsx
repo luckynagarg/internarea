@@ -13,6 +13,7 @@ import { useGlobalSearchSuggestions } from "@/hooks/useGlobalSearchSuggestions";
 import { useT, LANG_LABELS, type SupportedLang } from "@/i18n/runtime";
 import { toast } from "react-toastify";
 import { getFrenchOtpStatus } from "@/Feature/frenchOtp";
+import { resetAuthData } from "@/lib/authStorage";
 
 function GlobalSearchBox() {
   const router = useRouter();
@@ -87,6 +88,7 @@ function GlobalSearchBox() {
 }
 
 const Navbar = () => {
+  const router = useRouter();
   const user = useSelector(selectuser);
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -169,8 +171,15 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handlelogout = () => {
-    signOut(auth);
+  const handlelogout = async () => {
+    try {
+      await signOut(auth);
+    } catch {
+      // ignore signOut errors — still clear local state below
+    }
+    // Full auth reset: clear stored email/session/auth data from storage.
+    resetAuthData();
+    router.push("/login");
   };
 
   return (

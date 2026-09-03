@@ -592,6 +592,7 @@ const dict = {
     fullNameMin: 'At least 2 characters',
     passwordMin: 'At least 6 characters',
     rememberMe: 'Remember me',
+    forgotPasswordLabel: 'Forgot password?',
     forgotPasswordLink: 'Forgot Password?',
     backToLogin: 'Back to Login',
     backToHome: 'Back to home',

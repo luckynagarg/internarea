@@ -14,6 +14,7 @@ import {
 import FriendSearch, { FriendSearchResult } from './components/FriendSearch';
 import NicknameModal from './components/NicknameModal';
 import FriendCard, { FriendCardModel } from './components/FriendCard';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
 
 type IncomingRequest = {
   _id: string;
@@ -66,6 +67,7 @@ type SearchTabResult = {
 };
 
 export default function FriendsPage() {
+  const { ready } = useRequireAuth();
   const { t } = useT();
   const [tab, setTab] = useState<TabId>('friends');
 
@@ -344,6 +346,8 @@ export default function FriendsPage() {
     { id: 'search', label: t('friends.searchResults'), icon: <Search size={16} />, count: 0 },
   ];
 
+
+  if (!ready) return null;
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">

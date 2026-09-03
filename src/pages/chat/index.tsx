@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { mockData, MockConversation, MockChatMessage, MockUser } from '@/mockData';
 import { fetchOrMock } from '@/mockData/fetchOrMock';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { MessageSquareMore, Eye, EyeOff } from 'lucide-react';
 
 const API_BASE =
@@ -10,6 +11,7 @@ const API_BASE =
   'http://localhost:5000';
 
 export default function ChatPage() {
+  const { ready } = useRequireAuth();
   const currentUser: MockUser | null = mockData.users[1] ?? null;
 
   const [query, setQuery] = useState('');
@@ -74,6 +76,8 @@ export default function ChatPage() {
     ? messagesByConversationId[activeConversationId] || []
     : [];
 
+
+  if (!ready) return null;
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

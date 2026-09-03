@@ -5,6 +5,7 @@ import axiosClient from '@/lib/apiClient';
 import { useRouter } from 'next/router';
 import { useT } from '@/i18n/runtime';
 import { toast } from 'react-toastify';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
 
 import { Bell, CheckCircle2, Heart, MessageSquare, FileText, Inbox, Check, X } from 'lucide-react';
 
@@ -105,6 +106,9 @@ export default function NotificationsPage() {
     return <CheckCircle2 className="text-green-600" />;
   };
 
+  const { ready } = useRequireAuth();
+
+  if (!ready) return null;
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4">

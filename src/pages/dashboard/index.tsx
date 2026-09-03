@@ -16,8 +16,10 @@ import { selectuser } from "@/Feature/Userslice";
 import { useT } from '@/i18n/runtime';
 import FriendCard, { FriendCardModel } from "@/pages/friends/components/FriendCard";
 import { toast } from "react-toastify";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 export default function DashboardPage() {
+  const { ready } = useRequireAuth();
   const user = useSelector(selectuser) as any;
   const { t } = useT();
 
@@ -171,6 +173,8 @@ export default function DashboardPage() {
     }
   };
 
+
+  if (!ready) return null;
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm sticky top-0 z-40">

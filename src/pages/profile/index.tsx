@@ -7,6 +7,7 @@ import axiosClient from "@/lib/apiClient";
 import { API_URL } from "@/config/api";
 import LoginHistory from "@/Components/LoginHistory";
 import { useT } from '@/i18n/runtime';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
 
 interface User {
   name: string;
@@ -15,6 +16,7 @@ interface User {
 }
 
 const index = () => {
+  const { ready } = useRequireAuth();
   const user = useSelector(selectuser);
   const { t } = useT();
   const [resumes, setResumes] = useState<any[]>([]);
@@ -82,6 +84,8 @@ const index = () => {
     );
   }
 
+
+  if (!ready) return null;
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
