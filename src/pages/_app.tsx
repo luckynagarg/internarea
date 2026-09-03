@@ -9,6 +9,7 @@ import { store } from "../store/store";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { login, logout } from "@/Feature/Userslice";
+import axiosClient from "@/lib/apiClient";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { Analytics } from "@vercel/analytics/next";
@@ -41,6 +42,22 @@ function AuthListener() {
             phoneNumber: authuser.phoneNumber,
           })
         );
+
+        // Ensure a UserProfile document exists for this account so the user
+        // is discoverable in friend search / suggestions. Fire-and-forget,
+        // deduped per uid per session.
+        const uid = authuser.uid;
+        if ((globalThis as any).__bootstrappedUid !== uid) {
+          (globalThis as any).__bootstrappedUid = uid;
+          axiosClient
+            .post("/api/profile/bootstrap", {
+              photo: authuser.photoURL ?? null,
+            })
+            .catch(() => {
+              // Non-fatal: allow retry on next sign-in.
+              (globalThis as any).__bootstrappedUid = null;
+            });
+        }
       } else {
         dispatch(logout());
       }
