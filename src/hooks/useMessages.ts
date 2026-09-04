@@ -4,7 +4,7 @@ import { API_URL } from "@/config/api";
 import { getAuthHeaders } from "@/lib/authHeaders";
 import { toast } from "react-toastify";
 import { useSocket } from "@/hooks/useSocket";
-import type { Conversation, ChatMessage } from "./index";
+import type { Conversation, ChatMessage } from "@/types/messages";
 
 export function useMessages() {
   const { on, off, emit } = useSocket();

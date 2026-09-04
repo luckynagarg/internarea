@@ -1,50 +1,18 @@
 import React, { useState } from "react";
 import { MessageSquare, Plus } from "lucide-react";
 import { useT } from "@/i18n/runtime";
-import NewChatModal from "./NewChatModal";
-import ConversationList from "./ConversationList";
-import ChatWindow from "./ChatWindow";
-import { useMessages } from "./useMessages";
+import NewChatModal from "@/Components/messages/NewChatModal";
+import ConversationList from "@/Components/messages/ConversationList";
+import ChatWindow from "@/Components/messages/ChatWindow";
+import { useMessages } from "@/hooks/useMessages";
+import type {
+  OtherUser,
+  LastMessage,
+  Conversation,
+  ChatMessage,
+} from "@/types/messages";
 
-export type OtherUser = {
-  uid: string;
-  name: string | null;
-  username: string | null;
-  nickname: string | null;
-  photo: string | null;
-};
-
-export type LastMessage = {
-  _id: string;
-  messageType: string;
-  text: string | null;
-  imageUrl: string | null;
-  senderId: string;
-  createdAt: string;
-};
-
-export type Conversation = {
-  _id: string;
-  participants: string[];
-  otherUser: OtherUser;
-  lastMessage: LastMessage | null;
-  lastMessageAt: string;
-  unreadCount: number;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type ChatMessage = {
-  _id: string;
-  conversationId: string;
-  senderId: string;
-  receiverId: string;
-  messageType: "text" | "image";
-  text: string | null;
-  imageUrl: string | null;
-  createdAt: string;
-  readAt: string | null;
-};
+export type { OtherUser, LastMessage, Conversation, ChatMessage };
 
 export default function MessagesPage() {
   const { t } = useT();
@@ -58,6 +26,7 @@ export default function MessagesPage() {
   } = useMessages();
 
   const [showNewChat, setShowNewChat] = useState(false);
+  const SafeChatWindow = ChatWindow as unknown as React.ComponentType<any>;
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -5,7 +5,7 @@ import { API_URL } from "@/config/api";
 import { getAuthHeaders } from "@/lib/authHeaders";
 import { useT } from "@/i18n/runtime";
 import { toast } from "react-toastify";
-import type { Conversation } from "./index";
+import type { Conversation } from "@/types/messages";
 
 type UserResult = {
   uid: string;

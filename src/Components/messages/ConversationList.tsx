@@ -1,7 +1,7 @@
 import React from "react";
 import { MessageSquare, Search, Loader2 } from "lucide-react";
 import { useT } from "@/i18n/runtime";
-import type { Conversation } from "./index";
+import type { Conversation } from "@/types/messages";
 
 type Props = {
   conversations: Conversation[];
