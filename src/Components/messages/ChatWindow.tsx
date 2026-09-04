@@ -1,11 +1,20 @@
 import React, { useRef, useState } from "react";
-import { ArrowLeft, Loader2, Send, Image as ImageIcon } from "lucide-react";
+import {
+  ArrowLeft,
+  Loader2,
+  Send,
+  Image as ImageIcon,
+} from "lucide-react";
 import { useT } from "@/i18n/runtime";
 import axios from "axios";
 import { API_URL } from "@/config/api";
 import { getAuthHeaders } from "@/lib/authHeaders";
 import { toast } from "react-toastify";
-import type { Conversation, ChatMessage, OtherUser } from "@/types/messages";
+import type {
+  Conversation,
+  ChatMessage,
+  OtherUser,
+} from "@/types/messages";
 
 type Props = {
   conversation: Conversation | null;
@@ -50,7 +59,9 @@ export default function ChatWindow(props: Props) {
     });
   }, [messages]);
 
-  const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImage = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = e.target.files?.[0];
 
     if (!file) {
@@ -83,20 +94,30 @@ export default function ChatWindow(props: Props) {
       const fd = new FormData();
       fd.append("image", file);
 
-      const res = await axios.post(API_URL("/api/messages/upload"), fd, {
-        headers: {
-          ...headers,
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const res = await axios.post(
+        API_URL("/api/messages/upload"),
+        fd,
+        {
+          headers: {
+            ...headers,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
-      if (res.data?.success && res.data.data?.imageUrl) {
+      if (
+        res.data?.success &&
+        res.data.data?.imageUrl
+      ) {
         onSendImage(res.data.data.imageUrl);
       } else {
         toast.error("Upload failed.");
       }
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Upload failed.");
+      toast.error(
+        err?.response?.data?.message ||
+          "Upload failed."
+      );
     } finally {
       setUploading(false);
     }
@@ -110,7 +131,10 @@ export default function ChatWindow(props: Props) {
         }`}
       >
         <div className="text-center">
-          <ImageIcon className="mx-auto text-gray-300 mb-3" size={48} />
+          <ImageIcon
+            className="mx-auto text-gray-300 mb-3"
+            size={48}
+          />
 
           <p className="text-gray-500 text-sm">
             {t("messages.selectConversation")}
@@ -122,32 +146,28 @@ export default function ChatWindow(props: Props) {
 
   return (
     <div
-      className={`flex-1 flex flex-col ${visible ? "flex" : "hidden md:flex"}`}
+      className={`flex-1 flex flex-col ${
+        visible ? "flex" : "hidden md:flex"
+      }`}
     >
       {/* Header */}
-      <div className="p-4 border-b border-gray-100 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={onBack}
-          className="md:hidden p-1 hover:bg-gray-100 rounded"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        {auth.currentUser && (
-          <button
-            type="button"
-            onClick={async () => {
-              try {
-                await auth.signOut();
-              } catch (error) {
-                console.error("Failed to sign out:", error);
-              }
-            }}
-            className="p-2 text-gray-500 hover:text-gray-700 rounded-full transition-colors"
-          >
-            Logout
-          </button>
-        )}
+<div className="p-4 border-b border-gray-100 flex items-center gap-3">
+         <button
+           type="button"
+           onClick={onBack}
+           className="md:hidden p-1 hover:bg-gray-100 rounded"
+         >
+           <ArrowLeft size={20} />
+         </button>
+         {auth.currentUser && (
+           <button
+             type="button"
+             onClick={() => auth.signOut()}
+             className="p-2 text-gray-500 hover:text-gray-700 rounded-full transition-colors"
+           >
+             Logout
+           </button>
+         )}
 
         <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden">
           {otherUser?.photo ? (
@@ -158,18 +178,23 @@ export default function ChatWindow(props: Props) {
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-gray-500 font-medium text-xs">
-              {otherUser?.name?.[0]?.toUpperCase() || "?"}
+              {otherUser?.name?.[0]?.toUpperCase() ||
+                "?"}
             </div>
           )}
         </div>
 
         <div>
           <div className="font-medium text-gray-900 text-sm">
-            {otherUser?.name || otherUser?.nickname || "User"}
+            {otherUser?.name ||
+              otherUser?.nickname ||
+              "User"}
           </div>
 
           {otherUser?.username && (
-            <div className="text-xs text-gray-500">@{otherUser.username}</div>
+            <div className="text-xs text-gray-500">
+              @{otherUser.username}
+            </div>
           )}
         </div>
       </div>
@@ -178,22 +203,35 @@ export default function ChatWindow(props: Props) {
       <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
         {messagesLoading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="animate-spin text-blue-600" size={24} />
+            <Loader2
+              className="animate-spin text-blue-600"
+              size={24}
+            />
           </div>
         ) : messages.length === 0 ? (
           <div className="text-center py-12">
-            <ImageIcon className="mx-auto text-gray-300 mb-3" size={40} />
+            <ImageIcon
+              className="mx-auto text-gray-300 mb-3"
+              size={40}
+            />
 
-            <p className="text-gray-500 text-sm">{t("messages.noMessages")}</p>
+            <p className="text-gray-500 text-sm">
+              {t("messages.noMessages")}
+            </p>
           </div>
         ) : (
           messages.map((msg, idx) => {
-            const isMine = msg.senderId !== otherUser?.uid;
+            const isMine =
+              msg.senderId !== otherUser?.uid;
 
             return (
               <div
                 key={msg._id || idx}
-                className={`flex ${isMine ? "justify-end" : "justify-start"}`}
+                className={`flex ${
+                  isMine
+                    ? "justify-end"
+                    : "justify-start"
+                }`}
               >
                 <div
                   className={`max-w-[75%] rounded-2xl px-4 py-2 ${
@@ -202,13 +240,14 @@ export default function ChatWindow(props: Props) {
                       : "bg-white text-gray-900 border border-gray-200 rounded-bl-md"
                   }`}
                 >
-                  {msg.messageType === "image" && msg.imageUrl && (
-                    <img
-                      src={msg.imageUrl}
-                      alt="Shared"
-                      className="max-w-full rounded-lg mb-1 max-h-64 object-cover"
-                    />
-                  )}
+                  {msg.messageType === "image" &&
+                    msg.imageUrl && (
+                      <img
+                        src={msg.imageUrl}
+                        alt="Shared"
+                        className="max-w-full rounded-lg mb-1 max-h-64 object-cover"
+                      />
+                    )}
 
                   {msg.text && (
                     <p className="text-sm whitespace-pre-wrap break-words">
@@ -218,15 +257,21 @@ export default function ChatWindow(props: Props) {
 
                   <p
                     className={`text-[10px] mt-1 ${
-                      isMine ? "text-blue-100" : "text-gray-400"
+                      isMine
+                        ? "text-blue-100"
+                        : "text-gray-400"
                     }`}
                   >
-                    {new Date(msg.createdAt).toLocaleTimeString([], {
+                    {new Date(
+                      msg.createdAt
+                    ).toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
 
-                    {isMine && msg.readAt && " • Read"}
+                    {isMine &&
+                      msg.readAt &&
+                      " • Read"}
                   </p>
                 </div>
               </div>
@@ -250,13 +295,18 @@ export default function ChatWindow(props: Props) {
 
           <button
             type="button"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() =>
+              fileInputRef.current?.click()
+            }
             disabled={uploading}
             className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors disabled:opacity-50"
             title={t("messages.sendImage")}
           >
             {uploading ? (
-              <Loader2 className="animate-spin" size={20} />
+              <Loader2
+                className="animate-spin"
+                size={20}
+              />
             ) : (
               <ImageIcon size={20} />
             )}
@@ -265,9 +315,13 @@ export default function ChatWindow(props: Props) {
           <input
             type="text"
             value={messageInput}
-            onChange={(e) => onInputChange(e.target.value)}
+            onChange={(e) =>
+              onInputChange(e.target.value)
+            }
             onKeyDown={onKeyDown}
-            placeholder={t("messages.typePlaceholder")}
+            placeholder={t(
+              "messages.typePlaceholder"
+            )}
             className="flex-1 px-4 py-2 border border-gray-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             disabled={sending}
           />
@@ -275,11 +329,16 @@ export default function ChatWindow(props: Props) {
           <button
             type="button"
             onClick={onSendText}
-            disabled={!messageInput.trim() || sending}
+            disabled={
+              !messageInput.trim() || sending
+            }
             className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {sending ? (
-              <Loader2 className="animate-spin" size={18} />
+              <Loader2
+                className="animate-spin"
+                size={18}
+              />
             ) : (
               <Send size={18} />
             )}
@@ -289,3 +348,4 @@ export default function ChatWindow(props: Props) {
     </div>
   );
 }
+
