@@ -69,7 +69,7 @@ function AuthListener() {
   return null;
 }
 
-// Routes where the global Navbar/Footer should be hidden (auth pages)
+// Routes where the global Navbar/Footer should be hidden (auth pages + admin panel)
 const AUTH_ROUTES = [
   "/login",
   "/signup",
@@ -80,9 +80,18 @@ const AUTH_ROUTES = [
   "/verify-login-otp",
 ];
 
+// Helper: check if a path is an admin panel route
+function isAdminRoute(pathname: string): boolean {
+  if (pathname === "/adminpanel" || pathname.startsWith("/adminpanel/")) {
+    return true;
+  }
+  return false;
+}
+
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const isAuthRoute = AUTH_ROUTES.includes(router.pathname);
+  const isAdminPage = isAdminRoute(router.pathname);
 
   return (
     <Provider store={store}>
@@ -90,9 +99,9 @@ export default function App({ Component, pageProps }: AppProps) {
         <AuthListener />
         <div className="bg-white">
           <ToastContainer />
-          {!isAuthRoute && <Navbar />}
+          {!(isAuthRoute || isAdminPage) && <Navbar />}
           <Component {...pageProps} />
-          {!isAuthRoute && <Footer />}
+          {!(isAuthRoute || isAdminPage) && <Footer />}
         </div>
       </I18nProvider>
     </Provider>
