@@ -153,64 +153,108 @@ export default function AdminApplicationsPage() {
         )}
 
         {!loading && !error && rows.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {rows.map((r) => (
-                  <tr key={r._id}>
-                    <td className="px-6 py-4 text-sm text-gray-900">{r.company || "—"}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{r.category || "—"}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{r.user?.name || r.userId || "—"}</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${STATUS_STYLES[r.status || "pending"] || STATUS_STYLES.pending}`}>
-                        {r.status || "pending"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "—"}
-                    </td>
-                    <td className="px-6 py-4 text-sm whitespace-nowrap">
-                      <button
-                        type="button"
-                        disabled={updatingId === r._id || r.status === "accepted"}
-                        onClick={() => changeStatus(r._id, "accepted")}
-                        className="inline-flex items-center gap-1 text-green-600 hover:text-green-900 disabled:opacity-40 mr-3"
-                      >
-                        <CheckCircle2 className="h-4 w-4" /> Approve
-                      </button>
-                      <button
-                        type="button"
-                        disabled={updatingId === r._id || r.status === "rejected"}
-                        onClick={() => changeStatus(r._id, "rejected")}
-                        className="inline-flex items-center gap-1 text-red-600 hover:text-red-900 disabled:opacity-40"
-                      >
-                        <XCircle className="h-4 w-4" /> Reject
-                      </button>
-                    </td>
+          <>
+            {/* Desktop table - hidden on mobile */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {rows.map((r) => (
+                    <tr key={r._id}>
+                      <td className="px-6 py-4 text-sm text-gray-900">{r.company || "—"}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500">{r.category || "—"}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500">{r.user?.name || r.userId || "—"}</td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${STATUS_STYLES[r.status || "pending"] || STATUS_STYLES.pending}`}>
+                          {r.status || "pending"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "—"}
+                      </td>
+                      <td className="px-6 py-4 text-sm whitespace-nowrap">
+                        <button
+                          type="button"
+                          disabled={updatingId === r._id || r.status === "accepted"}
+                          onClick={() => changeStatus(r._id, "accepted")}
+                          className="inline-flex items-center gap-1 text-green-600 hover:text-green-900 disabled:opacity-40 mr-3"
+                        >
+                          <CheckCircle2 className="h-4 w-4" /> Approve
+                        </button>
+                        <button
+                          type="button"
+                          disabled={updatingId === r._id || r.status === "rejected"}
+                          onClick={() => changeStatus(r._id, "rejected")}
+                          className="inline-flex items-center gap-1 text-red-600 hover:text-red-900 disabled:opacity-40"
+                        >
+                          <XCircle className="h-4 w-4" /> Reject
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile card view - shown only on mobile */}
+            <div className="md:hidden space-y-4">
+              {rows.map((r) => (
+                <div key={r._id} className="bg-white rounded-lg shadow p-4 space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="font-medium text-gray-900">{r.company || "—"}</p>
+                      <p className="text-sm text-gray-500">{r.category || "—"}</p>
+                    </div>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${STATUS_STYLES[r.status || "pending"] || STATUS_STYLES.pending}`}>
+                      {r.status || "pending"}
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    <span className="font-medium">User:</span> {r.user?.name || r.userId || "—"}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    <span className="font-medium">Date:</span> {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "—"}
+                  </div>
+                  <div className="flex gap-3 pt-2 border-t">
+                    <button
+                      type="button"
+                      disabled={updatingId === r._id || r.status === "accepted"}
+                      onClick={() => changeStatus(r._id, "accepted")}
+                      className="inline-flex items-center gap-1 text-sm text-green-600 hover:text-green-900 disabled:opacity-40"
+                    >
+                      <CheckCircle2 className="h-4 w-4" /> Approve
+                    </button>
+                    <button
+                      type="button"
+                      disabled={updatingId === r._id || r.status === "rejected"}
+                      onClick={() => changeStatus(r._id, "rejected")}
+                      className="inline-flex items-center gap-1 text-sm text-red-600 hover:text-red-900 disabled:opacity-40"
+                    >
+                      <XCircle className="h-4 w-4" /> Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         {!loading && !error && rows.length > 0 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t">
+          <div className="flex flex-col sm:flex-row items-center justify-between px-4 sm:px-6 py-4 border-t gap-3">
             <button
               type="button"
               disabled={page <= 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-sm"
+              className="w-full sm:w-auto px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-sm font-medium"
             >
               Previous
             </button>
@@ -221,7 +265,7 @@ export default function AdminApplicationsPage() {
               type="button"
               disabled={page >= totalPages}
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-sm"
+              className="w-full sm:w-auto px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-sm font-medium"
             >
               Next
             </button>

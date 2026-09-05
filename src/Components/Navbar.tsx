@@ -13,7 +13,7 @@ import { useGlobalSearchSuggestions } from "@/hooks/useGlobalSearchSuggestions";
 import { useT, LANG_LABELS, type SupportedLang } from "@/i18n/runtime";
 import { toast } from "react-toastify";
 import { getFrenchOtpStatus } from "@/Feature/frenchOtp";
-import { resetAuthData } from "@/lib/authStorage";
+import { resetAuthData, ADMIN_SESSION_TOKEN_KEY } from "@/lib/authStorage";
 
 function GlobalSearchBox() {
   const router = useRouter();
@@ -98,6 +98,39 @@ const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [planName, setPlanName] = useState<string>("");
   const langRef = useRef<HTMLDivElement>(null);
+
+  // Role-aware navbar: an admin session (username/password adminlogin) is a
+  // separate auth identity from the Firebase user. When present, admin-specific
+  // navigation is shown and normal-user-only links (Friends, Login) are hidden.
+  const [isAdminSession, setIsAdminSession] = useState(false);
+
+  useEffect(() => {
+    const check = () => {
+      try {
+        setIsAdminSession(
+          !!window.localStorage.getItem(ADMIN_SESSION_TOKEN_KEY)
+        );
+      } catch {
+        setIsAdminSession(false);
+      }
+    };
+    check();
+    // Re-check on every navigation so login/logout updates the navbar instantly.
+    router.events?.on("routeChangeComplete", check);
+    return () => {
+      router.events?.off("routeChangeComplete", check);
+    };
+  }, [router.events]);
+
+  const handleAdminLogout = () => {
+    try {
+      window.localStorage.removeItem(ADMIN_SESSION_TOKEN_KEY);
+    } catch {
+      // ignore storage errors
+    }
+    setIsAdminSession(false);
+    router.push("/adminlogin");
+  };
 
   // Fetch unread notification count on mount / whenever dropdown state changes.
   useEffect(() => {
@@ -212,9 +245,11 @@ const Navbar = () => {
               <button className="flex items-center space-x-1 text-gray-700 hover:text-blue-600">
                 <Link href={"/public"}><span>{t('navbar.publicSpace')}</span></Link>
               </button>
-              <button className="flex items-center space-x-1 text-gray-700 hover:text-blue-600">
-                <Link href={"/friends"}><span>{t('navbar.friends')}</span></Link>
-              </button>
+              {!isAdminSession && (
+                <button className="flex items-center space-x-1 text-gray-700 hover:text-blue-600">
+                  <Link href={"/friends"}><span>{t('navbar.friends')}</span></Link>
+                </button>
+              )}
               <div className="flex items-center bg-gray-100 rounded-full px-4 py-2">
                 <Search size={16} className="text-gray-400" />
                 <GlobalSearchBox />
@@ -255,7 +290,23 @@ className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-cent
                   )}
                 </div>
 
-                 {user ? (
+                 {isAdminSession ? (
+                   <>
+                     <Link
+                       href="/adminpanel"
+                       className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                     >
+                       {t('navbar.admin')}
+                     </Link>
+                     <button
+                       type="button"
+                       onClick={handleAdminLogout}
+                       className="text-red-500 hover:text-red-700 text-sm font-medium"
+                     >
+                       {t('navbar.logout')}
+                     </button>
+                   </>
+                 ) : user ? (
                    <>
                      {planName && (
                        <span className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-100">
@@ -329,13 +380,28 @@ className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-cent
             <Link href="/public" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
               {t('navbar.publicSpace')}
             </Link>
-            <Link href="/friends" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
-              {t('navbar.friends')}
-            </Link>
+            {!isAdminSession && (
+              <Link href="/friends" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
+                {t('navbar.friends')}
+              </Link>
+            )}
             <Link href="/search" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
               {t('navbar.search')}
             </Link>
-            {user ? (
+            {isAdminSession ? (
+              <>
+                <Link href="/adminpanel" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-blue-600 hover:bg-gray-100">
+                  {t('navbar.admin')}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => { setMobileOpen(false); handleAdminLogout(); }}
+                  className="w-full text-left px-3 py-2 rounded-md text-red-500 hover:bg-gray-100"
+                >
+                  {t('navbar.logout')}
+                </button>
+              </>
+            ) : user ? (
               <>
                 <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
                   {t('dashboard.title')}
