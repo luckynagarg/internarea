@@ -200,31 +200,20 @@ export default function FriendsPage() {
 
   const handleAdd = async (target: FriendCardModel) => {
     const uid = target.uid || target._id;
+    if (!uid) {
+      toast.error(t('common.error'));
+      return;
+    }
     setActionUid(uid);
     try {
-      await axiosClient.post('/api/friends/request', { receiver: uid });
+      await axiosClient.post('/api/friends/request', { targetUid: uid });
       toast.success(t('common.addFriend'));
-      setSent((prev) => [
-        {
-          _id: 'pending-' + uid,
-          senderId: 'me',
-          receiverId: uid,
-          status: 'pending',
-          createdAtISO: new Date().toISOString(),
-          receiver: {
-            _id: uid,
-            name: target.name,
-            username: target.username,
-            nickname: target.nickname,
-            photo: target.photo,
-            headline: target.headline,
-          },
-        },
-        ...prev,
-      ]);
+      // Refresh sent requests from server instead of optimistic update
+      loadSent();
       loadSuggestions();
     } catch (e: any) {
-      toast.error(t('common.error'));
+      const msg = e?.response?.data?.message || e?.message || t('common.error');
+      toast.error(msg);
     } finally {
       setActionUid(null);
     }
@@ -232,14 +221,19 @@ export default function FriendsPage() {
 
   const handleCancel = async (target: FriendCardModel) => {
     const uid = target.uid || target._id;
+    if (!uid) {
+      toast.error(t('common.error'));
+      return;
+    }
     setActionUid(uid);
     try {
-      await axiosClient.post('/api/friends/cancel', { receiver: uid });
+      await axiosClient.post('/api/friends/cancel', { targetUid: uid });
       toast.success(t('common.cancelRequest'));
       setSent((prev) => prev.filter((r) => r.receiverId !== uid && r.receiver?._id !== uid));
       loadSuggestions();
     } catch (e: any) {
-      toast.error(t('common.error'));
+      const msg = e?.response?.data?.message || e?.message || t('common.error');
+      toast.error(msg);
     } finally {
       setActionUid(null);
     }
@@ -247,9 +241,13 @@ export default function FriendsPage() {
 
   const handleAccept = async (target: FriendCardModel) => {
     const uid = target.uid || target._id;
+    if (!uid) {
+      toast.error(t('common.error'));
+      return;
+    }
     setActionUid(uid);
     try {
-      await axiosClient.post('/api/friends/accept', { sender: uid });
+      await axiosClient.post('/api/friends/accept', { targetUid: uid });
       toast.success(t('common.accept'));
       setRequests((prev) => prev.filter((r) => r.senderId !== uid && r.sender?._id !== uid));
       const req = requests.find((r) => r.senderId === uid || r.sender?._id === uid);
@@ -267,7 +265,8 @@ export default function FriendsPage() {
         },
       ]);
     } catch (e: any) {
-      toast.error(t('common.error'));
+      const msg = e?.response?.data?.message || e?.message || t('common.error');
+      toast.error(msg);
     } finally {
       setActionUid(null);
     }
@@ -275,13 +274,18 @@ export default function FriendsPage() {
 
   const handleReject = async (target: FriendCardModel) => {
     const uid = target.uid || target._id;
+    if (!uid) {
+      toast.error(t('common.error'));
+      return;
+    }
     setActionUid(uid);
     try {
-      await axiosClient.post('/api/friends/reject', { sender: uid });
+      await axiosClient.post('/api/friends/reject', { targetUid: uid });
       toast.success(t('common.reject'));
       setRequests((prev) => prev.filter((r) => r.senderId !== uid && r.sender?._id !== uid));
     } catch (e: any) {
-      toast.error(t('common.error'));
+      const msg = e?.response?.data?.message || e?.message || t('common.error');
+      toast.error(msg);
     } finally {
       setActionUid(null);
     }
