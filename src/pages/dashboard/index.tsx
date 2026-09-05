@@ -1,14 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import axiosClient from "@/lib/apiClient";
-import NotificationDropdown from "@/Components/NotificationDropdown";
 import {
-  Bell,
-  MessageSquare,
-  Users,
   BriefcaseBusiness,
   Building2,
   Bookmark,
+  Users,
   ArrowRight,
 } from "lucide-react";
 import { useSelector } from "react-redux";
@@ -22,22 +19,6 @@ export default function DashboardPage() {
   const { ready } = useRequireAuth();
   const user = useSelector(selectuser) as any;
   const { t } = useT();
-
-  const [notificationOpen, setNotificationOpen] = useState(false);
-  const bellButtonRef = useRef<HTMLButtonElement | null>(null);
-
-  // close on outside click
-  useEffect(() => {
-    if (!notificationOpen) return;
-    const onDown = (e: MouseEvent) => {
-      const target = e.target as Node;
-      const btn = bellButtonRef.current;
-      if (btn && btn.contains(target)) return;
-      setNotificationOpen(false);
-    };
-    window.addEventListener("mousedown", onDown);
-    return () => window.removeEventListener("mousedown", onDown);
-  }, [notificationOpen]);
 
   const [friendRequests, setFriendRequests] = useState<any[]>([]);
   const [recentNotifications, setRecentNotifications] = useState<any[]>([]);
@@ -121,12 +102,7 @@ export default function DashboardPage() {
     return () => {
       mounted = false;
     };
-  }, [user?.uid]);
-
-  const unreadCount = useMemo(
-    () => recentNotifications.filter((x) => !x.read).length,
-    [recentNotifications]
-  );
+   }, [user?.uid]);
 
   const handleConnect = async (target: any) => {
     const uid = target.uid || target._id;
@@ -177,56 +153,6 @@ export default function DashboardPage() {
   if (!ready) return null;
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="h-16 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/" className="text-xl font-bold text-blue-600">
-                <img src="/logo.png" alt="" className="h-10 w-auto" />
-              </Link>
-              <div className="hidden md:block">
-                <div className="text-sm text-gray-600">{t('dashboard.welcome', { values: { user: user?.name ? `, ${user.name}` : '' } })}</div>
-                <div className="text-lg font-semibold text-gray-900">{t('dashboard.title')}</div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Link href="/chat" className="p-2 rounded-full hover:bg-gray-100" aria-label="Open chat">
-                <MessageSquare className="w-5 h-5 text-gray-700" />
-              </Link>
-              <Link href="/friends" className="p-2 rounded-full hover:bg-gray-100" aria-label="Open friends">
-                <Users className="w-5 h-5 text-gray-700" />
-              </Link>
-              <button
-                ref={bellButtonRef}
-                className="relative p-2 rounded-full hover:bg-gray-100"
-                aria-label="Open notifications"
-                onClick={() => setNotificationOpen((s) => !s)}
-              >
-                <Bell className="w-5 h-5 text-gray-700" />
-                {unreadCount > 0 ? (
-                  <span className="absolute -top-1 -right-1 bg-blue-600 text-white rounded-full text-[10px] px-1.5 py-0.5 font-bold">
-                    {unreadCount}
-                  </span>
-                ) : null}
-              </button>
-              <Link href="/profile" className="flex items-center gap-2 hover:bg-gray-50 px-2 py-1 rounded-lg">
-                {user?.photo ? (
-                  <img src={user.photo} alt="" className="w-9 h-9 rounded-full object-cover" />
-                ) : (
-                  <div className="w-9 h-9 rounded-full bg-gray-200" />
-                )}
-              </Link>
-            </div>
-          </div>
-
-          <NotificationDropdown
-            open={notificationOpen}
-            onClose={() => setNotificationOpen(false)}
-          />
-        </div>
-      </header>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <aside className="lg:col-span-2 hidden md:block">

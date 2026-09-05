@@ -76,14 +76,18 @@ export function useSocket() {
     }
   }, []);
 
-  const emit = useCallback((event: string, data?: any) => {
-    const socket = getSocketInstance();
-    if (socket && socket.connected) {
-      socket.emit(event, data);
-      return true;
-    }
-    return false;
-  }, []);
+  const emit = useCallback(
+    (event: string, data?: any, ack?: (response: any) => void) => {
+      const socket = getSocketInstance();
+      if (socket && socket.connected) {
+        if (typeof ack === "function") socket.emit(event, data, ack);
+        else socket.emit(event, data);
+        return true;
+      }
+      return false;
+    },
+    []
+  );
 
   return { on, off, emit, isConnected: () => connectedRef.current };
 }

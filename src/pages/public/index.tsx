@@ -83,7 +83,10 @@ export default function PublicSpacePage() {
       toast.error(t('common.pleaseLogin'));
       return;
     }
-    if (!file) {
+
+    const hasMedia = !!file;
+    const hasText = caption.trim().length > 0;
+    if (!hasMedia && !hasText) {
       toast.error(t('common.selectMedia'));
       return;
     }
@@ -95,24 +98,41 @@ export default function PublicSpacePage() {
 
     try {
       setCreating(true);
-      const { mediaType, mediaUrl } = await uploadMedia(file);
+
+      let mediaType: string = "";
+      let mediaUrl: string = "";
+      if (file) {
+        const uploaded = await uploadMedia(file);
+        mediaType = uploaded.mediaType;
+        mediaUrl = uploaded.mediaUrl;
+      }
 
       const res = await axiosClient.post(`/api/public/posts`, {
         name: currentUser?.displayName || currentUser?.name || "",
         photo: currentUser?.photo || "",
         caption,
-        mediaType,
-        mediaUrl,
+        mediaType: mediaType || undefined,
+        mediaUrl: mediaUrl || undefined,
       });
 
-      toast.success(t('common.postedSuccessfully'));
+      toast.success(t('public.postedSuccessfully'));
       setCaption("");
       setFile(null);
-      setPosts((prev) => [res.data, ...prev]);
+      const createdPost = res.data?.post ?? res.data;
+      if (createdPost && createdPost._id) {
+        setPosts((prev) => [createdPost, ...prev.filter((p) => p._id !== createdPost._id)]);
+      } else {
+        await fetchFeed();
+      }
 
       await fetchLimit();
     } catch (e: any) {
-      toast.error(t('common.postingFailed'));
+      const message =
+        e?.response?.data?.error ??
+        e?.response?.data?.message ??
+        e?.message ??
+        t('common.postingFailed');
+      toast.error(message);
     } finally {
       setCreating(false);
     }
@@ -220,7 +240,7 @@ export default function PublicSpacePage() {
         </div>
 
         <button
-          disabled={creating || !file}
+          disabled={creating || (!file && !caption.trim())}
           onClick={handleCreatePost}
           className="mt-4 w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-xl"
           type="button"
@@ -253,11 +273,13 @@ export default function PublicSpacePage() {
                 </div>
                 {post.caption && <p className="text-gray-800 mt-2 whitespace-pre-wrap">{post.caption}</p>}
 
-                {post.media?.mediaType === "video" ? (
-                  <video src={post.media.url} controls className="mt-3 w-full max-h-[420px] rounded-xl" />
-                ) : (
-                  <img src={post.media?.url} className="mt-3 w-full rounded-xl" alt={t('public.post')} />
-                )}
+                {post.media?.url ? (
+                  post.media?.mediaType === "video" ? (
+                    <video src={post.media.url} controls className="mt-3 w-full max-h-[420px] rounded-xl" />
+                  ) : (
+                    <img src={post.media.url} className="mt-3 w-full rounded-xl" alt={t('public.post')} />
+                  )
+                ) : null}
 
                 <div className="flex items-center gap-3 mt-3">
                   <button

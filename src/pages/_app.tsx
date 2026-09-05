@@ -161,25 +161,24 @@ function AppShell({
     return <Component {...pageProps} />;
   }
 
-  // Authenticated / dashboard area.
-  if (isDashboardRoute) {
-    if (authenticated) {
-      // /dashboard renders its own header + sidebar layout; every other page
-      // shares the dashboard header (the only authenticated navigation).
-      const withHeader = pathname !== "/dashboard";
-      return (
-        <>
-          {withHeader ? <DashboardHeader /> : null}
-          <Component {...pageProps} />
-        </>
-      );
-    }
-    // Not yet authenticated: wait for Firebase auth to resolve so we never
-    // flash the old public navbar to a signed-in user on refresh. Protected
-    // pages use useRequireAuth to redirect to /login once authReady resolves.
-    if (!authReady) return null;
-    return <Component {...pageProps} />;
-  }
+      // Authenticated / dashboard area.
+      // DashboardHeader is shown on ALL authenticated routes (including /dashboard)
+      // as the single consistent header. /dashboard renders its own sidebar.
+      if (isDashboardRoute) {
+        if (authenticated) {
+          return (
+            <>
+              <DashboardHeader />
+              <Component {...pageProps} />
+            </>
+          );
+        }
+        // Not yet authenticated: wait for Firebase auth to resolve so we never
+        // flash the old public navbar to a signed-in user on refresh. Protected
+        // pages use useRequireAuth to redirect to /login once authReady resolves.
+        if (!authReady) return null;
+        return <Component {...pageProps} />;
+      }
 
   // Public page.
   if (authenticated) {

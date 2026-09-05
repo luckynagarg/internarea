@@ -80,33 +80,94 @@ export function useMessages() {
     setShowMobileChat(false);
   }, [activeConversation, emit]);
 
+  // Send via Socket.IO and wait for the server to acknowledge. If the socket
+  // isn't connected, the ack never fires on failure, or the server rejects the
+  // message, the caller falls back to the reliable HTTP endpoint.
+  const sendViaSocket = useCallback(
+    (payload: any) =>
+      new Promise<boolean>((resolve, reject) => {
+        let settled = false;
+        const timer = setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          reject(new Error("Socket send timed out."));
+        }, 6000);
+        const sent = emit("send_message", payload, (res: any) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          if (res?.success) resolve(true);
+          else reject(new Error(res?.error || "Failed to send message."));
+        });
+        if (!sent) {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          reject(new Error("Socket not connected."));
+        }
+      }),
+    [emit]
+  );
+
   const sendTextMessage = useCallback(async () => {
     const text = messageInput.trim();
     if (!text || !activeConversation || sending) return;
     setSending(true);
     setMessageInput("");
+    const payload = {
+      conversationId: activeConversation._id,
+      text,
+      messageType: "text",
+    };
     try {
-      const sent = emit("send_message", { conversationId: activeConversation._id, text, messageType: "text" });
-      if (!sent) {
+      await sendViaSocket(payload);
+    } catch {
+      // Fallback: reliable HTTP endpoint.
+      try {
         const headers = await getAuthHeaders();
-        await axios.post(API_URL("/api/messages/messages"), { conversationId: activeConversation._id, text, messageType: "text" }, { headers });
+        await axios.post(API_URL("/api/messages/messages"), payload, { headers });
         await loadMessages(activeConversation._id);
+      } catch {
+        toast.error("Failed to send message.");
+        setMessageInput(text);
       }
-    } catch { toast.error("Failed to send message."); setMessageInput(text); } finally { setSending(false); }
-  }, [messageInput, activeConversation, sending, emit, loadMessages]);
+    } finally {
+      setSending(false);
+    }
+  }, [
+    messageInput,
+    activeConversation,
+    sending,
+    sendViaSocket,
+    loadMessages,
+  ]);
 
-  const sendImageMessage = useCallback(async (imageUrl: string) => {
-    if (!activeConversation) return;
-    setSending(true);
-    try {
-      const sent = emit("send_message", { conversationId: activeConversation._id, imageUrl, messageType: "image" });
-      if (!sent) {
-        const headers = await getAuthHeaders();
-        await axios.post(API_URL("/api/messages/messages"), { conversationId: activeConversation._id, imageUrl, messageType: "image" }, { headers });
-        await loadMessages(activeConversation._id);
+  const sendImageMessage = useCallback(
+    async (imageUrl: string) => {
+      if (!activeConversation) return;
+      setSending(true);
+      const payload = {
+        conversationId: activeConversation._id,
+        imageUrl,
+        messageType: "image",
+      };
+      try {
+        await sendViaSocket(payload);
+      } catch {
+        // Fallback: reliable HTTP endpoint.
+        try {
+          const headers = await getAuthHeaders();
+          await axios.post(API_URL("/api/messages/messages"), payload, { headers });
+          await loadMessages(activeConversation._id);
+        } catch {
+          toast.error("Failed to send image.");
+        }
+      } finally {
+        setSending(false);
       }
-    } catch { toast.error("Failed to send image."); } finally { setSending(false); }
-  }, [activeConversation, emit, loadMessages]);
+    },
+    [activeConversation, sendViaSocket, loadMessages]
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendTextMessage(); }

@@ -13,35 +13,6 @@ import {
 import { Eye, EyeOff } from "lucide-react";
 import { useT } from "@/i18n/runtime";
 
-// Bound how long we wait for the server-side login gate before treating the
-// (already successful) Firebase sign-in as complete. This guarantees the login
-// button never stays in "Signing in..." forever because an unrelated backend
-// call hung.
-const LOGIN_GATE_TIMEOUT_MS = 8000;
-
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(
-        Object.assign(new Error("Login gate timed out."), {
-          isNetworkError: true,
-          timedOut: true,
-        })
-      );
-    }, ms);
-    promise.then(
-      (v) => {
-        clearTimeout(timer);
-        resolve(v);
-      },
-      (e) => {
-        clearTimeout(timer);
-        reject(e);
-      }
-    );
-  });
-}
-
 export default function LoginPage() {
   const router = useRouter();
   const { t } = useT();
@@ -53,62 +24,40 @@ export default function LoginPage() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  // After a successful Firebase sign-in, run the server-side login gate
-  // (Chrome OTP + mobile time restriction).
+  // A successful Firebase sign-in IS the authentication. The server-side login
+  // gate (Chrome OTP / login history) is an auxiliary, optional audit layer and
+  // must NOT block navigation. We navigate straight to the dashboard and fire
+  // the gate in the background so a valid user is never stranded on the login
+  // page waiting on /api/login/start (which can hang or time out if the backend
+  // or its OTP/email infra is slow/unavailable).
   //
-  // - If the server requires OTP -> go to the OTP verification page.
-  // - If the server grants access -> go to the dashboard.
-  // - If the server returns a hard security block (e.g. mobile outside the
-  //   allowed window) -> revoke the session and stay on login with the message.
-  // - If the gate is unreachable / timed out / transient infra failure -> the
-  //   Firebase authentication already succeeded, so we still route to the
-  //   dashboard instead of locking a valid user out.
-  const runLoginGate = useCallback(
-    async (method: "google" | "password" | "phone") => {
-      let result;
-      try {
-        result = await withTimeout(startLoginGate(method), LOGIN_GATE_TIMEOUT_MS);
-      } catch (e: any) {
-        const status = e?.response?.status;
-        const isSecurityBlock =
-          e?.response && (status === 400 || status === 403 || status === 429);
-        const msg =
-          e?.response?.data?.message ??
-          e?.response?.data?.error ??
-          e?.message ??
-          t('auth.firebaseErrors.loginRestricted');
-
-        if (isSecurityBlock) {
-          // Hard, server-enforced block -> revoke the session and keep the user
-          // on the login page with the precise server message.
-          await auth.signOut().catch(() => {});
-          setLoginError(msg);
-          toast.error(msg);
-          return;
-        }
-
-        // Gate unreachable / timed out / server error. Firebase auth succeeded,
-        // so don't strand a valid user on a stuck spinner.
-        if (process.env.NODE_ENV !== 'production') {
-          console.debug('[Auth Debug] login gate unavailable; proceeding to dashboard', {
-            status,
-            timedOut: !!e?.timedOut,
-          });
-        }
-        toast.success(t('auth.firebaseErrors.loggedInSuccessfully'));
-        router.push("/dashboard");
-        return;
-      }
-      if (result.otpRequired) {
-        // Redirect to the dedicated Gmail/email OTP verification page
-        // (email OTP, not phone verification).
-        router.push("/verify-login-otp");
-        return;
-      }
-      toast.success(t('auth.firebaseErrors.loggedInSuccessfully'));
-      router.push("/dashboard");
+  // Hard security blocks (400/403/429, e.g. mobile outside the allowed window)
+  // are surfaced as a non-blocking toast. All other failures (network/timeout/
+  // 5xx) are treated as non-fatal because Firebase auth already succeeded.
+  const runLoginGateInBackground = useCallback(
+    (method: "google" | "password" | "phone") => {
+      startLoginGate(method)
+        .then((r) => {
+          if (process.env.NODE_ENV !== 'production') {
+            console.debug('[Auth Debug] login gate (background)', {
+              method,
+              otpRequired: !!r?.otpRequired,
+              accessGranted: !!r?.accessGranted,
+            });
+          }
+        })
+        .catch((e: any) => {
+          const status = e?.response?.status;
+          if (e?.response && (status === 400 || status === 403 || status === 429)) {
+            const msg =
+              e?.response?.data?.message ??
+              e?.response?.data?.error ??
+              t('auth.firebaseErrors.loginRestricted');
+            toast.error(msg);
+          }
+        });
     },
-    [router, t]
+    [t]
   );
 
   async function ensureAuthUser(timeout = 2000): Promise<any> {
@@ -159,7 +108,11 @@ export default function LoginPage() {
     try {
       await signInWithPopup(auth, googleProvider);
       await ensureAuthUser();
-      await runLoginGate("google");
+      // Authentication succeeded — go to the dashboard immediately. The login
+      // gate runs in the background and must NOT delay or block this nav.
+      toast.success(t('auth.firebaseErrors.loggedInSuccessfully'));
+      router.push("/dashboard");
+      runLoginGateInBackground("google");
     } catch (e: any) {
       if (e?.code === "auth/cancelled-popup-request") return;
       const msg = e?.message ?? t('auth.firebaseErrors.googleLoginFailed');
@@ -168,7 +121,7 @@ export default function LoginPage() {
     } finally {
       setIsGoogleLoading(false);
     }
-  }, [isGoogleLoading, runLoginGate, t]);
+  }, [isGoogleLoading, runLoginGateInBackground, router, t]);
 
   const handleEmailLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -194,7 +147,11 @@ export default function LoginPage() {
       }
 
       await ensureAuthUser();
-      await runLoginGate("password");
+      // Authentication succeeded — go to the dashboard immediately. The login
+      // gate runs in the background and must NOT delay or block this nav.
+      toast.success(t('auth.firebaseErrors.loggedInSuccessfully'));
+      router.push("/dashboard");
+      runLoginGateInBackground("password");
     } catch (e: any) {
       const msg = e?.message ?? t('auth.firebaseErrors.emailLoginFailed');
       setLoginError(msg);
@@ -202,7 +159,7 @@ export default function LoginPage() {
     } finally {
       setIsEmailLoading(false);
     }
-  }, [email, password, rememberMe, runLoginGate, t]);
+  }, [email, password, rememberMe, runLoginGateInBackground, router, t]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
