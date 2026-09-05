@@ -53,9 +53,9 @@ export default function VerifyLoginOtpPage() {
     setIsVerifying(true);
     try {
       const res = await verifyLoginOtp(otp.trim());
-      if (res.accessGranted) {
+            if (res.accessGranted) {
         toast.success(t('auth.otp.verifiedSuccess'));
-        router.push("/");
+        router.push("/dashboard");
       } else {
         toast.error(res.message || t('auth.otp.invalidOtp'));
       }

@@ -67,10 +67,10 @@ export default function LoginPage() {
         return;
       }
       if (process.env.NODE_ENV !== 'production') {
-        console.debug('[Auth Debug] runLoginGate SUCCESS → redirecting to /', { method });
+        console.debug('[Auth Debug] runLoginGate SUCCESS → redirecting to /dashboard', { method });
       }
       toast.success(t('auth.firebaseErrors.loggedInSuccessfully'));
-      router.push("/");
+      router.push("/dashboard");
     },
     [router, t]
   );

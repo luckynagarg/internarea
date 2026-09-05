@@ -1,13 +1,15 @@
-import { selectuser } from "@/Feature/Userslice";
-import { ExternalLink, Mail, User as UserIcon } from "lucide-react";
+﻿import { login, selectuser } from "@/Feature/Userslice";
+import { ExternalLink, Mail, User as UserIcon, Camera } from "lucide-react";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import axiosClient from "@/lib/apiClient";
 import { API_URL } from "@/config/api";
 import LoginHistory from "@/Components/LoginHistory";
 import { useT } from '@/i18n/runtime';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { uploadMedia } from "@/firebase/uploadMedia";
+import { toast } from "react-toastify";
 
 interface User {
   name: string;
@@ -22,6 +24,8 @@ const index = () => {
   const [resumes, setResumes] = useState<any[]>([]);
   const [activeApplications, setActiveApplications] = useState(0);
   const [acceptedApplications, setAcceptedApplications] = useState(0);
+  const dispatch = useDispatch();
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     async function loadResumes() {
@@ -52,8 +56,52 @@ const index = () => {
         // ignore
       }
     }
-    loadApplicationStats();
+        loadApplicationStats();
   }, []);
+
+  // Update the user's profile photo:
+  // 1) Upload the raw image to Firebase Storage (existing uploadMedia helper).
+  // 2) Persist the resulting URL in the user's DB record (backend /api/profile/photo).
+  // 3) Mirror the URL into Redux so the avatar refreshes immediately, and it
+  //    persists across sign-in/out (also saved to the Firebase user photoURL).
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select a valid image file (jpg, png, gif, ...).");
+      return;
+    }
+    const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+    if (file.size > MAX_SIZE) {
+      toast.error("Image must be smaller than 5 MB.");
+      return;
+    }
+
+    setUploading(true);
+    e.target.value = ""; // reset so the same file can be selected again
+    try {
+      const result = await uploadMedia(file);
+      const photoUrl = result?.mediaUrl;
+      if (!photoUrl) throw new Error("Upload did not return a URL.");
+
+      await axiosClient.patch("/api/profile/photo", { photoUrl });
+
+      // Refresh the avatar in Redux (the profile page / navbar read user.photo).
+      if (user) {
+        dispatch(login({ ...user, photo: photoUrl }));
+      }
+      toast.success("Profile photo updated.");
+    } catch (err: any) {
+      toast.error(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Could not update profile photo."
+      );
+    } finally {
+      setUploading(false);
+    }
+  };
 
   function ResumesList() {
     if (!resumes.length) {
@@ -92,18 +140,36 @@ const index = () => {
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           {/* Profile Header */}
           <div className="relative h-32 bg-gradient-to-r from-blue-500 to-blue-600">
-            <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2">
+            <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 relative">
               {user?.photo ? (
                 <img
                   src={user?.photo}
-                  alt={user?.name}
-                  className="w-24 h-24 rounded-full border-4 border-white shadow-lg"
+                  alt={user?.name || "Profile"}
+                  className="w-24 h-24 rounded-full border-4 border-white shadow-lg object-cover"
                 />
               ) : (
                 <div className="w-24 h-24 rounded-full border-4 border-white shadow-lg bg-gray-200 flex items-center justify-center">
                   <UserIcon className="h-12 w-12 text-gray-400" />
                 </div>
               )}
+              <label
+                htmlFor="profile-photo-input"
+                className={`absolute bottom-0 right-0 flex items-center justify-center w-7 h-7 rounded-full border-2 border-white bg-blue-600 text-white hover:bg-blue-700 transition-colors cursor-pointer ${
+                  uploading ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+                title="Upload profile photo"
+                aria-label="Upload profile photo"
+              >
+                <Camera className="h-4 w-4" />
+              </label>
+              <input
+                id="profile-photo-input"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={uploading}
+                onChange={handlePhotoUpload}
+              />
             </div>
           </div>
 

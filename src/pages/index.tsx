@@ -17,11 +17,24 @@ import {
 } from "lucide-react";
 
 import Link from "next/link";
+import { useRouter } from "next/router";
 import axiosClient from "@/lib/apiClient";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import { useT } from "@/i18n";
 
 export default function SvgSlider() {
   const { t } = useT();
+  const router = useRouter();
+
+  // Redirect already-authenticated users to the dashboard so the public
+  // marketing/home feed isn't shown after a successful login.
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) router.replace("/dashboard");
+    });
+    return () => unsub();
+  }, [router]);
 
   /*
    * IMPORTANT:

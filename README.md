@@ -1,40 +1,109 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# InternArea
 
-## Getting Started
+InternArea is a full-stack internship platform connecting students and graduates with internship and job opportunities. It features a social "Public Space" feed, friend connections, real-time messaging, a resume builder, subscription-based application quotas, and a multi-language interface.
 
-First, run the development server:
+## Quick Start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Clone and install
+git clone <repository-url>
+cd internarea
+
+# Frontend
+cd internarea && npm install
+cp .env.example .env.local   # fill in Firebase + backend URL
+
+# Backend
+cd ../backend && npm install
+cp .env.example .env          # fill in MongoDB, Firebase Admin, email, payment keys
+
+# Run both (separate terminals)
+cd ../internarea && npm run dev   # http://localhost:3000
+cd ../backend && npm run dev       # http://localhost:5000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+See [docs/setup.md](docs/setup.md) for detailed instructions.
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+## Key Features
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+- **Platform**: Internship and job listings with search and filtering
+- **Authentication**: Email/password, Google sign-in, phone OTP (Firebase Auth)
+- **Social**: Public Space posting with friend-based daily limits, likes, comments
+- **Connections**: Friend request system, user search
+- **Messaging**: Real-time 1-to-1 chat (Socket.IO)
+- **Resume Builder**: Create, preview, download (PDF), and manage resumes with OTP-protected payment
+- **Subscriptions**: Razorpay-powered subscription plans with monthly application quotas
+- **Admin Panel**: Full admin dashboard for user/content/application management and analytics
+- **Multi-language**: 6 languages (English, Spanish, Hindi, Portuguese, Chinese, French)
+- **Notifications**: Real-time notifications for applications, social interactions, and system events
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+## Technology Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 15 (Pages Router), TypeScript, React 19, Tailwind CSS, Redux Toolkit |
+| Backend | Node.js, Express 4, Mongoose, Firebase Admin |
+| Database | MongoDB (Atlas) |
+| Authentication | Firebase Authentication |
+| File Storage | Firebase Storage |
+| Email | Resend (primary), SMTP/Nodemailer (fallback) |
+| Payments | Razorpay |
+| Realtime | Socket.IO |
+| i18n | Custom runtime engine (6 languages, English source-of-truth) |
+| Deployment | Frontend: Vercel; Backend: Render |
 
-## Learn More
+## Documentation
 
-To learn more about Next.js, take a look at the following resources:
+| Topic | Link |
+|---|---|
+| Architecture | [docs/architecture.md](docs/architecture.md) |
+| Setup Guide | [docs/setup.md](docs/setup.md) |
+| Environment Variables | [docs/environment.md](docs/environment.md) |
+| Authentication | [docs/authentication.md](docs/authentication.md) |
+| API Reference | [docs/api.md](docs/api.md) |
+| Database | [docs/database.md](docs/database.md) |
+| Admin Panel | [docs/admin.md](docs/admin.md) |
+| Features | [docs/features.md](docs/features.md) |
+| Deployment | [docs/deployment.md](docs/deployment.md) |
+| Testing | [docs/testing.md](docs/testing.md) |
+| Troubleshooting | [docs/troubleshooting.md](docs/troubleshooting.md) |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+internarea/
+├── internarea/              # Next.js frontend (src/pages, src/Components, src/i18n, src/lib)
+├── backend/                 # Express API (Routes/, Middleware/, Model/, Services/)
+├── docs/                    # Project documentation
+└── .gitignore
+```
 
-## Deploy on Vercel
+## Development Commands
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+# Frontend (internarea/)
+npm run dev          # Dev server (port 3000)
+npm run build        # Production build
+npm run lint         # ESLint
+npm test             # Jest (no tests currently)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+# Backend (backend/)
+npm run dev          # nodemon dev server (port 5000)
+npm start            # Production start
+node --check <file>  # Syntax check
+```
+
+## Security
+
+- All authentication is handled by Firebase — passwords are never stored in MongoDB
+- Backend verifies Firebase ID tokens on every protected request
+- Admin access requires server-side verification (admin session token or admin claim)
+- User identity is derived from verified tokens, never from request bodies
+- Firebase service-account credentials are excluded from version control via `.gitignore`
+- Security headers (Helmet), rate limiting, and body-size limits are enforced
+
+See [docs/authentication.md](docs/authentication.md) for details.
+
+## License
+
+This project is provided as-is for portfolio use. See source headers for individual component licenses.
