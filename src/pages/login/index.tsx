@@ -13,6 +13,35 @@ import {
 import { Eye, EyeOff } from "lucide-react";
 import { useT } from "@/i18n/runtime";
 
+// Bound how long we wait for the server-side login gate before treating the
+// (already successful) Firebase sign-in as complete. This guarantees the login
+// button never stays in "Signing in..." forever because an unrelated backend
+// call hung.
+const LOGIN_GATE_TIMEOUT_MS = 8000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(
+        Object.assign(new Error("Login gate timed out."), {
+          isNetworkError: true,
+          timedOut: true,
+        })
+      );
+    }, ms);
+    promise.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      }
+    );
+  });
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const { t } = useT();
@@ -25,49 +54,56 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   // After a successful Firebase sign-in, run the server-side login gate
-  // (Chrome OTP + mobile time restriction). If OTP is required, block access.
+  // (Chrome OTP + mobile time restriction).
+  //
+  // - If the server requires OTP -> go to the OTP verification page.
+  // - If the server grants access -> go to the dashboard.
+  // - If the server returns a hard security block (e.g. mobile outside the
+  //   allowed window) -> revoke the session and stay on login with the message.
+  // - If the gate is unreachable / timed out / transient infra failure -> the
+  //   Firebase authentication already succeeded, so we still route to the
+  //   dashboard instead of locking a valid user out.
   const runLoginGate = useCallback(
     async (method: "google" | "password" | "phone") => {
-      if (process.env.NODE_ENV !== 'production') {
-        console.debug('[Auth Debug] runLoginGate start', {
-          method,
-          firebaseUid: auth.currentUser?.uid ?? null,
-          email: auth.currentUser?.email ?? null,
-        });
-      }
       let result;
       try {
-        result = await startLoginGate(method);
+        result = await withTimeout(startLoginGate(method), LOGIN_GATE_TIMEOUT_MS);
       } catch (e: any) {
+        const status = e?.response?.status;
+        const isSecurityBlock =
+          e?.response && (status === 400 || status === 403 || status === 429);
         const msg =
           e?.response?.data?.message ??
           e?.response?.data?.error ??
           e?.message ??
           t('auth.firebaseErrors.loginRestricted');
+
+        if (isSecurityBlock) {
+          // Hard, server-enforced block -> revoke the session and keep the user
+          // on the login page with the precise server message.
+          await auth.signOut().catch(() => {});
+          setLoginError(msg);
+          toast.error(msg);
+          return;
+        }
+
+        // Gate unreachable / timed out / server error. Firebase auth succeeded,
+        // so don't strand a valid user on a stuck spinner.
         if (process.env.NODE_ENV !== 'production') {
-          console.debug('[Auth Debug] runLoginGate FAILED', {
-            method,
-            status: e?.response?.status ?? null,
-            data: e?.response?.data ?? null,
-            message: msg,
+          console.debug('[Auth Debug] login gate unavailable; proceeding to dashboard', {
+            status,
+            timedOut: !!e?.timedOut,
           });
         }
-        await auth.signOut().catch(() => {});
-        setLoginError(msg);
-        toast.error(msg);
+        toast.success(t('auth.firebaseErrors.loggedInSuccessfully'));
+        router.push("/dashboard");
         return;
       }
       if (result.otpRequired) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.debug('[Auth Debug] runLoginGate OTP required → /verify-login-otp', { method });
-        }
         // Redirect to the dedicated Gmail/email OTP verification page
         // (email OTP, not phone verification).
         router.push("/verify-login-otp");
         return;
-      }
-      if (process.env.NODE_ENV !== 'production') {
-        console.debug('[Auth Debug] runLoginGate SUCCESS → redirecting to /dashboard', { method });
       }
       toast.success(t('auth.firebaseErrors.loggedInSuccessfully'));
       router.push("/dashboard");

@@ -1,19 +1,19 @@
 import Footer from "@/Components/Footer";
 import Navbar from "@/Components/Navbar";
+import DashboardHeader from "@/Components/DashboardHeader";
 import ErrorBoundary from "@/Components/ErrorBoundary";
 import "@/styles/global.css";
 import type { AppProps } from "next/app";
 import { useRouter } from "next/router";
-import { Provider, useDispatch } from "react-redux";
+import { Provider, useDispatch, useSelector } from "react-redux";
 import { useEffect, useState } from "react";
 import { store } from "../store/store";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { login, logout } from "@/Feature/Userslice";
+import { login, logout, selectuser } from "@/Feature/Userslice";
 import axiosClient from "@/lib/apiClient";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { Analytics } from "@vercel/analytics/next";
 import { I18nProvider } from "@/i18n/runtime";
 
 function AuthListener() {
@@ -87,8 +87,11 @@ function PageLoader() {
   );
 }
 
-// Routes where the global Navbar/Footer should be hidden (auth pages + admin panel)
-const AUTH_ROUTES = [
+// ---------------------------------------------------------------------------
+// Layout rules
+// ---------------------------------------------------------------------------
+// Standalone auth / post-payment pages: NO navbar, NO footer.
+const AUTH_PAGES = [
   "/login",
   "/signup",
   "/adminlogin",
@@ -96,21 +99,111 @@ const AUTH_ROUTES = [
   "/admin-forgot-password",
   "/verify-email",
   "/verify-login-otp",
+  "/payment/success",
+  "/payment/failed",
+  "/payment/cancel",
 ];
 
-// Helper: check if a path is an admin panel route
-function isAdminRoute(pathname: string): boolean {
-  if (pathname === "/adminpanel" || pathname.startsWith("/adminpanel/")) {
-    return true;
-  }
+// Public marketing/browse pages: show the legacy global Navbar + Footer for
+// signed-out visitors ONLY. Logged-in users get the dashboard header instead.
+const PUBLIC_ROOTS = [
+  "/about",
+  "/contact",
+  "/help",
+  "/privacy",
+  "/terms",
+  "/internship",
+  "/job",
+  "/companies",
+  "/search",
+];
+
+function isPublicRoute(pathname: string): boolean {
+  if (pathname === "/") return true;
+  if (PUBLIC_ROOTS.includes(pathname)) return true;
+  if (pathname.startsWith("/detailinternship/")) return true;
+  if (pathname.startsWith("/detailjob/")) return true;
   return false;
 }
 
-export default function App({ Component, pageProps }: AppProps) {
-  const router = useRouter();
-  const isAuthRoute = AUTH_ROUTES.includes(router.pathname);
-  const isAdminPage = isAdminRoute(router.pathname);
+// Admin panel routes get their own AdminLayout (rendered by each page), so the
+// global Navbar/Footer must never appear there.
+function isAdminRoute(pathname: string): boolean {
+  return pathname === "/adminpanel" || pathname.startsWith("/adminpanel/");
+}
 
+function AppShell({
+  Component,
+  pageProps,
+}: {
+  Component: AppProps["Component"];
+  pageProps: AppProps["pageProps"];
+}) {
+  const router = useRouter();
+  const user = useSelector(selectuser);
+  const [authReady, setAuthReady] = useState(false);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, () => setAuthReady(true));
+    return () => unsub();
+  }, []);
+
+  const pathname = router.pathname;
+  const isAdminPage = isAdminRoute(pathname);
+  const isAuthPage = AUTH_PAGES.includes(pathname);
+  const isPublicPage = !isAuthPage && isPublicRoute(pathname);
+  // Everything else is treated as an authenticated / dashboard route.
+  const isDashboardRoute = !isAdminPage && !isAuthPage && !isPublicPage;
+  const authenticated = !!user;
+
+  // Admin + standalone auth pages: render the page with no global shell.
+  if (isAdminPage || isAuthPage) {
+    return <Component {...pageProps} />;
+  }
+
+  // Authenticated / dashboard area.
+  if (isDashboardRoute) {
+    if (authenticated) {
+      // /dashboard renders its own header + sidebar layout; every other page
+      // shares the dashboard header (the only authenticated navigation).
+      const withHeader = pathname !== "/dashboard";
+      return (
+        <>
+          {withHeader ? <DashboardHeader /> : null}
+          <Component {...pageProps} />
+        </>
+      );
+    }
+    // Not yet authenticated: wait for Firebase auth to resolve so we never
+    // flash the old public navbar to a signed-in user on refresh. Protected
+    // pages use useRequireAuth to redirect to /login once authReady resolves.
+    if (!authReady) return null;
+    return <Component {...pageProps} />;
+  }
+
+  // Public page.
+  if (authenticated) {
+    // Signed-in visitor on a public page: dashboard header, no footer.
+    return (
+      <>
+        <DashboardHeader />
+        <Component {...pageProps} />
+      </>
+    );
+  }
+
+  // Signed-out visitor on a public page: legacy navbar + footer.
+  if (!authReady) return null;
+  return (
+    <>
+      <Navbar />
+      <Component {...pageProps} />
+      <Footer />
+    </>
+  );
+}
+
+export default function App({ Component, pageProps }: AppProps) {
   return (
     <Provider store={store}>
       <I18nProvider>
@@ -128,9 +221,7 @@ export default function App({ Component, pageProps }: AppProps) {
               draggable
               theme="light"
             />
-            {!(isAuthRoute || isAdminPage) && <Navbar />}
-            <Component {...pageProps} />
-            {!(isAuthRoute || isAdminPage) && <Footer />}
+            <AppShell Component={Component} pageProps={pageProps} />
           </div>
         </ErrorBoundary>
       </I18nProvider>
