@@ -24,9 +24,6 @@ import {
   LogOut,
   Menu,
   X,
-  Home,
-  Search,
-  User,
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { selectuser } from "@/Feature/Userslice";
@@ -104,29 +101,27 @@ export default function DashboardHeader() {
 
   const navItems = useMemo(
     () => [
-      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/public", label: "Public Space", icon: Bookmark },
-      { href: "/friends", label: "Friends", icon: Users },
-      { href: "/chat", label: "Messages", icon: MessageSquare },
-      { href: "/users", label: "Search", icon: Search },
-      { href: "/subscription", label: "Subscription", icon: CreditCard },
-      { href: "/profile", label: "Profile", icon: User },
+      { href: "/", label: t("footer.links.home"), icon: LayoutDashboard },
+      { href: "/chat", label: t("navbar.messages"), icon: MessageSquare },
+      { href: "/friends", label: t("navbar.friends"), icon: Users },
+      { href: "/public", label: t("navbar.publicSpace"), icon: Bookmark },
+      { href: "/subscription", label: t("subscription.title"), icon: CreditCard },
+      { href: "/profile", label: t("navbar.profile"), icon: LayoutDashboard },
     ],
     [t]
   );
 
   return (
-    <header className="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-40 border-b border-gray-100">
+    <header className="bg-white shadow-sm sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="h-16 flex items-center justify-between">
           <div className="flex items-center gap-4 min-w-0">
-            <Link href="/dashboard" className="shrink-0 flex items-center gap-2" aria-label="InternArea home">
+            <Link href="/" className="shrink-0" aria-label="InternArea home">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" alt="" className="h-9 w-auto" />
-              <span className="hidden sm:block text-lg font-bold text-blue-600">InternArea</span>
+              <img src="/logo.png" alt="" className="h-10 w-auto" />
             </Link>
             {title && (
-              <div className="hidden lg:block leading-tight min-w-0">
+              <div className="hidden md:block leading-tight min-w-0">
                 <div className="text-sm text-gray-600 truncate">
                   {t("dashboard.welcome", {
                     values: { user: user?.name ? `, ${user.name}` : "" },
@@ -141,16 +136,11 @@ export default function DashboardHeader() {
           <div className="hidden lg:flex items-center gap-1">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = router.pathname === item.href;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-                    isActive
-                      ? "bg-blue-50 text-blue-600"
-                      : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
-                  }`}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors whitespace-nowrap"
                 >
                   <Icon className="w-4 h-4" />
                   <span>{item.label}</span>
@@ -162,39 +152,39 @@ export default function DashboardHeader() {
           <div className="flex items-center gap-2">
             <Link
               href="/notifications"
-              className="relative p-2 rounded-full hover:bg-gray-100 transition-colors"
+              className="relative p-2 rounded-full hover:bg-gray-100"
               aria-label="Open notifications"
             >
               <Bell className="w-5 h-5 text-gray-700" />
               {unreadCount > 0 ? (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-[10px] px-1.5 py-0.5 font-bold min-w-[18px] text-center">
-                  {unreadCount > 99 ? "99+" : unreadCount}
+                <span className="absolute -top-1 -right-1 bg-blue-600 text-white rounded-full text-[10px] px-1.5 py-0.5 font-bold">
+                  {unreadCount}
                 </span>
               ) : null}
             </Link>
-            <Link href="/profile" className="shrink-0 p-1 rounded-full hover:bg-gray-100 transition-colors" aria-label="Open profile">
+            <Link href="/profile" className="shrink-0 p-1 rounded-full hover:bg-gray-100" aria-label="Open profile">
               {user?.photo ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={user.photo} alt="" className="w-9 h-9 rounded-full object-cover ring-2 ring-gray-100" />
+                <img src={user.photo} alt="" className="w-9 h-9 rounded-full object-cover" />
               ) : (
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center font-semibold ring-2 ring-gray-100">
-                  {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
+                <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">
+                  {user?.name ? user.name.charAt(0).toUpperCase() : ""}
                 </div>
               )}
             </Link>
             <button
               type="button"
               onClick={handleLogout}
-              className="p-2 rounded-full hover:bg-red-50 text-gray-700 hover:text-red-600 transition-colors"
+              className="p-2 rounded-full hover:bg-gray-100 text-gray-700 hover:text-red-600 transition-colors"
               aria-label="Logout"
-              title="Logout"
+              title={t("navbar.logout")}
             >
               <LogOut className="w-5 h-5" />
             </button>
             <button
               type="button"
               onClick={() => setMenuOpen((s) => !s)}
-              className="lg:hidden p-2 rounded-full hover:bg-gray-100 text-gray-700"
+              className="md:hidden p-2 rounded-full hover:bg-gray-100 text-gray-700"
               aria-label="Toggle menu"
             >
               {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}

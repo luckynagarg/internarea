@@ -7,6 +7,12 @@ import {
   Bookmark,
   Users,
   ArrowRight,
+  Sparkles,
+  TrendingUp,
+  UserPlus,
+  Bell,
+  Search,
+  Compass,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { selectuser } from "@/Feature/Userslice";
@@ -152,8 +158,83 @@ export default function DashboardPage() {
 
   if (!ready) return null;
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Hero Section */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 text-white">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E')] opacity-30"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="w-5 h-5 text-yellow-300" />
+                <span className="text-blue-200 text-sm font-medium">Welcome back</span>
+              </div>
+              <h1 className="text-3xl md:text-4xl font-bold mb-2">Hello, {user?.name || "there"}! 👋</h1>
+              <p className="text-blue-100 text-lg max-w-xl">Ready to discover new opportunities? Explore jobs, internships, and connect with your community.</p>
+            </div>
+            <Link href="/profile" className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 hover:bg-white/20 transition-colors">
+              {user?.photo ? (
+                <img src={user.photo} alt="" className="w-10 h-10 rounded-full object-cover ring-2 ring-white/30" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                  <span className="text-lg font-bold">{user?.name?.charAt(0) || "U"}</span>
+                </div>
+              )}
+              <span className="font-medium">My Profile</span>
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+              <div className="flex items-center gap-2 text-blue-200 mb-1"><BriefcaseBusiness className="w-4 h-4" /><span className="text-sm">Jobs</span></div>
+              <div className="text-2xl font-bold">{jobs.length}</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+              <div className="flex items-center gap-2 text-blue-200 mb-1"><Building2 className="w-4 h-4" /><span className="text-sm">Internships</span></div>
+              <div className="text-2xl font-bold">{internships.length}</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+              <div className="flex items-center gap-2 text-blue-200 mb-1"><Users className="w-4 h-4" /><span className="text-sm">Friends</span></div>
+              <div className="text-2xl font-bold">{onlineFriends.length}</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+              <div className="flex items-center gap-2 text-blue-200 mb-1"><Bell className="w-4 h-4" /><span className="text-sm">Alerts</span></div>
+              <div className="text-2xl font-bold">{recentNotifications.length}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Quick Actions */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <Link href="/job" className="group bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 border border-gray-100">
+            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-3 group-hover:bg-blue-600 transition-colors">
+              <BriefcaseBusiness className="w-6 h-6 text-blue-600 group-hover:text-white transition-colors" />
+            </div>
+            <h3 className="font-semibold text-gray-900">Browse Jobs</h3>
+            <p className="text-sm text-gray-500 mt-1">Find your dream job</p>
+          </Link>
+          <Link href="/internship" className="group bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 border border-gray-100">
+            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-3 group-hover:bg-purple-600 transition-colors">
+              <Building2 className="w-6 h-6 text-purple-600 group-hover:text-white transition-colors" />
+            </div>
+            <h3 className="font-semibold text-gray-900">Internships</h3>
+            <p className="text-sm text-gray-500 mt-1">Start your career</p>
+          </Link>
+          <Link href="/friends" className="group bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 border border-gray-100">
+            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-3 group-hover:bg-green-600 transition-colors">
+              <UserPlus className="w-6 h-6 text-green-600 group-hover:text-white transition-colors" />
+            </div>
+            <h3 className="font-semibold text-gray-900">Find Friends</h3>
+            <p className="text-sm text-gray-500 mt-1">Expand your network</p>
+          </Link>
+          <Link href="/public" className="group bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 border border-gray-100">
+            <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mb-3 group-hover:bg-orange-600 transition-colors">
+              <Compass className="w-6 h-6 text-orange-600 group-hover:text-white transition-colors" />
+            </div>
+            <h3 className="font-semibold text-gray-900">Public Space</h3>
+            <p className="text-sm text-gray-500 mt-1">Share and connect</p>
+          </Link>
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <aside className="lg:col-span-2 hidden md:block">
             <div className="bg-white rounded-xl shadow-sm p-4 sticky top-20">
