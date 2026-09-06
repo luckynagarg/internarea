@@ -1,72 +1,78 @@
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { storage } from "../lib/firebase";
-
-function sanitizeFileName(name) {
-  return (name || "file").replace(/[^a-zA-Z0-9._-]/g, "_");
-}
-
 /**
- * Uploads a file to Firebase Storage with timeout protection.
+ * Uploads a file via the authenticated backend endpoint (POST /api/upload).
+ *
+ * This replaces the old client-side Firebase Storage upload. The backend
+ * validates the file, uploads it to Supabase Storage with the service-role
+ * key (which NEVER reaches the browser), and returns a public image URL
+ * that is persisted in MongoDB by the existing endpoints.
+ *
+ * The function signature and return shape are UNCHANGED
+ * ({ mediaType, mediaUrl }) so all existing callers keep working.
+ *
  * @param {File} file - The file to upload
  * @param {number} [timeoutMs=30000] - Timeout in milliseconds (default 30s)
+ * @param {{folder?: "profile-images" | "public-space"}} [options]
  * @returns {Promise<{mediaType: string, mediaUrl: string}>}
  */
-export async function uploadMedia(file, timeoutMs = 30000) {
+import axiosClient from "../lib/apiClient";
+
+export async function uploadMedia(file, timeoutMs = 30000, options = {}) {
   if (!file) throw new Error("No file provided");
 
-  // Validate file size (max 10MB for images, 50MB for videos)
-  const maxSize = file.type?.startsWith("video/") ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+  // Validate file size (matches the backend's 5 MB limit)
+  const maxSize = 5 * 1024 * 1024;
   if (file.size > maxSize) {
     throw new Error(`File too large. Maximum size is ${maxSize / (1024 * 1024)}MB.`);
   }
 
-  // Validate file type
-  const validImageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/jpg"];
-  const validVideoTypes = ["video/mp4", "video/webm", "video/quicktime"];
-  const validTypes = [...validImageTypes, ...validVideoTypes];
-
+  // Validate file type (must match the backend MIME allow-list)
+  const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
   if (!validTypes.includes(file.type)) {
-    throw new Error(`Invalid file type: ${file.type}. Allowed types: ${validTypes.join(", ")}`);
+    throw new Error(
+      `Invalid file type: ${file.type}. Allowed types: ${validTypes.join(", ")}`
+    );
   }
 
   const mediaType = file.type?.startsWith("video/") ? "video" : "image";
-  const ext = mediaType === "video" ? "mp4" : "jpg";
 
-  const path = `public-space/${Date.now()}-${Math.random().toString(16).slice(2)}-${sanitizeFileName(
-    file.name
-  )}.${ext}`;
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("folder", options.folder || "profile-images");
 
-  const storageRef = ref(storage, path);
-
-  // Create a timeout promise that rejects after timeoutMs
   const timeoutPromise = new Promise((_, reject) => {
-    setTimeout(() => reject(new Error(`Upload timed out after ${timeoutMs / 1000} seconds. Please check your connection and try again.`)), timeoutMs);
+    setTimeout(
+      () =>
+        reject(
+          new Error(
+            `Upload timed out after ${timeoutMs / 1000} seconds. Please check your connection and try again.`
+          )
+        ),
+      timeoutMs
+    );
   });
 
   try {
-    // Race the upload against the timeout
-    await Promise.race([
-      uploadBytes(storageRef, file),
+    // Race the upload against the timeout. Override the JSON content-type so
+    // axios sets the correct multipart/form-data boundary for FormData.
+    const res = await Promise.race([
+      axiosClient.post("/api/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: timeoutMs,
+      }),
       timeoutPromise,
     ]);
 
-    const url = await getDownloadURL(storageRef);
-    return { mediaType, mediaUrl: url };
+    const data = res?.data ?? res;
+    const mediaUrl = data?.mediaUrl ?? data?.data?.mediaUrl;
+    if (!mediaUrl) throw new Error("Upload did not return a URL.");
+    return { mediaType, mediaUrl };
   } catch (error) {
-    // Provide more specific error messages
-    if (error.code === "storage/unauthorized") {
-      throw new Error(
-        "Upload blocked by Firebase Storage security rules. Deploy the storage.rules file (run: firebase deploy --only storage) or allow authenticated uploads in the Firebase Console → Storage → Rules."
-      );
-    } else if (error.code === "storage/canceled") {
-      throw new Error("Upload was cancelled.");
-    } else if (error.code === "storage/quota-exceeded") {
-      throw new Error("Upload failed: Storage quota exceeded. Please contact support.");
-    } else if (error.code === "storage/invalid-checksum") {
-      throw new Error("Upload failed: File corrupted. Please try again.");
-    } else if (error.code === "storage/retry-limit-exceeded") {
-      throw new Error("Upload failed: Network error. Please check your connection and try again.");
-    }
-    throw error;
+    // Provide a useful, non-sensitive error message
+    const message =
+      error?.response?.data?.message ||
+      error?.message ||
+      "Upload failed. Please try again.";
+    throw new Error(message);
   }
 }
+

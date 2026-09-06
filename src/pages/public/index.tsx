@@ -103,7 +103,7 @@ export default function PublicSpacePage() {
       let mediaType: string = "";
       let mediaUrl: string = "";
       if (file) {
-        const uploaded = await uploadMedia(file);
+        const uploaded = await uploadMedia(file, 30000, { folder: "public-space" });
         mediaType = uploaded.mediaType;
         mediaUrl = uploaded.mediaUrl;
       }

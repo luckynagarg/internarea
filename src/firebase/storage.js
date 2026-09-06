@@ -1,9 +1,4 @@
-// Legacy re-export to preserve compatibility with existing imports.
-// The single source of truth is now src/lib/firebase.ts.
-// Keep this file so `@/firebase/storage` imports continue to work.
-
-import { storage } from "../lib/firebase";
-
-export { storage };
-
-export default storage;
+// Legacy shim REMOVED: Firebase Storage has been replaced by Supabase Storage
+// (uploads now go through the authenticated backend endpoint POST /api/upload).
+// The single source of truth for the Firebase client is src/lib/firebase.ts
+// (auth only — no storage).
