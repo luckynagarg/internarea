@@ -14,6 +14,14 @@ type Internship = {
   category?: string;
   stipend?: string;
   numberOfOpening?: string;
+  duration?: string;
+  aboutCompany?: string;
+  aboutInternship?: string;
+  whoCanApply?: string;
+  perks?: string;
+  startDate?: string;
+  applicationDeadline?: string;
+  skillsRequired?: string;
   isActive?: boolean;
 };
 
@@ -21,6 +29,7 @@ const EMPTY = {
   title: "", company: "", location: "", category: "",
   aboutCompany: "", aboutInternship: "", whoCanApply: "",
   perks: "", numberOfOpening: "", stipend: "", startDate: "", additionalInfo: "",
+  duration: "", applicationDeadline: "", skillsRequired: "",
 };
 
 const inputCls = "mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
@@ -39,11 +48,26 @@ export default function AdminInternshipsPage() {
     setLoading(true); setError(null);
     try {
       const headers = await getAuthHeaders();
-      const res = await axios.get(API_URL("/api/admin/internships"), { headers, params: { limit: 100 } });
+      const source = axios.CancelToken.source();
+      const timeout = setTimeout(() => source.cancel("Request timed out"), 15000);
+      const res = await axios.get(API_URL("/api/admin/internships"), {
+        headers,
+        params: { limit: 100 },
+        cancelToken: source.token,
+      });
+      clearTimeout(timeout);
+      if (res?.data?.success === false) {
+        throw new Error(res.data.message || "API returned failure");
+      }
       setRows(res?.data?.data ?? []);
     } catch (e: any) {
+      if (axios.isCancel(e)) {
+        setError("Request timed out. Please check your connection.");
+        setRows([]);
+        return;
+      }
       if (e?.response?.status === 401 || e?.response?.status === 403) { router.replace("/adminlogin"); return; }
-      setError("Could not load internships. Please try again."); setRows([]);
+      setError(e?.response?.data?.message || e?.message || "Could not load internships. Please try again."); setRows([]);
     } finally { setLoading(false); }
   }, [router]);
 
@@ -56,13 +80,20 @@ export default function AdminInternshipsPage() {
     setSaving(true); setError(null);
     try {
       const headers = await getAuthHeaders();
-      if (editingId) await axios.patch(API_URL(`/api/admin/internships/${editingId}`), form, { headers });
-      else await axios.post(API_URL("/api/admin/internships"), form, { headers });
+      const source = axios.CancelToken.source();
+      const timeout = setTimeout(() => source.cancel("Request timed out"), 15000);
+      if (editingId) await axios.patch(API_URL(`/api/admin/internships/${editingId}`), form, { headers, cancelToken: source.token });
+      else await axios.post(API_URL("/api/admin/internships"), form, { headers, cancelToken: source.token });
+      clearTimeout(timeout);
       setModalOpen(false); setForm(EMPTY); setEditingId(null);
       await load();
     } catch (e: any) {
+      if (axios.isCancel(e)) {
+        setError("Request timed out. Please try again.");
+        return;
+      }
       if (e?.response?.status === 401 || e?.response?.status === 403) { router.replace("/adminlogin"); return; }
-      setError("Failed to save internship. Please try again.");
+      setError(e?.response?.data?.message || e?.message || "Failed to save internship. Please try again.");
     } finally { setSaving(false); }
   };
 
@@ -161,16 +192,42 @@ export default function AdminInternshipsPage() {
               <button type="button" onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
             <div className="space-y-4">
-              <div><label className="block text-sm font-medium text-gray-700">Title *</label>
-                <input className={inputCls} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+              <div><label className="block text-sm font-medium text-gray-700">Internship Title *</label>
+                <input className={inputCls} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Web Development Intern" /></div>
               <div><label className="block text-sm font-medium text-gray-700">Company *</label>
-                <input className={inputCls} value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} /></div>
-              <div><label className="block text-sm font-medium text-gray-700">Location</label>
-                <input className={inputCls} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></div>
-              <div><label className="block text-sm font-medium text-gray-700">Category *</label>
-                <input className={inputCls} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} /></div>
-              <div><label className="block text-sm font-medium text-gray-700">Stipend</label>
-                <input className={inputCls} value={form.stipend} onChange={(e) => setForm({ ...form, stipend: e.target.value })} /></div>
+                <input className={inputCls} value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="e.g. Microsoft" /></div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className="block text-sm font-medium text-gray-700">Location</label>
+                  <input className={inputCls} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="e.g. Remote / Delhi" /></div>
+                <div><label className="block text-sm font-medium text-gray-700">Category *</label>
+                  <input className={inputCls} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="e.g. Technology" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className="block text-sm font-medium text-gray-700">Stipend (₹)</label>
+                  <input className={inputCls} value={form.stipend} onChange={(e) => setForm({ ...form, stipend: e.target.value })} placeholder="e.g. ₹15,000 / month" /></div>
+                <div><label className="block text-sm font-medium text-gray-700">Duration</label>
+                  <input className={inputCls} value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="e.g. 3 months, 6 months" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className="block text-sm font-medium text-gray-700">Number of Openings</label>
+                  <input className={inputCls} value={form.numberOfOpening} onChange={(e) => setForm({ ...form, numberOfOpening: e.target.value })} placeholder="e.g. 5" /></div>
+                <div><label className="block text-sm font-medium text-gray-700">Application Deadline</label>
+                  <input type="date" className={inputCls} value={form.applicationDeadline} onChange={(e) => setForm({ ...form, applicationDeadline: e.target.value })} /></div>
+              </div>
+              <div><label className="block text-sm font-medium text-gray-700">About Company</label>
+                <textarea className={inputCls} rows={2} value={form.aboutCompany} onChange={(e) => setForm({ ...form, aboutCompany: e.target.value })} placeholder="Brief description about the company..." /></div>
+              <div><label className="block text-sm font-medium text-gray-700">About Internship</label>
+                <textarea className={inputCls} rows={2} value={form.aboutInternship} onChange={(e) => setForm({ ...form, aboutInternship: e.target.value })} placeholder="Roles and responsibilities..." /></div>
+              <div><label className="block text-sm font-medium text-gray-700">Skills Required</label>
+                <input className={inputCls} value={form.skillsRequired} onChange={(e) => setForm({ ...form, skillsRequired: e.target.value })} placeholder="e.g. HTML, CSS, JavaScript" /></div>
+              <div><label className="block text-sm font-medium text-gray-700">Who Can Apply</label>
+                <input className={inputCls} value={form.whoCanApply} onChange={(e) => setForm({ ...form, whoCanApply: e.target.value })} placeholder="e.g. Students, Freshers" /></div>
+              <div><label className="block text-sm font-medium text-gray-700">Perks &amp; Benefits</label>
+                <input className={inputCls} value={form.perks} onChange={(e) => setForm({ ...form, perks: e.target.value })} placeholder="e.g. Certificate, Flexible hours" /></div>
+              <div><label className="block text-sm font-medium text-gray-700">Start Date</label>
+                <input type="date" className={inputCls} value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} /></div>
+              <div><label className="block text-sm font-medium text-gray-700">Additional Info</label>
+                <textarea className={inputCls} rows={2} value={form.additionalInfo} onChange={(e) => setForm({ ...form, additionalInfo: e.target.value })} placeholder="Any other details..." /></div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
                 <button type="button" onClick={save} disabled={saving} className="inline-flex items-center gap-2 px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50">

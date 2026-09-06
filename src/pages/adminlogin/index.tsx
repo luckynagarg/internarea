@@ -1,5 +1,5 @@
 import axios from "axios";
-import { User, Lock } from "lucide-react";
+import { User, Lock, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/router";
 import React, { useState } from "react";
 import Link from "next/link";
@@ -65,6 +65,13 @@ const index = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 mb-6 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Home
+        </Link>
         <h2 className="text-center text-3xl font-extrabold text-gray-900">
           {t('admin.login.title')}
         </h2>

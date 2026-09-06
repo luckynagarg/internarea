@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useT } from '@/i18n/runtime';
 import { toast } from "react-toastify";
 import { uploadMedia } from "@/firebase/uploadMedia";
@@ -29,6 +29,7 @@ export default function PublicSpacePage() {
   const [caption, setCaption] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [creating, setCreating] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [limit, setLimit] = useState<FriendLimit | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -118,6 +119,10 @@ export default function PublicSpacePage() {
       toast.success(t('public.postedSuccessfully'));
       setCaption("");
       setFile(null);
+      // Reset the file input so the same file can be selected again
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       const createdPost = res.data?.post ?? res.data;
       if (createdPost && createdPost._id) {
         setPosts((prev) => [createdPost, ...prev.filter((p) => p._id !== createdPost._id)]);
@@ -220,6 +225,7 @@ export default function PublicSpacePage() {
             <Camera size={16} />
             <span>{file ? file.name : t('public.uploadImageVideo')}</span>
             <input
+              ref={fileInputRef}
               type="file"
               accept="image/*,video/*"
               className="hidden"
@@ -230,7 +236,12 @@ export default function PublicSpacePage() {
           {file && (
             <button
               className="ml-auto inline-flex items-center gap-2 px-3 py-2 rounded-lg border hover:bg-gray-50 text-sm text-red-600"
-              onClick={() => setFile(null)}
+              onClick={() => {
+                setFile(null);
+                if (fileInputRef.current) {
+                  fileInputRef.current.value = "";
+                }
+              }}
               type="button"
             >
               <Trash2 size={16} />

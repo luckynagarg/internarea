@@ -9,6 +9,9 @@ import { useRequireAuth } from '@/hooks/useRequireAuth';
 
 import { Bell, CheckCircle2, Heart, MessageSquare, FileText, Inbox, Check, X } from 'lucide-react';
 
+// useRequireAuth is used to protect this page - it waits for Firebase auth
+// to resolve and redirects to /login if user is not authenticated
+
 interface NotificationItem {
   _id: string;
   title?: string;
@@ -22,12 +25,24 @@ interface NotificationItem {
   action?: string | null;
   entityType?: string | null;
   entityId?: string | null;
+  actor?: {
+    _id?: string;
+    name?: string;
+    username?: string;
+    nickname?: string;
+    photo?: string;
+    headline?: string;
+    bio?: string;
+    location?: string;
+    verified?: boolean;
+  } | null;
 }
 
 export default function NotificationsPage() {
   const user = useSelector(selectuser) as any;
   const router = useRouter();
   const { t } = useT();
+  const { ready } = useRequireAuth();
 
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,13 +97,19 @@ export default function NotificationsPage() {
   async function handleFriendRequestAction(notification: NotificationItem, action: 'accept' | 'reject') {
     if (!notification.entityId) return;
     const requestId = notification.entityId;
-    const senderUid = (notification as any).fromUser;
+    // The backend toApiNotification() returns `actor` (populated profile with _id = firebaseUid)
+    // NOT `fromUser`. Use actor._id as the sender UID for accept/reject API calls.
+    const senderUid = (notification as any).actor?._id || (notification as any).fromUser;
+    if (!senderUid) {
+      toast.error(t('common.error'));
+      return;
+    }
     setActionId(requestId);
     try {
       if (action === 'accept') {
-        await axiosClient.post('/api/friends/accept', { requestId, sender: senderUid });
+        await axiosClient.post('/api/friends/accept', { sender: senderUid });
       } else {
-        await axiosClient.post('/api/friends/reject', { requestId, sender: senderUid });
+        await axiosClient.post('/api/friends/reject', { sender: senderUid });
       }
       setItems((prev) => prev.filter((x) => x._id !== notification._id));
       toast.success(action === 'accept' ? t('common.accept') : t('common.reject'));
@@ -105,10 +126,6 @@ export default function NotificationsPage() {
     if (type === 'application') return <FileText className="text-purple-600" />;
     return <CheckCircle2 className="text-green-600" />;
   };
-
-  const { ready } = useRequireAuth();
-
-  if (!ready) return null;
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4">
@@ -137,7 +154,11 @@ export default function NotificationsPage() {
           </button>
         </div>
 
-        {!user ? (
+        {!ready ? (
+          <div className="bg-white rounded-xl shadow-sm p-8 text-center text-gray-500">
+            Loading...
+          </div>
+        ) : !user ? (
           <div className="bg-white rounded-xl shadow-sm p-8 text-center text-gray-500">
             Please sign in to view your notifications.
           </div>
@@ -167,7 +188,7 @@ export default function NotificationsPage() {
                     </div>
                   </div>
                   <div className="text-gray-600 text-sm mt-1">{n.body || n.message || ''}</div>
-                  {(n as any).entityType === 'friend_request' && (n as any).fromUser && (
+                  {(n as any).entityType === 'friend_request' && ((n as any).actor?._id || (n as any).fromUser) && (
                     <div className="flex items-center gap-2 mt-3">
                       <button
                         type="button"

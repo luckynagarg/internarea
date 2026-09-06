@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { useRouter } from "next/router";
-import { Loader2, Plus, Archive, RotateCcw, Trash2, X } from "lucide-react";
+import { Loader2, Plus, Archive, RotateCcw, Trash2, X, MapPin, Building, Briefcase, Clock, Users, Award } from "lucide-react";
 import AdminLayout from "@/Components/AdminLayout";
 import { getAuthHeaders } from "@/lib/authHeaders";
 import { API_URL } from "@/config/api";
@@ -13,8 +13,19 @@ type Job = {
   location?: string;
   category?: string;
   CTC?: string;
+  Experience?: string;
+  aboutCompany?: string;
+  aboutJob?: string;
+  whoCanApply?: string;
+  perks?: string;
+  AdditionalInfo?: string;
+  StartDate?: string;
   isActive?: boolean;
-  createAt?: string;
+  createdAt?: string;
+  applicationDeadline?: string;
+  jobType?: string;
+  skillsRequired?: string;
+  benefits?: string;
 };
 
 const EMPTY_FORM = {
@@ -22,6 +33,7 @@ const EMPTY_FORM = {
   company: "",
   location: "",
   category: "",
+  Experience: "",
   aboutCompany: "",
   aboutJob: "",
   whoCanApply: "",
@@ -29,6 +41,10 @@ const EMPTY_FORM = {
   AdditionalInfo: "",
   CTC: "",
   StartDate: "",
+  applicationDeadline: "",
+  jobType: "",
+  skillsRequired: "",
+  benefits: "",
 };
 
 export default function AdminJobsPage() {
@@ -46,15 +62,30 @@ export default function AdminJobsPage() {
     setError(null);
     try {
       const headers = await getAuthHeaders();
-      const res = await axios.get(API_URL("/api/admin/jobs"), { headers, params: { limit: 100 } });
+      const source = axios.CancelToken.source();
+      const timeout = setTimeout(() => source.cancel("Request timed out"), 15000);
+      const res = await axios.get(API_URL("/api/admin/jobs"), {
+        headers,
+        params: { limit: 100 },
+        cancelToken: source.token,
+      });
+      clearTimeout(timeout);
+      if (res?.data?.success === false) {
+        throw new Error(res.data.message || "API returned failure");
+      }
       setRows(res?.data?.data ?? []);
     } catch (e: any) {
+      if (axios.isCancel(e)) {
+        setError("Request timed out. Please check your connection.");
+        setRows([]);
+        return;
+      }
       const code = e?.response?.status;
       if (code === 401 || code === 403) {
         router.replace("/adminlogin");
         return;
       }
-      setError("Could not load jobs. Please try again.");
+      setError(e?.response?.data?.message || e?.message || "Could not load jobs. Please try again.");
       setRows([]);
     } finally {
       setLoading(false);
@@ -78,13 +109,18 @@ export default function AdminJobsPage() {
       company: job.company || "",
       location: job.location || "",
       category: job.category || "",
-      aboutCompany: "",
-      aboutJob: "",
-      whoCanApply: "",
-      perks: "",
-      AdditionalInfo: "",
+      Experience: job.Experience || "",
+      aboutCompany: job.aboutCompany || "",
+      aboutJob: job.aboutJob || "",
+      whoCanApply: job.whoCanApply || "",
+      perks: job.perks || "",
+      AdditionalInfo: job.AdditionalInfo || "",
       CTC: job.CTC || "",
-      StartDate: "",
+      StartDate: job.StartDate || "",
+      applicationDeadline: job.applicationDeadline || "",
+      jobType: job.jobType || "",
+      skillsRequired: job.skillsRequired || "",
+      benefits: job.benefits || "",
     });
     setModalOpen(true);
   };
@@ -98,20 +134,33 @@ export default function AdminJobsPage() {
     setError(null);
     try {
       const headers = await getAuthHeaders();
+      const source = axios.CancelToken.source();
+      const timeout = setTimeout(() => source.cancel("Request timed out"), 15000);
       if (editingId) {
-        await axios.patch(API_URL(`/api/admin/jobs/${editingId}`), form, { headers });
+        await axios.patch(API_URL(`/api/admin/jobs/${editingId}`), form, {
+          headers,
+          cancelToken: source.token,
+        });
       } else {
-        await axios.post(API_URL("/api/admin/jobs"), form, { headers });
+        await axios.post(API_URL("/api/admin/jobs"), form, {
+          headers,
+          cancelToken: source.token,
+        });
       }
+      clearTimeout(timeout);
       setModalOpen(false);
       await load();
     } catch (e: any) {
+      if (axios.isCancel(e)) {
+        setError("Request timed out. Please try again.");
+        return;
+      }
       const code = e?.response?.status;
       if (code === 401 || code === 403) {
         router.replace("/adminlogin");
         return;
       }
-      setError("Failed to save job. Please try again.");
+      setError(e?.response?.data?.message || e?.message || "Failed to save job. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -234,24 +283,76 @@ export default function AdminJobsPage() {
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Title *</label>
-                <input className={inputCls} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+                <label className="block text-sm font-medium text-gray-700">Job Title *</label>
+                <input className={inputCls} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Software Engineer" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Company *</label>
-                <input className={inputCls} value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
+                <input className={inputCls} value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="e.g. Google" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Location</label>
+                  <input className={inputCls} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="e.g. Remote / Bangalore" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Job Type</label>
+                  <select className={inputCls} value={form.jobType} onChange={(e) => setForm({ ...form, jobType: e.target.value })}>
+                    <option value="">Select type</option>
+                    <option value="Full-time">Full-time</option>
+                    <option value="Part-time">Part-time</option>
+                    <option value="Contract">Contract</option>
+                    <option value="Freelance">Freelance</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Category *</label>
+                  <input className={inputCls} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="e.g. Engineering" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Experience</label>
+                  <input className={inputCls} value={form.Experience} onChange={(e) => setForm({ ...form, Experience: e.target.value })} placeholder="e.g. 2-4 years" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">CTC (₹)</label>
+                  <input className={inputCls} value={form.CTC} onChange={(e) => setForm({ ...form, CTC: e.target.value })} placeholder="e.g. ₹10,00,000 / year" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Application Deadline</label>
+                  <input type="date" className={inputCls} value={form.applicationDeadline} onChange={(e) => setForm({ ...form, applicationDeadline: e.target.value })} />
+                </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Location</label>
-                <input className={inputCls} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
+                <label className="block text-sm font-medium text-gray-700">About Company</label>
+                <textarea className={inputCls} rows={2} value={form.aboutCompany} onChange={(e) => setForm({ ...form, aboutCompany: e.target.value })} placeholder="Brief description about the company..." />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Category *</label>
-                <input className={inputCls} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+                <label className="block text-sm font-medium text-gray-700">About Job</label>
+                <textarea className={inputCls} rows={2} value={form.aboutJob} onChange={(e) => setForm({ ...form, aboutJob: e.target.value })} placeholder="Roles and responsibilities..." />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">CTC</label>
-                <input className={inputCls} value={form.CTC} onChange={(e) => setForm({ ...form, CTC: e.target.value })} />
+                <label className="block text-sm font-medium text-gray-700">Skills Required</label>
+                <input className={inputCls} value={form.skillsRequired} onChange={(e) => setForm({ ...form, skillsRequired: e.target.value })} placeholder="e.g. React, Node.js, Python" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Who Can Apply</label>
+                <input className={inputCls} value={form.whoCanApply} onChange={(e) => setForm({ ...form, whoCanApply: e.target.value })} placeholder="e.g. Final year students, Graduates" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Perks &amp; Benefits</label>
+                <input className={inputCls} value={form.perks} onChange={(e) => setForm({ ...form, perks: e.target.value })} placeholder="e.g. Flexible hours, Health insurance" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Start Date</label>
+                <input type="date" className={inputCls} value={form.StartDate} onChange={(e) => setForm({ ...form, StartDate: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Additional Info</label>
+                <textarea className={inputCls} rows={2} value={form.AdditionalInfo} onChange={(e) => setForm({ ...form, AdditionalInfo: e.target.value })} placeholder="Any other details..." />
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
