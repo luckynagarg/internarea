@@ -16,14 +16,11 @@ import { signOut } from "firebase/auth";
 import { useSelector } from "react-redux";
 import {
   Bell,
-  MessageSquare,
-  Users,
-  CreditCard,
-  Bookmark,
-  LayoutDashboard,
+  Search,
   LogOut,
   Menu,
   X,
+  User,
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { selectuser } from "@/Feature/Userslice";
@@ -32,8 +29,6 @@ import { resetAuthData } from "@/lib/authStorage";
 import axiosClient from "@/lib/apiClient";
 
 // Map a route to an i18n label so the header always shows a sensible title.
-// Uses only keys known to exist in the dictionaries; unknown routes show the
-// welcome greeting without a page subtitle (never a broken key).
 function pageTitleKey(pathname: string): string | null {
   switch (pathname) {
     case "/dashboard":
@@ -49,11 +44,12 @@ function pageTitleKey(pathname: string): string | null {
     case "/notifications":
       return "navbar.notifications";
     case "/messages":
-      return "navbar.messages";
     case "/chat":
       return "navbar.messages";
-    case "/users":
-      return "navbar.search";
+    case "/internship":
+      return "navbar.internships";
+    case "/job":
+      return "navbar.jobs";
     default:
       return null;
   }
@@ -101,127 +97,142 @@ export default function DashboardHeader() {
 
   const navItems = useMemo(
     () => [
-      { href: "/", label: t("footer.links.home"), icon: LayoutDashboard },
-      { href: "/chat", label: t("navbar.messages"), icon: MessageSquare },
-      { href: "/friends", label: t("navbar.friends"), icon: Users },
-      { href: "/public", label: t("navbar.publicSpace"), icon: Bookmark },
-      { href: "/subscription", label: t("subscription.title"), icon: CreditCard },
-      { href: "/profile", label: t("navbar.profile"), icon: LayoutDashboard },
+      { href: "/internship", label: t("navbar.internships") },
+      { href: "/job", label: t("navbar.jobs") },
+      { href: "/public", label: t("navbar.publicSpace") },
+      { href: "/friends", label: t("navbar.friends") },
     ],
     [t]
   );
 
   return (
-    <header className="bg-white shadow-sm sticky top-0 z-40">
+    <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4 min-w-0">
-            <Link href="/" className="shrink-0" aria-label="InternArea home">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" alt="" className="h-10 w-auto" />
+          {/* Logo */}
+          <Link href="/dashboard" className="shrink-0" aria-label="InternArea home">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="InternArea" className="h-9 w-auto" />
+          </Link>
+
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center gap-6">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+
+          {/* Right Section */}
+          <div className="flex items-center gap-3">
+            {/* Search */}
+            <Link
+              href="/search"
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+              aria-label="Search"
+            >
+              <Search className="w-5 h-5" />
             </Link>
-            {title && (
-              <div className="hidden md:block leading-tight min-w-0">
-                <div className="text-sm text-gray-600 truncate">
-                  {t("dashboard.welcome", {
-                    values: { user: user?.name ? `, ${user.name}` : "" },
-                  })}
-                </div>
-                <div className="text-lg font-semibold text-gray-900 truncate">{title}</div>
-              </div>
-            )}
-          </div>
 
-          {/* Desktop quick nav */}
-          <div className="hidden lg:flex items-center gap-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors whitespace-nowrap"
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center gap-2">
+            {/* Notifications */}
             <Link
               href="/notifications"
-              className="relative p-2 rounded-full hover:bg-gray-100"
-              aria-label="Open notifications"
+              className="relative p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+              aria-label="Notifications"
             >
-              <Bell className="w-5 h-5 text-gray-700" />
-              {unreadCount > 0 ? (
-                <span className="absolute -top-1 -right-1 bg-blue-600 text-white rounded-full text-[10px] px-1.5 py-0.5 font-bold">
-                  {unreadCount}
+              <Bell className="w-5 h-5" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
-              ) : null}
+              )}
             </Link>
-            <Link href="/profile" className="shrink-0 p-1 rounded-full hover:bg-gray-100" aria-label="Open profile">
+
+            {/* Profile */}
+            <Link href="/profile" className="flex items-center gap-2 p-1 rounded-lg hover:bg-gray-100 transition-colors">
               {user?.photo ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={user.photo} alt="" className="w-9 h-9 rounded-full object-cover" />
+                <img src={user.photo} alt="" className="w-8 h-8 rounded-full object-cover" />
               ) : (
-                <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">
-                  {user?.name ? user.name.charAt(0).toUpperCase() : ""}
+                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-semibold">
+                  {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
                 </div>
               )}
             </Link>
+
+            {/* Logout */}
             <button
               type="button"
               onClick={handleLogout}
-              className="p-2 rounded-full hover:bg-gray-100 text-gray-700 hover:text-red-600 transition-colors"
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-red-600 transition-colors"
               aria-label="Logout"
-              title={t("navbar.logout")}
             >
               <LogOut className="w-5 h-5" />
             </button>
+
+            {/* Mobile Menu */}
             <button
               type="button"
               onClick={() => setMenuOpen((s) => !s)}
-              className="md:hidden p-2 rounded-full hover:bg-gray-100 text-gray-700"
+              className="md:hidden p-2 rounded-lg hover:bg-gray-100 text-gray-500"
               aria-label="Toggle menu"
             >
-              {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile menu */}
-      {menuOpen ? (
-        <div className="md:hidden border-t border-gray-100 bg-white">
-          <div className="px-4 py-3 space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-50"
-                >
-                  <Icon className="w-4 h-4" />
-                  <span className="font-medium">{item.label}</span>
-                </Link>
-              );
-            })}
+      {/* Mobile Menu */}
+      {menuOpen && (
+        <div className="md:hidden border-t border-gray-200 bg-white">
+          <nav className="px-4 py-3 space-y-1">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMenuOpen(false)}
+                className="block px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100"
+              >
+                {item.label}
+              </Link>
+            ))}
+            <Link
+              href="/search"
+              onClick={() => setMenuOpen(false)}
+              className="block px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100"
+            >
+              Search
+            </Link>
+            <Link
+              href="/messages"
+              onClick={() => setMenuOpen(false)}
+              className="block px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100"
+            >
+              Messages
+            </Link>
+            <Link
+              href="/profile"
+              onClick={() => setMenuOpen(false)}
+              className="block px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100"
+            >
+              Profile
+            </Link>
             <button
               type="button"
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-600 hover:bg-gray-50"
+              className="w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-gray-100"
             >
-              <LogOut className="w-4 h-4" />
-              <span className="font-medium">{t("navbar.logout")}</span>
+              Logout
             </button>
-          </div>
+          </nav>
         </div>
-      ) : null}
+      )}
     </header>
   );
 }

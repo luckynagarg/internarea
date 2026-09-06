@@ -55,7 +55,9 @@ export async function uploadMedia(file, timeoutMs = 30000) {
   } catch (error) {
     // Provide more specific error messages
     if (error.code === "storage/unauthorized") {
-      throw new Error("Upload failed: Not authorized. Please sign in and try again.");
+      throw new Error(
+        "Upload blocked by Firebase Storage security rules. Deploy the storage.rules file (run: firebase deploy --only storage) or allow authenticated uploads in the Firebase Console → Storage → Rules."
+      );
     } else if (error.code === "storage/canceled") {
       throw new Error("Upload was cancelled.");
     } else if (error.code === "storage/quota-exceeded") {
