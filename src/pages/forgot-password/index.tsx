@@ -3,7 +3,9 @@
 import React, { useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { toast } from "react-toastify";
+import { sendPasswordResetEmail } from "firebase/auth";
 import axiosClient from "@/lib/axiosClient";
+import { auth } from "@/lib/firebase";
 import { useT } from "@/i18n/runtime";
 
 function isValidEmail(email: string) {
@@ -27,6 +29,14 @@ export default function ForgotPasswordPage() {
 
   const [message, setMessage] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
+
+  // When the backend's custom email delivery fails (e.g. SMTP/Resend outage),
+  // the password HAS been reset server-side but the user never received it.
+  // Offer Firebase's built-in password-reset email as a recovery path so the
+  // user is never locked out. (Uses only the client SDK — no Firebase Auth
+  // configuration changes.)
+  const [showFirebaseFallback, setShowFirebaseFallback] = useState(false);
+  const [fallbackLoading, setFallbackLoading] = useState(false);
 
   const detectedMethod: "email" | "phone" | null = useMemo(() => {
     const v = identifier.trim();
@@ -76,8 +86,49 @@ export default function ForgotPasswordPage() {
         t('auth.forgotPassword.requestFailed');
       setErrorMessage(msg);
       toast.error(msg);
+
+      // Backend resets the password BEFORE sending the email; if delivery
+      // fails the old password no longer works and the new one is unknown.
+      // Expose the Firebase reset-email fallback in that situation.
+      if (
+        detectedMethod === "email" &&
+        (e?.isServerError ||
+          /could not be sent|email/i.test(String(msg)))
+      ) {
+        setShowFirebaseFallback(true);
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Recovery path: Firebase's built-in password reset email. This does NOT
+  // change any Firebase Auth configuration — it is the standard client-SDK
+  // flow that emails the user a link to choose a new password themselves.
+  const sendFirebaseResetEmail = async () => {
+    if (detectedMethod !== "email") {
+      toast.error(t('auth.forgotPassword.requestFailed'));
+      return;
+    }
+    setFallbackLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, identifier.trim());
+      toast.success(t('auth.forgotPassword.resetSent'));
+      setMessage(t('auth.forgotPassword.desc'));
+      setErrorMessage("");
+      setTimeout(() => router.push("/login"), 4000);
+    } catch (e: any) {
+      const code = e?.code || "";
+      const msg =
+        code === "auth/user-not-found"
+          ? t('auth.forgotPassword.desc')
+          : code === "auth/too-many-requests"
+          ? "Too many requests. Please wait a moment and try again."
+          : t('auth.forgotPassword.requestFailed');
+      setErrorMessage(msg);
+      toast.error(msg);
+    } finally {
+      setFallbackLoading(false);
     }
   };
 
@@ -160,6 +211,28 @@ export default function ForgotPasswordPage() {
               aria-live="assertive"
             >
               {errorMessage}
+            </div>
+          ) : null}
+
+          {showFirebaseFallback && detectedMethod === "email" ? (
+            <div className="mt-4 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950 px-4 py-3 text-sm text-blue-800 dark:text-blue-200">
+              <p className="font-semibold mb-2">
+                Didn&apos;t receive the new password?
+              </p>
+              <p className="mb-3">
+                We can email you a secure sign-in link from Firebase so you can
+                set a new password yourself.
+              </p>
+              <button
+                type="button"
+                onClick={sendFirebaseResetEmail}
+                disabled={fallbackLoading}
+                className="w-full bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 disabled:opacity-60"
+              >
+                {fallbackLoading
+                  ? "Sending…"
+                  : "Email me a password reset link"}
+              </button>
             </div>
           ) : null}
 

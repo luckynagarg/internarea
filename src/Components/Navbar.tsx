@@ -222,7 +222,7 @@ const Navbar = () => {
           <div className="flex justify-between h-16 items-center">
 <div className="flex-shrink-0">
               <a href="/" className="text-xl font-bold text-blue-600">
-                <img src={"/logo.png"} alt="" className="h-16" />
+                <img src={"/logo.png"} alt="" className="h-10 sm:h-12 md:h-16 w-auto" />
               </a>
             </div>
 
@@ -371,6 +371,28 @@ className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-cent
       {mobileOpen ? (
         <div className="md:hidden bg-white border-t border-gray-200 shadow-md">
           <div className="px-4 py-3 space-y-1">
+            {/* Mobile language switcher (mirrors the desktop Globe dropdown) */}
+            <div className="px-3 py-2">
+              <div className="flex items-center gap-2 text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                <Globe size={14} /> {t('navbar.language')}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {(Object.keys(LANG_LABELS) as SupportedLang[]).map((l) => (
+                  <button
+                    key={l}
+                    type="button"
+                    onClick={() => { handleSelectLang(l); }}
+                    className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                      lang === l
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                    }`}
+                  >
+                    {LANG_LABELS[l]}
+                  </button>
+                ))}
+              </div>
+            </div>
             <Link href="/internship" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
               {t('navbar.internships')}
             </Link>

@@ -188,11 +188,11 @@ export default function SvgSlider() {
       ========================================================= */}
       <div className="text-center mb-12">
 
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
           {t("home.heroTitle")}
         </h1>
 
-        <p className="text-xl text-gray-600">
+        <p className="text-lg sm:text-xl text-gray-600">
           {t("home.heroTrending")}
         </p>
 
@@ -214,7 +214,7 @@ export default function SvgSlider() {
           {slides.map((slide, index) => (
             <SwiperSlide key={index}>
               <div
-                className={`relative h-[400px] ${slide.bgColor}`}
+                className={`relative h-[240px] sm:h-[320px] md:h-[400px] ${slide.bgColor}`}
               >
 
                 {/* SVG Pattern Background */}
@@ -306,7 +306,7 @@ export default function SvgSlider() {
 
                 {/* Slide Content */}
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <h2 className="text-4xl font-bold text-white text-center px-6">
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white text-center px-4 sm:px-6">
                     {slide.title}
                   </h2>
                 </div>
@@ -535,7 +535,7 @@ export default function SvgSlider() {
       {/* =========================================================
           STATISTICS SECTION
       ========================================================= */}
-      <div className="bg-white rounded-xl shadow-lg p-8 mb-16">
+      <div className="bg-white rounded-xl shadow-lg p-4 sm:p-8 mb-8 sm:mb-16">
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
 
@@ -545,7 +545,7 @@ export default function SvgSlider() {
               className="text-center"
             >
 
-              <div className="text-4xl font-bold text-blue-600 mb-2">
+              <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-blue-600 mb-2">
                 {stat.number}
               </div>
 
