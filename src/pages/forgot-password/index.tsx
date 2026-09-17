@@ -70,7 +70,7 @@ export default function ForgotPasswordPage() {
         t('auth.forgotPassword.desc');
 
       if (res?.data?.success === false) {
-        // Server rejected (e.g. "You can use this option only once per day.")
+        // Server rejected (e.g. once-per-day restriction)
         setErrorMessage(msg);
         toast.error(msg);
       } else {
@@ -80,6 +80,20 @@ export default function ForgotPasswordPage() {
         setTimeout(() => router.push("/login"), 4000);
       }
     } catch (e: any) {
+      const status = e?.response?.status;
+      const code = e?.response?.data?.code;
+
+      // Once-per-day restriction is enforced by the backend and returned with
+      // code FORGOT_PASSWORD_DAILY_LIMIT (HTTP 429).
+      if (code === "FORGOT_PASSWORD_DAILY_LIMIT" || status === 429) {
+        const dailyMsg =
+          e?.response?.data?.message ||
+          t('auth.forgotPassword.oncePerDay');
+        setErrorMessage(dailyMsg);
+        toast.error(dailyMsg);
+        return;
+      }
+
       const msg =
         e?.response?.data?.message ||
         e?.response?.data?.error?.message ||

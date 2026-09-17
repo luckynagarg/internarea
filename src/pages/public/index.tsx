@@ -10,7 +10,23 @@ import axiosClient from "@/lib/axiosClient";
 
 type FriendLimit = {
   friendsCount: number;
-  allowedPerDay: number | typeof Infinity;
+  /** null when posting is unlimited (> 10 friends). */
+  allowedPerDay: number | null;
+  unlimited?: boolean;
+  usedToday?: number;
+  /** null when unlimited. */
+  remainingToday?: number | null;
+  date?: string;
+};
+
+/** Shape of the server's 403 posting-quota rejection. */
+type PostQuotaError = {
+  code?: "NO_FRIENDS" | "DAILY_POST_LIMIT_REACHED";
+  message?: string;
+  friendCount?: number;
+  allowedPerDay?: number | null;
+  usedToday?: number;
+  unlimited?: boolean;
 };
 
 type Post = {
@@ -47,14 +63,22 @@ export default function PublicSpacePage() {
 
   async function fetchLimit() {
     if (!userId) {
-      setLimit({ friendsCount: 0, allowedPerDay: 0 });
+      setLimit({ friendsCount: 0, allowedPerDay: 0, unlimited: false, usedToday: 0, remainingToday: 0 });
       return;
     }
     try {
       const res = await axiosClient.get(`/api/public/friends/count`);
-      setLimit(res.data);
+      const data = res.data || {};
+      setLimit({
+        friendsCount: data.friendsCount ?? 0,
+        allowedPerDay: data.allowedPerDay ?? 0,
+        unlimited: !!data.unlimited,
+        usedToday: data.usedToday ?? 0,
+        remainingToday: data.remainingToday ?? null,
+        date: data.date,
+      });
     } catch {
-      setLimit({ friendsCount: 0, allowedPerDay: 0 });
+      setLimit({ friendsCount: 0, allowedPerDay: 0, unlimited: false, usedToday: 0, remainingToday: 0 });
     }
   }
 
@@ -92,8 +116,12 @@ export default function PublicSpacePage() {
       return;
     }
 
-    if (limit && limit.allowedPerDay !== Infinity && limit.allowedPerDay <= 0) {
+    // UX-only pre-check. The authoritative decision is always the server's
+    // response to POST /api/public/posts (input `allowedPerDay`/`friendCount`
+    // are never sent and would be ignored anyway).
+    if (limit && !limit.unlimited && (limit.remainingToday ?? 0) <= 0) {
       toast.error(t('public.cantPost'));
+      await fetchLimit();
       return;
     }
 
@@ -132,12 +160,28 @@ export default function PublicSpacePage() {
 
       await fetchLimit();
     } catch (e: any) {
-      const message =
-        e?.response?.data?.error ??
-        e?.response?.data?.message ??
-        e?.message ??
-        t('common.postingFailed');
-      toast.error(message);
+      // The server is the authority: surface its structured rejection verbatim.
+      const quotaError: PostQuotaError | undefined = e?.response?.data;
+
+      if (quotaError?.code === "DAILY_POST_LIMIT_REACHED") {
+        toast.error(
+          `${quotaError.message ?? t('public.cantPost')} (${quotaError.usedToday ?? 0}/${
+            quotaError.allowedPerDay ?? 0
+          })`
+        );
+      } else if (quotaError?.code === "NO_FRIENDS") {
+        toast.error(quotaError.message ?? t('public.cantPost'));
+      } else {
+        const message =
+          quotaError?.message ??
+          e?.response?.data?.error ??
+          e?.message ??
+          t('common.postingFailed');
+        toast.error(message);
+      }
+
+      // Resync the displayed quota with the server's view.
+      await fetchLimit();
     } finally {
       setCreating(false);
     }
@@ -196,8 +240,28 @@ export default function PublicSpacePage() {
   const friendsHint = (() => {
     if (!limit) return "";
     if (limit.friendsCount === 0) return t('public.cantPost');
-    if (limit.allowedPerDay === Infinity) return t('public.postingUnlimited');
-    return t('public.canPostTimes', { values: { count: limit.allowedPerDay } });
+    if (limit.unlimited) return t('public.postingUnlimited');
+    return t('public.canPostTimes', { values: { count: limit.allowedPerDay ?? 0 } });
+  })();
+
+  /** Detailed server-reported quota (friend count / used / remaining). */
+  const quotaSummary = (() => {
+    if (!limit || !userId) return null;
+
+    if (limit.friendsCount === 0) {
+      return t('public.quotaNoFriends');
+    }
+    if (limit.unlimited) {
+      return t('public.quotaUnlimited', { values: { friends: limit.friendsCount } });
+    }
+    return t('public.quotaDetail', {
+      values: {
+        friends: limit.friendsCount,
+        used: limit.usedToday ?? 0,
+        limit: limit.allowedPerDay ?? 0,
+        remaining: limit.remainingToday ?? 0,
+      },
+    });
   })();
 
 
@@ -207,6 +271,13 @@ export default function PublicSpacePage() {
         <h1 className="text-3xl font-bold text-gray-900">{t('public.pageTitle')}</h1>
         <p className="text-gray-600 mt-2">{t('public.pageDesc')}</p>
         {friendsHint && <p className="mt-3 text-sm text-blue-700">{friendsHint}</p>}
+
+        {/* Server-reported posting quota: friend count, daily limit, used, remaining. */}
+        {quotaSummary && (
+          <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+            {quotaSummary}
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm p-4 mb-6">

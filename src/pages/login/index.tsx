@@ -24,40 +24,61 @@ export default function LoginPage() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  // A successful Firebase sign-in IS the authentication. The server-side login
-  // gate (Chrome OTP / login history) is an auxiliary, optional audit layer and
-  // must NOT block navigation. We navigate straight to the dashboard and fire
-  // the gate in the background so a valid user is never stranded on the login
-  // page waiting on /api/login/start (which can hang or time out if the backend
-  // or its OTP/email infra is slow/unavailable).
+  // SECURITY GATE (server-side decision).
   //
-  // Hard security blocks (400/403/429, e.g. mobile outside the allowed window)
-  // are surfaced as a non-blocking toast. All other failures (network/timeout/
-  // 5xx) are treated as non-fatal because Firebase auth already succeeded.
-  const runLoginGateInBackground = useCallback(
-    (method: "google" | "password" | "phone") => {
-      startLoginGate(method)
-        .then((r) => {
-          if (process.env.NODE_ENV !== 'production') {
-            console.debug('[Auth Debug] login gate (background)', {
-              method,
-              otpRequired: !!r?.otpRequired,
-              accessGranted: !!r?.accessGranted,
-            });
-          }
-        })
-        .catch((e: any) => {
-          const status = e?.response?.status;
-          if (e?.response && (status === 400 || status === 403 || status === 429)) {
-            const msg =
-              e?.response?.data?.message ??
-              e?.response?.data?.error ??
-              t('auth.firebaseErrors.loginRestricted');
-            toast.error(msg);
-          }
-        });
+  // Firebase authentication alone must NOT open the dashboard. This calls
+  // /api/login/start and waits for the SERVER's decision:
+  //   - hard block (400/403/429, e.g. mobile outside the allowed IST window)
+  //       -> sign out, stay on /login, show the server message
+  //   - otpRequired -> /verify-login-otp (dashboard stays blocked until verified)
+  //   - accessGranted -> dashboard
+  //
+  // No dashboard navigation is permitted when the security service is unavailable.
+  const runLoginGate = useCallback(
+    async (method: "google" | "password" | "phone"): Promise<"granted" | "otp" | "blocked" | "unavailable"> => {
+      try {
+        const r = await startLoginGate(method);
+        if (r?.otpRequired || r?.verificationRequired) return "otp";
+        if (r?.accessGranted) return "granted";
+        return "otp";
+      } catch (e: any) {
+        const status = e?.response?.status;
+        if (e?.response && (status === 400 || status === 401 || status === 403 || status === 429)) {
+          const msg =
+            e?.response?.data?.message ??
+            e?.response?.data?.error?.message ??
+            t('auth.firebaseErrors.loginRestricted');
+          setLoginError(msg);
+          toast.error(msg);
+          return "blocked";
+        }
+        setLoginError('Login security verification is unavailable. Please try again.');
+        return "blocked";
+      }
     },
     [t]
+  );
+
+  const completeLogin = useCallback(
+    async (method: "google" | "password" | "phone") => {
+      const decision = await runLoginGate(method);
+
+      if (decision === "blocked") {
+        // A failed security gate must revoke the local session too.
+        await auth.signOut().catch(() => {});
+        return;
+      }
+
+      if (decision === "otp") {
+        toast.info(t('auth.loginEmailOtp.securityNote'));
+        router.push("/verify-login-otp");
+        return;
+      }
+
+      toast.success(t('auth.firebaseErrors.loggedInSuccessfully'));
+      router.push("/dashboard");
+    },
+    [runLoginGate, router, t]
   );
 
   async function ensureAuthUser(timeout = 2000): Promise<any> {
@@ -108,11 +129,9 @@ export default function LoginPage() {
     try {
       await signInWithPopup(auth, googleProvider);
       await ensureAuthUser();
-      // Authentication succeeded — go to the dashboard immediately. The login
-      // gate runs in the background and must NOT delay or block this nav.
-      toast.success(t('auth.firebaseErrors.loggedInSuccessfully'));
-      router.push("/dashboard");
-      runLoginGateInBackground("google");
+      // Authentication done. The SERVER's security gate decides whether the
+      // dashboard is reachable (or whether an OTP/security check is required).
+      await completeLogin("google");
     } catch (e: any) {
       if (e?.code === "auth/cancelled-popup-request") return;
       const msg = e?.message ?? t('auth.firebaseErrors.googleLoginFailed');
@@ -121,7 +140,7 @@ export default function LoginPage() {
     } finally {
       setIsGoogleLoading(false);
     }
-  }, [isGoogleLoading, runLoginGateInBackground, router, t]);
+  }, [isGoogleLoading, completeLogin, t]);
 
   const handleEmailLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,11 +166,9 @@ export default function LoginPage() {
       }
 
       await ensureAuthUser();
-      // Authentication succeeded — go to the dashboard immediately. The login
-      // gate runs in the background and must NOT delay or block this nav.
-      toast.success(t('auth.firebaseErrors.loggedInSuccessfully'));
-      router.push("/dashboard");
-      runLoginGateInBackground("password");
+      // Authentication done. The SERVER's security gate decides whether the
+      // dashboard is reachable (or whether an OTP/security check is required).
+      await completeLogin("password");
     } catch (e: any) {
       const msg = e?.message ?? t('auth.firebaseErrors.emailLoginFailed');
       setLoginError(msg);
@@ -159,7 +176,7 @@ export default function LoginPage() {
     } finally {
       setIsEmailLoading(false);
     }
-  }, [email, password, rememberMe, runLoginGateInBackground, router, t]);
+  }, [email, password, rememberMe, completeLogin, t]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">

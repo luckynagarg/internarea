@@ -86,6 +86,7 @@ export default function DashboardHeader() {
 
   const handleLogout = async () => {
     try {
+      await axiosClient.post('/api/login/logout', {}).catch(() => {});
       await auth.signOut();
     } catch {
       /* continue clearing local state regardless */

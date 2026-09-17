@@ -3,6 +3,7 @@ import { useT } from '@/i18n/runtime';
 import { useSelector } from 'react-redux';
 import { selectuser } from '@/Feature/Userslice';
 import { useRouter } from 'next/router';
+import { isAxiosError } from 'axios';
 import axiosClient from '@/lib/apiClient';
 import { openRazorpayCheckout } from '@/lib/razorpay';
 import { toast } from 'react-toastify';
@@ -19,7 +20,7 @@ import { Lock, Loader2, CheckCircle2, ArrowRight } from 'lucide-react';
  * user fills the form, saves it, then generates the PDF.
  */
 
-type Step = 'auth' | 'pay' | 'form' | 'done';
+type Step = 'auth' | 'otp' | 'pay' | 'form' | 'done';
 
 const ResumeCreatePage = () => {
   const { t } = useT();
@@ -33,6 +34,8 @@ const ResumeCreatePage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
   const [resumeId, setResumeId] = useState<string>('');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
@@ -101,7 +104,7 @@ const ResumeCreatePage = () => {
         setResumeId(String(access.resumeId || ''));
         setStep('form');
       } else {
-        setStep('pay');
+        setStep('otp');
       }
     } catch (e: any) {
       const status = e?.response?.status;
@@ -111,6 +114,28 @@ const ResumeCreatePage = () => {
         setError(t('common.error'));
         setStep('pay');
       }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleOtp(verify: boolean) {
+    setLoading(true);
+    setError(null);
+    try {
+      if (verify) {
+        await axiosClient.post('/api/resume/otp/verify', { otp });
+        setOtp('');
+        setStep('pay');
+      } else {
+        await axiosClient.post('/api/resume/otp/send', {});
+        setOtpSent(true);
+      }
+    } catch (err: unknown) {
+      const message = isAxiosError(err)
+        ? err.response?.data?.message || err.response?.data?.error?.message
+        : null;
+      setError(message || 'Unable to verify email. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -239,6 +264,29 @@ const ResumeCreatePage = () => {
               >
                 {t('common.goToLogin')} <ArrowRight size={16} />
               </button>
+            </div>
+          )}
+
+          {step === 'otp' && !editId && (
+            <div className="py-6 space-y-4">
+              <h2 className="font-semibold text-gray-900">Verify your email before payment</h2>
+              <p className="text-sm text-gray-600">We will send a short-lived code to your authenticated account email. Payment opens only after the server verifies it.</p>
+              <button type="button" disabled={loading} onClick={() => handleOtp(false)}
+                className="px-5 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-60">
+                {otpSent ? 'Resend email code' : 'Send email code'}
+              </button>
+              {otpSent && (
+                <form onSubmit={(event) => { event.preventDefault(); void handleOtp(true); }} className="space-y-3">
+                  <label className="block text-sm text-gray-700" htmlFor="resume-otp">Email verification code</label>
+                  <input id="resume-otp" value={otp} onChange={(event) => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                    inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" required maxLength={6}
+                    className="w-full p-3 border rounded-lg text-gray-900" />
+                  <button type="submit" disabled={loading || otp.length !== 6}
+                    className="w-full py-3 bg-purple-600 text-white rounded-lg disabled:opacity-60">
+                    {loading ? 'Verifying…' : 'Verify and continue to payment'}
+                  </button>
+                </form>
+              )}
             </div>
           )}
 

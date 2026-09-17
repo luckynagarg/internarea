@@ -139,19 +139,19 @@ const [availability, setAvailability] = useState("");
   const [coverLetter, setCoverLetter] = useState("");
   const [quota, setQuota] = useState<any>(null);
 
-useEffect(() => {
-    if (user) {
-      (async () => {
-        try {
-          const res = await axiosClient.get("/api/subscription/me");
-          setQuota(res.data?.data);
-        } catch (e) {
-          console.log(e);
-        }
-      })();
+  const loadQuota = React.useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await axiosClient.get("/api/subscription/me");
+      setQuota(res.data?.data ?? null);
+    } catch (e) {
+      console.log(e);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  useEffect(() => {
+    loadQuota();
+  }, [loadQuota]);
 
   if (!jobdata) {
     return (
@@ -188,11 +188,20 @@ await axiosClient.post("/api/application", applicationdata);
       router.push("/job");
     } catch (error: any) {
       const status = error?.response?.status;
-      const msg = error?.response?.data?.error?.message || error?.response?.data?.message || t('errors.generic');
-      if (status === 403) {
-        toast.error(t('subscription.upgradeInfo'));
+      const data = error?.response?.data;
+
+      // The backend is the authority on quota — reflect its decision exactly.
+      if (data?.code === 'APPLICATION_QUOTA_EXCEEDED') {
+        const limitLabel = data.unlimited ? t('subscription.unlimited') : data.limit;
+        toast.error(`${data.message} (${data.plan} • ${data.used}/${limitLabel})`);
+        loadQuota();
+      } else if (data?.code === 'DUPLICATE_APPLICATION') {
+        toast.error(data.message || t('job.applicationSubmitted'));
+      } else if (status === 403) {
+        toast.error(data?.message || t('subscription.upgradeInfo'));
+        loadQuota();
       } else {
-        toast.error(msg);
+        toast.error(data?.message || data?.error?.message || t('errors.generic'));
       }
       console.error(error);
     }
@@ -290,6 +299,34 @@ await axiosClient.post("/api/application", applicationdata);
               </div>
             </div>
             <div className="p-6 space-y-6">
+              {/* Quota banner: current plan, used this month, remaining, upgrade CTA.
+                  Informational only — the backend enforces the real limit. */}
+              {user && quota && (
+                <div className={`rounded-lg p-4 ${(quota.remainingApplications ?? 0) <= 0 ? "bg-red-50 border border-red-200" : "bg-blue-50 border border-blue-200"}`}>
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">
+                        {quota.planName} {t('subscription.plan')} • {(quota.remainingApplications ?? 0) <= 0 ? t('subscription.noApplicationsRemaining') : `${quota.remainingApplications === Number.POSITIVE_INFINITY ? t('subscription.unlimited') : quota.remainingApplications} ${t('subscription.applicationsRemainingText')}`}
+                      </div>
+                      {quota.remainingApplications === Number.POSITIVE_INFINITY ? (
+                        <div className="text-xs text-gray-600">{t('job.unlimitedApplications')}</div>
+                      ) : (
+                        <div className="text-xs text-gray-600">
+                          {t('job.usedOfTotal', { values: { used: quota.applicationsUsed ?? 0, total: quota.monthlyLimit } })}
+                        </div>
+                      )}
+                    </div>
+                    {(quota.remainingApplications ?? 0) <= 0 && (
+                      <Link
+                        href="/subscription"
+                        className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
+                      >
+                        {t('subscription.upgradeNow')}
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              )}
               {/* Resume Section */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">

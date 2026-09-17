@@ -97,19 +97,19 @@ const [availability, setAvailability] = useState("");
   const [quota, setQuota] = useState<any>(null);
   const user=useSelector(selectuser)
 
-useEffect(() => {
-    if (user) {
-      (async () => {
-        try {
-          const res = await axiosClient.get("/api/subscription/me");
-          setQuota(res.data?.data);
-        } catch (e) {
-          console.log(e);
-        }
-      })();
+  const loadQuota = React.useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await axiosClient.get("/api/subscription/me");
+      setQuota(res.data?.data ?? null);
+    } catch (e) {
+      console.log(e);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  useEffect(() => {
+    void loadQuota();
+  }, [loadQuota]);
 
   if (internshipData === null) {
     return (
@@ -147,11 +147,20 @@ await axiosClient.post("/api/application", applicationdata);
 
     } catch (error: any) {
       const status = error?.response?.status;
-      const msg = error?.response?.data?.error?.message || error?.response?.data?.message || t('errors.generic');
-      if (status === 403) {
-        toast.error(t('subscription.upgradeInfo'));
+      const data = error?.response?.data;
+
+      // The backend is the authority on quota — reflect its decision exactly.
+      if (data?.code === 'APPLICATION_QUOTA_EXCEEDED') {
+        const limitLabel = data.unlimited ? t('subscription.unlimited') : data.limit;
+        toast.error(`${data.message} (${data.plan} • ${data.used}/${limitLabel})`);
+        await loadQuota();
+      } else if (data?.code === 'DUPLICATE_APPLICATION') {
+        toast.error(data.message || t('internship.applicationSubmitted'));
+      } else if (status === 403) {
+        toast.error(data?.message || t('subscription.upgradeInfo'));
+        await loadQuota();
       } else {
-        toast.error(msg);
+        toast.error(data?.message || data?.error?.message || t('errors.generic'));
       }
       console.error(error)
     }

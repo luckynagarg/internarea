@@ -10,6 +10,7 @@ import { MailCheck, ShieldCheck } from "lucide-react";
 import {
   verifyLoginOtp,
   resendLoginOtp,
+  getLoginSessionStatus,
 } from "@/Feature/loginSecurity";
 import { useT } from "@/i18n/runtime";
 
@@ -31,16 +32,40 @@ export default function VerifyLoginOtpPage() {
   const [cooldown, setCooldown] = useState(0);
 
   // Require an authenticated Firebase user; capture their email.
+  // The SERVER is asked whether verification is actually outstanding, so this
+  // page cannot be used to fake a completed state, and a user who already
+  // verified (or who never needed to) is sent straight to the dashboard.
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    let active = true;
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!active) return;
+
       if (!user) {
         router.replace("/login");
         return;
       }
+
       setEmail(user.email ?? null);
-      setCheckingAuth(false);
+
+      try {
+        const status = await getLoginSessionStatus();
+        if (!active) return;
+        if (!status.verificationRequired) {
+          router.replace("/dashboard");
+          return;
+        }
+      } catch {
+        // Server unreachable: keep showing the OTP form.
+      }
+
+      if (active) setCheckingAuth(false);
     });
-    return () => unsubscribe();
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, [router]);
 
   const handleVerify = async (e?: React.FormEvent) => {
@@ -90,15 +115,7 @@ export default function VerifyLoginOtpPage() {
     ? email.replace(/^(.).*(@.*)$/, (_m, a, b) => `${a}***${b}`)
     : t('auth.emailVerification.yourEmail');
 
-  if (checkingAuth) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
-        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  // Cooldown timer for resend.
+  // Cooldown timer must be registered before the conditional loading return.
   useEffect(() => {
     if (cooldown <= 0) return;
     const timer = setInterval(() => {
@@ -106,6 +123,14 @@ export default function VerifyLoginOtpPage() {
     }, 1000);
     return () => clearInterval(timer);
   }, [cooldown]);
+
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">

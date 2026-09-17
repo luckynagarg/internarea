@@ -206,6 +206,7 @@ const Navbar = () => {
 
   const handlelogout = async () => {
     try {
+      await axiosClient.post('/api/login/logout', {}).catch(() => {});
       await signOut(auth);
     } catch {
       // ignore signOut errors — still clear local state below
