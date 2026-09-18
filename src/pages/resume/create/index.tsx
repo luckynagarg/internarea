@@ -98,7 +98,7 @@ const ResumeCreatePage = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await axiosClient.get('/api/resume/create-access');
+      const res = await axiosClient.post('/api/resume/create-access');
       const access = res?.data?.data;
       if (access?.allowed) {
         setResumeId(String(access.resumeId || ''));
