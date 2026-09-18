@@ -44,3 +44,13 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Audit/verification temp artifacts (never commit these)
+*.log
+tsc_*.log
+build2.txt
+build_out.txt
+eslint*.txt
+fresh_build.txt
+final_build.txt
+
