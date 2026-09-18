@@ -41,7 +41,7 @@ See [docs/setup.md](docs/setup.md) for detailed instructions.
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 15 (Pages Router), TypeScript, React 19, Tailwind CSS, Redux Toolkit |
+| Frontend | Next.js 16 (Pages Router), TypeScript, React 19, Tailwind CSS, Redux Toolkit |
 | Backend | Node.js, Express 4, Mongoose, Firebase Admin |
 | Database | MongoDB (Atlas) |
 | Authentication | Firebase Authentication |

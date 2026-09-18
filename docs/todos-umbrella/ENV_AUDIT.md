@@ -1,7 +1,7 @@
 # Complete Environment Variable Audit
 
 Audit date: current session
-Scope: `intern/backend` (Node/Express/Mongoose/Firebase Admin) + `intern/internarea` (Next.js 15)
+Scope: `intern/backend` (Node/Express/Mongoose/Firebase Admin) + `intern/internarea` (Next.js 16)
 
 Method: compared (a) every `process.env.*` reference in project source code, (b) `.env.example` docs,
 and (c) actual `.env` / `.env.local` keys. Secret values were NOT read or logged.

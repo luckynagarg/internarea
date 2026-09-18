@@ -40,7 +40,7 @@ InternArea consists of two independent services deployed on separate platforms:
 - **Platform**: Vercel
 - **Build command**: `npm run build`
 - **Output directory**: `.next`
-- **Framework**: Next.js 15 (Pages Router)
+- **Framework**: Next.js 16 (Pages Router)
 
 ### Required Environment Variables (Vercel)
 

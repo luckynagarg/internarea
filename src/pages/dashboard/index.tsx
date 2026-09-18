@@ -317,7 +317,7 @@ export default function DashboardPage() {
             <section className="bg-white rounded-lg border border-gray-200 p-5">
               <h2 className="text-sm font-semibold text-gray-900 mb-3">Your activity</h2>
               {friendRequests.length === 0 && recentNotifications.length === 0 ? (
-                <p className="text-sm text-gray-500">You're all caught up.</p>
+                <p className="text-sm text-gray-500">You&apos;re all caught up.</p>
               ) : (
                 <div className="space-y-2">
                   {friendRequests.length > 0 && (

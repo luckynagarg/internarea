@@ -13,7 +13,6 @@ import {
   XCircle,
 } from 'lucide-react';
 import axiosClient from '@/lib/apiClient';
-import { API_URL } from '@/config/api';
 import { useT } from '@/i18n/runtime';
 
 type PaymentRecord = {
@@ -39,6 +38,23 @@ type QuotaResponse = {
   subscriptionStart: string;
   subscriptionExpiry: string;
 };
+
+async function downloadInvoice(invoiceNumber: string | null | undefined, fallbackName?: string) {
+  if (!invoiceNumber) return;
+  const res = await axiosClient.get(
+    `/api/subscription/invoices/${encodeURIComponent(invoiceNumber)}/download`,
+    { responseType: "blob" }
+  );
+  const blob = res.data instanceof Blob ? res.data : new Blob([res.data]);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = (fallbackName || invoiceNumber) + ".pdf";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 export default function PaymentSuccessPage() {
   const router = useRouter();
@@ -271,14 +287,13 @@ export default function PaymentSuccessPage() {
               {payment?.invoiceNumber && (
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">{t('payment.invoice')}</span>
-                  <a
-                    href={API_URL(`/api/subscription/invoices/${encodeURIComponent(payment.invoiceNumber)}/download`)}
-                    target="_blank"
-                    rel="noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => downloadInvoice(payment.invoiceNumber)}
                     className="text-blue-700 hover:text-blue-800 font-medium"
                   >
                     {payment.invoiceNumber}
-                  </a>
+                  </button>
                 </div>
               )}
             </div>

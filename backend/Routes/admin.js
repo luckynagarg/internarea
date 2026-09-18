@@ -8,8 +8,24 @@ const { deleteUserCompletely } = require("../services/userDeletionService");
 const { issueAdminSessionToken } = require("../middleware/adminSession");
 const adminuser = process.env.ADMIN_USER || "admin";
 const adminpass = process.env.ADMIN_PASS || "admin";
+const rateLimit = require("express-rate-limit");
 
 module.exports = router;
+
+// Brute-force / abuse protection for the admin login endpoint — the default
+// ADMIN_USER/ADMIN_PASS fall back to "admin"/"admin", so the login path must
+// be rate-limited even when no stronger credential has been set.
+const adminLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    code: "TOO_MANY_REQUESTS",
+    message: "Too many admin login attempts. Please try again later.",
+  },
+});
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/users
@@ -184,7 +200,7 @@ router.delete("/users/:userId", async (req, res) => {
  * 1. Env-var credentials (ADMIN_USER / ADMIN_PASS) - fallback/initial
  * 2. DB-stored password hash (set via password reset flow)
  */
-router.post("/adminlogin", async (req, res) => {
+router.post("/adminlogin", adminLoginLimiter, async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {

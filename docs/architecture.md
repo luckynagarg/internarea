@@ -32,9 +32,9 @@ InternArea is a full-stack internship platform with two independent deployments:
 
 ## Components
 
-### Frontend (Next.js 15, TypeScript)
+### Frontend (Next.js 16, TypeScript)
 
-- **Framework**: Next.js 15 with the Pages Router (`src/pages/`)
+- **Framework**: Next.js 16 with the Pages Router (`src/pages/`)
 - **State**: Redux Toolkit (`@reduxjs/toolkit`) for user authentication state
 - **HTTP**: Axios with a centralized client (`src/lib/axiosClient.ts`) that attaches the Firebase ID token to requests
 - **Auth**: Firebase Client SDK (`src/lib/firebase.ts`) — handles email/password, Google sign-in, phone OTP

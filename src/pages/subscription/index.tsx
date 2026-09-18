@@ -6,7 +6,6 @@ import { useRouter } from "next/router";
 import { useSelector } from "react-redux";
 import { selectuser } from "@/Feature/Userslice";
 import { openRazorpayCheckout } from "@/lib/razorpay";
-import { API_URL } from "@/config/api";
 import { toast } from "react-toastify";
 import {
   CalendarDays,
@@ -74,6 +73,27 @@ type PlanOption = {
   price: string;
   amountINR: number;
 };
+
+// Downloads an invoice PDF using the authenticated axiosClient so the
+// Firebase ID token is sent. Plain <a href> navigations cannot carry the
+// Authorization header, so a new-tab link to the auth-gated download route
+// would fail with 401.
+async function downloadInvoice(invoiceNumber: string | null | undefined, fallbackName?: string) {
+  if (!invoiceNumber) return;
+  const res = await axiosClient.get(
+    `/api/subscription/invoices/${encodeURIComponent(invoiceNumber)}/download`,
+    { responseType: "blob" }
+  );
+  const blob = res.data instanceof Blob ? res.data : new Blob([res.data]);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = (fallbackName || invoiceNumber) + ".pdf";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 const PLANS: PlanOption[] = [
   { key: "bronze", label: "Bronze", price: "₹100", amountINR: 100 },
@@ -494,14 +514,13 @@ export default function SubscriptionPage() {
                       {p.invoiceNumber && (
                         <div className="text-xs text-blue-600 mt-2">
                           {t('subscription.invoices')}:{" "}
-                          <a
-                            href={API_URL(`/api/subscription/invoices/${encodeURIComponent(p.invoiceNumber)}/download`)}
-                            target="_blank"
-                            rel="noreferrer"
+                          <button
+                            type="button"
+                            onClick={() => downloadInvoice(p.invoiceNumber)}
                             className="underline"
                           >
                             {p.invoiceNumber}
-                          </a>
+                          </button>
                         </div>
                       )}
                     </div>
@@ -524,13 +543,13 @@ export default function SubscriptionPage() {
                         <div className="text-xs text-gray-500">{new Date(inv.createdAt).toDateString()}</div>
                         <div className="text-xs text-gray-600">{inv.emailStatus}</div>
                       </div>
-                      <Link
-                        href={API_URL(`/api/subscription/invoices/${encodeURIComponent(inv.invoiceNumber)}/download`)}
-                        target="_blank"
+                      <button
+                        type="button"
+                        onClick={() => downloadInvoice(inv.invoiceNumber, inv.invoiceNumber)}
                         className="px-3 py-2 rounded-lg bg-blue-50 text-blue-700 text-sm font-semibold hover:bg-blue-100 transition"
                       >
                         {t('subscription.downloadPdf')}
-                      </Link>
+                      </button>
                     </div>
                   ))}
                 </div>

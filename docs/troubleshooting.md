@@ -131,7 +131,7 @@ Common issues encountered during development and deployment, with verified fixes
 
 **Root Cause**: `next.config.ts` had a custom webpack rule for `json-loader` which is not installed and unnecessary (webpack 5 handles JSON natively).
 
-**Solution**: Remove the `json-loader` webpack block from `next.config.ts`. JSON imports work natively in Next.js 15.
+**Solution**: Remove the `json-loader` webpack block from `next.config.ts`. JSON imports work natively in Next.js 16.
 
 **Verification**: Vercel build completes successfully.
 
