@@ -98,12 +98,14 @@ const ResumeCreatePage = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await axiosClient.post('/api/resume/create-access');
+      const res = await axiosClient.get('/api/resume/create-access');
       const access = res?.data?.data;
       if (access?.allowed) {
         setResumeId(String(access.resumeId || ''));
         setStep('form');
       } else {
+        // No paid entitlement yet — the server-mandated flow starts with the
+        // email OTP (OTP -> verify -> ₹50 order -> payment -> form).
         setStep('otp');
       }
     } catch (e: any) {
@@ -112,7 +114,9 @@ const ResumeCreatePage = () => {
         setStep('auth');
       } else {
         setError(t('common.error'));
-        setStep('pay');
+        // Never jump straight to payment: the server requires a verified
+        // email OTP before any payment order can be created.
+        setStep('otp');
       }
     } finally {
       setLoading(false);
