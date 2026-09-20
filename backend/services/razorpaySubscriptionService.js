@@ -36,7 +36,6 @@ async function createRazorpayOrder({ userId, planKey, userEmail, userName }) {
   if (!isPaymentTimeAllowedNow()) {
     const err = new Error('Payments are only accepted between 10:00 AM and 11:00 AM IST.');
     err.statusCode = 403;
-    err.publicMessage = 'Payments are only accepted between 10:00 AM and 11:00 AM IST.';
     throw err;
   }
 
@@ -69,14 +68,13 @@ async function createRazorpayOrder({ userId, planKey, userEmail, userName }) {
     orderId: order.id,
     amount: plan.priceINR,
     currency,
-     planKey: plan.planKey,
+    planKey: plan.planKey,
     // allow frontend to render
     subscriptionName: plan.name,
     transactionId: txn._id,
     keyId: process.env.RAZORPAY_KEY_ID || '',
   };
 }
-
 async function verifyPaymentAndActivate({ userId, planKey, razorpayOrderId, razorpayPaymentId, razorpaySignature, userEmail, userName }) {
   // Atomic claim: only one concurrent request may proceed per 'created' txn.
   // This prevents duplicate subscription activation / duplicate invoices when a
