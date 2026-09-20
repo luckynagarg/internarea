@@ -114,6 +114,15 @@ router.post(
       throw badRequest('resumeId is required.');
     }
 
+    // Defense in depth: refuse to open a Razorpay checkout outside the
+    // 10:00–11:00 AM IST payment window (mirrors /payment/create-order).
+    const { isPaymentTimeAllowedNow } = require('../config/paymentWindow');
+    if (!isPaymentTimeAllowedNow()) {
+      const err = new Error('Resume payment is only accepted between 10:00 AM and 11:00 AM IST.');
+      err.statusCode = 403;
+      throw err;
+    }
+
     const resume = await Resume.findOne({
       _id: resumeId,
       userId: req.user.uid,
@@ -190,6 +199,15 @@ router.post(
 
     if (!secret) {
       throw new Error('Razorpay secret not configured.');
+    }
+
+    // Defense in depth: payment verification is also rejected outside the
+    // 10:00–11:00 AM IST payment window (mirrors /payment/verify).
+    const { isPaymentTimeAllowedNow } = require('../config/paymentWindow');
+    if (!isPaymentTimeAllowedNow()) {
+      const err = new Error('Resume payment is only accepted between 10:00 AM and 11:00 AM IST.');
+      err.statusCode = 403;
+      throw err;
     }
 
     const body = `${razorpayOrderId}|${razorpayPaymentId}`;

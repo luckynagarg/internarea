@@ -347,6 +347,17 @@ async function createResumePaymentOrder({ userId, userEmail }) {
   const PaymentTransaction = require('../Model/PaymentTransaction');
   const { getRazorpayInstance } = require('./razorpayService');
 
+  // Defense in depth: refuse to open a Razorpay checkout outside the
+  // 10:00–11:00 AM IST payment window. Verification-time enforcement alone
+  // is not sufficient (mirrors createRazorpayOrder in
+  // razorpaySubscriptionService.js).
+  const { isPaymentTimeAllowedNow } = require('../config/paymentWindow');
+  if (!isPaymentTimeAllowedNow()) {
+    const err = new Error('Resume payment is only accepted between 10:00 AM and 11:00 AM IST.');
+    err.statusCode = 403;
+    throw err;
+  }
+
   const priceInr = resumePriceInr();
   const currency = process.env.RAZORPAY_CURRENCY || 'INR';
 

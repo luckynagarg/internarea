@@ -27,6 +27,19 @@ async function createRazorpayOrder({ userId, planKey, userEmail, userName }) {
     return { orderId: null, amount: 0, currency: 'INR', planKey: plan.planKey };
   }
 
+  // Enforce the payment time window at ORDER CREATION time too (defense in
+  // depth). The user must not be able to even open/start Razorpay checkout
+  // outside the allowed window; verification-time enforcement alone is not
+  // sufficient. Inclusive start, exclusive end (10:00:00 allowed, 10:59:59
+  // allowed, 11:00:00 blocked) — enforced server-side via the shared helper.
+  const { isPaymentTimeAllowedNow } = require('../config/paymentWindow');
+  if (!isPaymentTimeAllowedNow()) {
+    const err = new Error('Payments are only accepted between 10:00 AM and 11:00 AM IST.');
+    err.statusCode = 403;
+    err.publicMessage = 'Payments are only accepted between 10:00 AM and 11:00 AM IST.';
+    throw err;
+  }
+
   const razorpay = getRazorpayInstance();
 
   const amountPaise = plan.priceINR * 100;
